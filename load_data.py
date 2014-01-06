@@ -1,7 +1,10 @@
 from scipy.io import loadmat
 import numpy as np
-
-class Data(object): pass
+from collections import namedtuple
+    
+GeneData = namedtuple('GeneData', [
+    'expression', 'gene_names', 'region_names', 'genders', 'ages',
+])
     
 def convert_matlab_string_cell(cell_array):
     return np.array([x[0] for x in cell_array.flat])
@@ -14,10 +17,11 @@ def load_data(serotonin_only=True):
         filename = 'kang2011_allGenes.mat'
     path = r'{}\{}'.format(datadir,filename)
     mat = loadmat(path)
-    data = Data()
-    data.expression = mat['expression']
-    data.gene_names = convert_matlab_string_cell(mat['gene_names'])
-    data.region_names = convert_matlab_string_cell(mat['region_names'])
-    data.genders = convert_matlab_string_cell(mat['genders'])
-    data.ages = mat['ages'][0,:]
+    data = GeneData(
+        expression = mat['expression'],
+        gene_names = convert_matlab_string_cell(mat['gene_names']),
+        region_names = convert_matlab_string_cell(mat['region_names']),
+        genders = convert_matlab_string_cell(mat['genders']),
+        ages = mat['ages'][0,:],
+    )
     return data
