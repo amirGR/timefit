@@ -6,9 +6,12 @@ class Data(object): pass
 def convert_matlab_string_cell(cell_array):
     return np.array([x[0] for x in cell_array.flat])
 
-def load_data():
+def load_data(serotonin_only=True):
     datadir = r'C:\data\HTR\data'
-    filename = 'kang2011_allGenes.mat'
+    if serotonin_only:
+        filename = 'kang2011_serotonin.mat'
+    else:
+        filename = 'kang2011_allGenes.mat'
     path = r'{}\{}'.format(datadir,filename)
     mat = loadmat(path)
     data = Data()
