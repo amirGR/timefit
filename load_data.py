@@ -2,12 +2,22 @@ from scipy.io import loadmat
 import numpy as np
 from collections import namedtuple
     
-GeneData = namedtuple('GeneData', [
+GeneDataBase = namedtuple('GeneData', [
     'expression', 'gene_names', 'region_names', 'genders', 'ages',
 ])
-    
-def convert_matlab_string_cell(cell_array):
-    return np.array([x[0] for x in cell_array.flat])
+
+class GeneData(GeneDataBase):
+    def get_one_series(self, iGene, iRegion):
+        expression = self.expression[:,iGene,iRegion]
+        not_nan = ~np.isnan(expression)
+        return OneGeneRegion(
+            expression = expression[not_nan],
+            ages = self.ages[not_nan],
+            gene_name = self.gene_names[iGene],
+            region_name = self.region_names[iRegion],
+        )
+
+OneGeneRegion = namedtuple('OneGeneRegion', ['expression', 'ages', 'gene_name', 'region_name'])
 
 def load_data(serotonin_only=True):
     datadir = r'C:\data\HTR\data'
@@ -25,3 +35,7 @@ def load_data(serotonin_only=True):
         ages = mat['ages'][0,:],
     )
     return data
+
+def convert_matlab_string_cell(cell_array):
+    return np.array([x[0] for x in cell_array.flat])
+
