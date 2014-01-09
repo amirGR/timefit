@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from sigmoid_fit import *
 from plots import *
 
-def draw_with_fit(series):
-    theta = fit_sigmoid(series)
+def draw_with_fit(series,L=0):
+    theta = fit_sigmoid(series,L)
     fit = sigmoid(theta,series.ages)
     plot_one_fit(series,fit)
 
