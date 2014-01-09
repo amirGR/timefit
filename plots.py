@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-from sigmoid_fit import sigmoid
 
 def plot_gene(data, iGene):
     fig = plt.figure()
