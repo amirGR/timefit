@@ -43,13 +43,22 @@ def fit_sigmoid(series,L):
     res = minimize(f_error, theta0, args=(ages,expr,L), method='BFGS', jac=f_error_gradient)
     return res.x
     
-def check_grad(series, n=10):
-    for i in xrange(n):
+def check_grad(n=10):
+    import scipy.optimize
+    def check_one():
+        x = np.arange(-10,11)
+        y = sigmoid([-1,3,2,2],x) + np.random.normal(size=x.shape)
+        L = np.random.uniform()
         a,b,c,d = np.random.uniform(size=4)
         theta = [a, a+b, c, d]
-        x = series.ages[0:1]
-        y = series.expression[0:1]
-        L = 3
-        diff = sp.optimize.check_grad(f_error, f_error_gradient, theta, x, y, L)
-        print '{}) theta={}, diff={}'.format(i,theta,diff)
+        diff = scipy.optimize.check_grad(f_error, f_error_gradient, theta, x, y, L)
+        return diff
+    max_diff = max([check_one() for _ in xrange(n)])
+    print 'Max difference over {} iterations: {}'.format(n,max_diff)
+    if max_diff < 1E-5:
+        print 'Gradient is OK'
+    else:
+        print 'Difference is too big. Gradient is NOT OK!'
 
+if __name__ == '__main__':
+    check_grad()
