@@ -27,4 +27,14 @@ def plot_one_series(series, fits=None):
     ax.set_ylabel('Expression Level')
     ax.set_xlabel('Age [years]')
     ax.legend()
- 
+
+def plot_L_scores(Ls, scores):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(Ls, scores, linewidth=2)
+    ax.plot(Ls, scores, 'ro')
+    #ax.set_xscale('log')
+    ax.set_title(r'Score vs. $\lambda$')
+    ax.set_ylabel(r'$\lambda$')
+    ax.set_xlabel('Score')
+    ax.legend()

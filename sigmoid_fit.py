@@ -18,18 +18,20 @@ def sigmoid_grad(theta,x):
 def f_error(theta,x,y,L):
     a,h,mu,w = theta
     squares = (sigmoid(theta,x) - y)**2
-    log_p0 = -0.5*((w-cfg.w0)/cfg.w0_sigma)**2;
-    return 0.5*sum(squares) - L*log_p0
+    prior_z = (theta - cfg.theta_prior) / cfg.theta_prior_sigma
+    regularizer = sum(prior_z ** 2);
+    return 0.5*sum(squares) + 0.5*L*regularizer
 
 def f_error_gradient(theta,x,y,L):
     a,h,mu,w = theta
     diffs = sigmoid(theta,x) - y
     d_a, d_h, d_mu, d_w = sigmoid_grad(theta,x)
+    d_prior = L * (theta - cfg.theta_prior) / cfg.theta_prior_sigma**2
     d_a = sum(diffs * d_a)
     d_h = sum(diffs * d_h)
     d_mu = sum(diffs * d_mu)
-    d_w = sum(diffs * d_w) + L*(w-cfg.w0)/cfg.w0_sigma**2
-    return np.array([d_a, d_h, d_mu, d_w])
+    d_w = sum(diffs * d_w)
+    return np.array([d_a, d_h, d_mu, d_w]) + d_prior
 
 def fit_sigmoid_simple(x,y,L):
     theta0 = np.array([
@@ -38,7 +40,7 @@ def fit_sigmoid_simple(x,y,L):
         (x.min() + x.max()) / 2, # mu
         (x.max() - x.min()) / 2, # w
     ])
-    for i in xrange(3):
+    for i in xrange(cfg.n_optimization_attempts):
         init_noise = np.random.normal(0,1,size=4)
         res = minimize(f_error, theta0 + init_noise, args=(x,y,L), method='BFGS', jac=f_error_gradient)
         if res.success:

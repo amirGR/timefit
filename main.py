@@ -6,11 +6,23 @@ import matplotlib.pyplot as plt
 from sigmoid_fit import *
 from plots import *
 
-def draw_with_fit(series,L=0):
-    loo_preds = fit_sigmoid_loo(series.ages, series.expression, L)
+def draw_with_fit(series, L=0, cv=True):
     theta = fit_sigmoid_simple(series.ages, series.expression, L)
-    fit = sigmoid(theta,series.ages)
-    plot_one_series(series, fits = {'Simple fit':fit, 'LOO predictions': loo_preds})
+    fits = {'Simple fit': sigmoid(theta,series.ages)}
+    if cv:
+        fits['LOO predictions'] = fit_sigmoid_loo(series.ages, series.expression, L)
+    plot_one_series(series, fits)
+
+def find_best_L(series):
+    Ls = np.linspace(0,1,20)
+    def score(L):
+        print 'Computing score for L={}'.format(L)
+        return get_fit_score(series.ages,series.expression,L)
+    scores = array([score(L) for L in Ls])
+    plot_L_scores(Ls,scores)
+#    idx = scores.argmin()
+#    L = L_options[idx]
+#    scores = scores[idx]
 
 data = load_data()   
 series = data.get_one_series(0,0)

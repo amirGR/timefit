@@ -1,2 +1,4 @@
-w0 = 2.5 # slope = 1/(4*w) => w = 1/(4*slope)
-w0_sigma = 2 # YYY - what's a good guesstimate for this?
+import numpy as np
+n_optimization_attempts = 1
+theta_prior = np.array([5, 5, 30, 2.5])
+theta_prior_sigma = np.array([5, 5, 30, 2.5])
