@@ -60,7 +60,8 @@ def fit_sigmoid_loo(x,y,L):
 
 def get_fit_score(x,y,L):
     from sklearn.metrics import r2_score, explained_variance_score
-    score = r2_score
+    dct_scores = {'R2' : r2_score, 'Explained Variance' : explained_variance_score}
+    score = dct_scores[cfg.score_type]
     preds = fit_sigmoid_loo(x,y,L)
     return score(y,preds)
     

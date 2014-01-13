@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import config as cfg
 
 def plot_gene(data, iGene):
     fig = plt.figure()
@@ -28,13 +29,31 @@ def plot_one_series(series, fits=None):
     ax.set_xlabel('Age [years]')
     ax.legend()
 
-def plot_L_scores(Ls, scores):
+def plot_L_scores(Ls, scores, logscale=True):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(Ls, scores, linewidth=2)
     ax.plot(Ls, scores, 'ro')
-    #ax.set_xscale('log')
-    ax.set_title(r'Score vs. $\lambda$')
-    ax.set_ylabel(r'$\lambda$')
-    ax.set_xlabel('Score')
-    ax.legend()
+    if logscale:
+        ax.set_xscale('log')
+    ax.set_title(r'{} vs. $\lambda$'.format(cfg.score_type), fontsize=cfg.fontsize)
+    ax.set_xlabel(r'$\lambda$', fontsize=cfg.fontsize)
+    ax.set_ylabel(cfg.score_type, fontsize=cfg.fontsize)
+
+    idx = scores.argmax()
+    best_L = Ls[idx]
+    best_score = scores[idx]
+    ax.plot(best_L,best_score,'gd')
+    ax.annotate(
+        r'best $\lambda$', 
+        xy = (best_L, best_score), 
+        xytext = (best_L,best_score*0.6), 
+        arrowprops = dict(
+            edgecolor = 'black',
+            facecolor = 'green',
+            shrink = 0.1,
+        ),
+        horizontalalignment = 'center',
+        fontsize = cfg.fontsize
+    )
+    
