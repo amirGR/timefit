@@ -38,8 +38,12 @@ def fit_sigmoid_simple(x,y,L):
         (x.min() + x.max()) / 2, # mu
         (x.max() - x.min()) / 2, # w
     ])
-    res = minimize(f_error, theta0, args=(x,y,L), method='CG', jac=f_error_gradient)
-    return res.x
+    for i in xrange(3):
+        init_noise = np.random.normal(0,1,size=4)
+        res = minimize(f_error, theta0 + init_noise, args=(x,y,L), method='BFGS', jac=f_error_gradient)
+        if res.success:
+            return res.x
+    assert False, 'Optimization failed'
 
 def fit_sigmoid_loo(x,y,L):
     from sklearn.cross_validation import LeaveOneOut
@@ -47,8 +51,8 @@ def fit_sigmoid_loo(x,y,L):
     test_preds = np.empty(n)
     for i,(train,test) in enumerate(LeaveOneOut(n)):
         theta = fit_sigmoid_simple(x[train],y[train],L)
-        assert(not np.isnan(theta).any())
-        assert(y[test] == y[i]) # this should hold for LOO
+        assert not np.isnan(theta).any()
+        assert y[test] == y[i]  # this should hold for LOO
         test_preds[i] = sigmoid(theta,x[test])
     return test_preds
 
