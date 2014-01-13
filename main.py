@@ -5,21 +5,31 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sigmoid_fit import *
 from plots import *
+import config as cfg
 
 np.seterr(all='ignore') # YYY - can/should we handle these warnings?
 
 def draw_with_fit(series, L=0, cv=True):
-    theta = fit_sigmoid_simple(series.ages, series.expression, L)
-    fits = {'Simple fit': sigmoid(theta,series.ages)}
+    x = series.ages
+    y = series.expression
+    theta = fit_sigmoid_simple(x,y,L)
+    fit = sigmoid(theta,series.ages)
+    fit_label = 'Simple fit (R2={:.3f})'.format(cfg.score(y,fit))
+    fits = {fit_label : fit}
     if cv:
-        fits['LOO predictions'] = fit_sigmoid_loo(series.ages, series.expression, L)
-    plot_one_series(series, fits)
+        preds = fit_sigmoid_loo(x,y,L)
+        loo_label = 'LOO predictions (R2={:.3f})'.format(cfg.score(y,preds))
+        fits[loo_label] = preds
+    more_title = r'$\lambda={:.3g}$'.format(L)
+    plot_one_series(series, fits, more_title)
 
-def find_best_L(series):
-    Ls = np.logspace(-4,3,20)
+def find_best_L(series, Ls=None):
+    if Ls is None:
+        Ls = np.logspace(-4,3,20)
     def score(L):
         print 'Computing score for L={}'.format(L)
-        return get_fit_score(series.ages,series.expression,L)
+        preds = fit_sigmoid_loo(series.ages,series.expression,L)
+        return cfg.score(series.expression, preds)
     scores = array([score(L) for L in Ls])
     plot_L_scores(Ls,scores)
 

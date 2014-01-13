@@ -58,13 +58,6 @@ def fit_sigmoid_loo(x,y,L):
         test_preds[i] = sigmoid(theta,x[test])
     return test_preds
 
-def get_fit_score(x,y,L):
-    from sklearn.metrics import r2_score, explained_variance_score
-    dct_scores = {'R2' : r2_score, 'Explained Variance' : explained_variance_score}
-    score = dct_scores[cfg.score_type]
-    preds = fit_sigmoid_loo(x,y,L)
-    return score(y,preds)
-    
 def check_grad(n=10):
     import scipy.optimize
     def check_one():

@@ -16,7 +16,7 @@ def plot_gene(data, iGene):
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(series.gene_name))
     
-def plot_one_series(series, fits=None):
+def plot_one_series(series, fits=None, more_title=None):
     if fits is None:
         fits = {}
     fig = plt.figure()
@@ -24,9 +24,12 @@ def plot_one_series(series, fits=None):
     ax.plot(series.ages,series.expression,'ro')
     for name,fit in fits.iteritems():
         ax.plot(series.ages, fit ,linewidth=2, label=name)
-    ax.set_title('Gene: {}, Region: {}'.format(series.gene_name, series.region_name))
-    ax.set_ylabel('Expression Level')
-    ax.set_xlabel('Age [years]')
+    ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
+    if more_title is not None:
+        ttl = '{} ({})'.format(ttl,more_title)
+    ax.set_title(ttl, fontsize=cfg.fontsize)
+    ax.set_ylabel('Expression Level', fontsize=cfg.fontsize)
+    ax.set_xlabel('Age [years]', fontsize=cfg.fontsize)
     ax.legend()
 
 def plot_L_scores(Ls, scores, logscale=True):
@@ -36,7 +39,7 @@ def plot_L_scores(Ls, scores, logscale=True):
     ax.plot(Ls, scores, 'ro')
     if logscale:
         ax.set_xscale('log')
-    ax.set_title(r'{} vs. $\lambda$'.format(cfg.score_type), fontsize=cfg.fontsize)
+    ax.set_title(r'Goodness of fit vs. $\lambda$', fontsize=cfg.fontsize)
     ax.set_xlabel(r'$\lambda$', fontsize=cfg.fontsize)
     ax.set_ylabel(cfg.score_type, fontsize=cfg.fontsize)
 
@@ -44,16 +47,17 @@ def plot_L_scores(Ls, scores, logscale=True):
     best_L = Ls[idx]
     best_score = scores[idx]
     ax.plot(best_L,best_score,'gd')
-    ax.annotate(
-        r'best $\lambda$', 
-        xy = (best_L, best_score), 
-        xytext = (best_L,best_score*0.6), 
-        arrowprops = dict(
-            edgecolor = 'black',
-            facecolor = 'green',
-            shrink = 0.1,
-        ),
-        horizontalalignment = 'center',
-        fontsize = cfg.fontsize
-    )
+#    low_y = ax.get_ylim()[0]
+#    ax.annotate(
+#        r'best $\lambda$', 
+#        xy = (best_L, best_score), 
+#        xytext = (best_L, (best_score+low_y)/2), 
+#        arrowprops = dict(
+#            edgecolor = 'black',
+#            facecolor = 'green',
+#            shrink = 0.1,
+#        ),
+#        horizontalalignment = 'center',
+#        fontsize = cfg.fontsize
+#    )
     
