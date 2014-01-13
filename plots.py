@@ -15,14 +15,16 @@ def plot_gene(data, iGene):
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(series.gene_name))
     
-def plot_one_fit(series,fit=None):
+def plot_one_series(series, fits=None):
+    if fits is None:
+        fits = {}
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(series.ages,series.expression,'ro')
-    ax.plot(series.ages,series.expression,'b-')
-    if fit is not None:
-        ax.plot(series.ages,fit,'g-')
-    ax.set_title('Region {}'.format(series.gene_name))
+    for name,fit in fits.iteritems():
+        ax.plot(series.ages, fit ,linewidth=2, label=name)
+    ax.set_title('Gene: {}, Region: {}'.format(series.gene_name, series.region_name))
     ax.set_ylabel('Expression Level')
     ax.set_xlabel('Age [years]')
+    ax.legend()
  

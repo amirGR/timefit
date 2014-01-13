@@ -31,17 +31,32 @@ def f_error_gradient(theta,x,y,L):
     d_w = sum(diffs * d_w) + L*(w-cfg.w0)/cfg.w0_sigma**2
     return np.array([d_a, d_h, d_mu, d_w])
 
-def fit_sigmoid(series,L):
-    expr = series.expression
-    ages = series.ages
+def fit_sigmoid_simple(x,y,L):
     theta0 = np.array([
-        expr.min(), # a
-        expr.max(), # h
-        (ages.min() + ages.max()) / 2, # mu
-        (ages.max() - ages.min()) / 2, # w
+        y.min(), # a
+        y.max(), # h
+        (x.min() + x.max()) / 2, # mu
+        (x.max() - x.min()) / 2, # w
     ])
-    res = minimize(f_error, theta0, args=(ages,expr,L), method='BFGS', jac=f_error_gradient)
+    res = minimize(f_error, theta0, args=(x,y,L), method='CG', jac=f_error_gradient)
     return res.x
+
+def fit_sigmoid_loo(x,y,L):
+    from sklearn.cross_validation import LeaveOneOut
+    n = len(y)
+    test_preds = np.empty(n)
+    for i,(train,test) in enumerate(LeaveOneOut(n)):
+        theta = fit_sigmoid_simple(x[train],y[train],L)
+        assert(not np.isnan(theta).any())
+        assert(y[test] == y[i]) # this should hold for LOO
+        test_preds[i] = sigmoid(theta,x[test])
+    return test_preds
+
+def get_fit_score(x,y,L):
+    from sklearn.metrics import r2_score, explained_variance_score
+    score = r2_score
+    preds = fit_sigmoid_loo(x,y,L)
+    return score(y,preds)
     
 def check_grad(n=10):
     import scipy.optimize

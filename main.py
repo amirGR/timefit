@@ -7,9 +7,10 @@ from sigmoid_fit import *
 from plots import *
 
 def draw_with_fit(series,L=0):
-    theta = fit_sigmoid(series,L)
+    loo_preds = fit_sigmoid_loo(series.ages, series.expression, L)
+    theta = fit_sigmoid_simple(series.ages, series.expression, L)
     fit = sigmoid(theta,series.ages)
-    plot_one_fit(series,fit)
+    plot_one_series(series, fits = {'Simple fit':fit, 'LOO predictions': loo_preds})
 
 data = load_data()   
 series = data.get_one_series(0,0)
