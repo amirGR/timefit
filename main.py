@@ -7,18 +7,18 @@ from sigmoid_fit import *
 from plots import *
 import config as cfg
 
-np.seterr(all='ignore') # YYY - can/should we handle these warnings?
+np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/should we handle these warnings?
 
 def draw_with_fit(series, L=0, cv=True):
     x = series.ages
     y = series.expression
     theta = fit_sigmoid_simple(x,y,L)
     fit = sigmoid(theta,series.ages)
-    fit_label = 'Simple fit (R2={:.3f})'.format(cfg.score(y,fit))
+    fit_label = 'Simple fit ({}={:.3f})'.format(cfg.score_type, cfg.score(y,fit))
     fits = {fit_label : fit}
     if cv:
         preds = fit_sigmoid_loo(x,y,L)
-        loo_label = 'LOO predictions (R2={:.3f})'.format(cfg.score(y,preds))
+        loo_label = 'LOO predictions ({}={:.3f})'.format(cfg.score_type, cfg.score(y,preds))
         fits[loo_label] = preds
     more_title = r'$\lambda={:.3g}$'.format(L)
     plot_one_series(series, fits, more_title)
