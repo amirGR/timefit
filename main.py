@@ -39,4 +39,7 @@ def find_best_L(series, Ls=None):
 data = load_data()   
 series = data.get_one_series(0,0)
 
+#cfg.n_optimization_restarts = 100
+#find_best_L(series, Ls=np.logspace(-3,-1,20))
+
 #draw_with_fit(series)

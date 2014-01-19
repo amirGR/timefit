@@ -18,7 +18,7 @@ def sigmoid_grad(theta,x):
 def f_error(theta,x,y,L):
     a,h,mu,w = theta
     squares = (sigmoid(theta,x) - y)**2
-    prior_z = (theta - cfg.theta_prior) / cfg.theta_prior_sigma
+    prior_z = (theta - cfg.theta_prior_mean) / cfg.theta_prior_sigma
     regularizer = sum(prior_z ** 2);
     return 0.5*sum(squares) + 0.5*L*regularizer
 
@@ -26,7 +26,7 @@ def f_error_gradient(theta,x,y,L):
     a,h,mu,w = theta
     diffs = sigmoid(theta,x) - y
     d_a, d_h, d_mu, d_w = sigmoid_grad(theta,x)
-    d_prior = L * (theta - cfg.theta_prior) / cfg.theta_prior_sigma**2
+    d_prior = L * (theta - cfg.theta_prior_mean) / cfg.theta_prior_sigma**2
     d_a = sum(diffs * d_a)
     d_h = sum(diffs * d_h)
     d_mu = sum(diffs * d_mu)
