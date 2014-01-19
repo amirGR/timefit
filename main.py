@@ -7,7 +7,10 @@ from sigmoid_fit import *
 from plots import *
 import config as cfg
 
+import warnings
+warnings.filterwarnings(action='ignore', category=DeprecationWarning)
 np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/should we handle these warnings?
+
 
 def draw_with_fit(series, L=0, cv=True):
     x = series.ages
