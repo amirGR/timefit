@@ -1,5 +1,7 @@
 import numpy as np
 
+random_seed = 0 # None means initialize using time or /dev/urandom
+
 fontsize = 18
 
 b_verbose_optmization = False

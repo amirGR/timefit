@@ -59,6 +59,7 @@ def minimize_with_restarts(f_minimize, f_get_P0):
     return best_res.x
 
 def fit_sigmoid_simple(x,y):
+    rng = np.random.RandomState(cfg.random_seed)
     P0_base = np.array([
         y.min(), # a
         y.max()-y.min(), # h
@@ -67,7 +68,7 @@ def fit_sigmoid_simple(x,y):
         1, # p
     ])
     def get_P0():
-        return P0_base + np.random.normal(0,1,size=5)
+        return P0_base + rng.normal(0,1,size=5)
     def f_minimize(P0):
         return minimize(f_error, P0, args=(x,y), method='BFGS', jac=f_error_gradient)
     return minimize_with_restarts(f_minimize, get_P0)
@@ -86,10 +87,11 @@ def fit_sigmoid_loo(x,y):
 
 def check_grad(n=100):
     import scipy.optimize
+    rng = np.random.RandomState(0)
     def check_one():
         x = np.arange(-10,11)
-        y = sigmoid([-1,3,2,2],x) + np.random.normal(size=x.shape)
-        a,b,c,d = np.random.uniform(size=4)
+        y = sigmoid([-1,3,2,2],x) + rng.normal(size=x.shape)
+        a,b,c,d = rng.uniform(size=4)
         s = np.e
         P = [a, a+b, c, d, s]
 #        g1 = f_error_gradient(p,x,y)
