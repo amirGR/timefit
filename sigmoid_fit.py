@@ -40,12 +40,14 @@ def fit_sigmoid_simple(x,y,L):
         (x.min() + x.max()) / 2, # mu
         (x.max() - x.min()) / 2, # w
     ])
-    for i in xrange(cfg.n_optimization_attempts):
+    best_res = None
+    for i in xrange(cfg.n_optimization_restarts):
         init_noise = np.random.normal(0,1,size=4)
         res = minimize(f_error, theta0 + init_noise, args=(x,y,L), method='BFGS', jac=f_error_gradient)
-        if res.success:
-            return res.x
-    assert False, 'Optimization failed'
+        if res.success and (best_res is None or res.fun < best_res.fun):
+            best_res = res
+    assert best_res is not None, 'Optimization failed'
+    return best_res.x
 
 def fit_sigmoid_loo(x,y,L):
     from sklearn.cross_validation import LeaveOneOut
