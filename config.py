@@ -2,7 +2,14 @@ import numpy as np
 
 fontsize = 18
 
-n_optimization_restarts = 10
+b_verbose_optmization = False
+b_minimal_restarts = False
+if b_minimal_restarts:
+    n_optimization_restarts = 2
+    n_max_optimization_attempt_factor = 10
+else:
+    n_optimization_restarts = 10
+    n_max_optimization_attempt_factor = 5
 
 # theta = [a,h,mu,w]
 theta_prior_mean = np.array([5, 5, 30, 2.5])

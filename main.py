@@ -11,35 +11,22 @@ import warnings
 warnings.filterwarnings(action='ignore', category=DeprecationWarning)
 np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/should we handle these warnings?
 
-
-def draw_with_fit(series, L=0, cv=True):
+def draw_with_fit(series, cv=True):
     x = series.ages
     y = series.expression
-    theta = fit_sigmoid_simple(x,y,L)
-    fit = sigmoid(theta,series.ages)
+    P = fit_sigmoid_simple(x,y)
+    fit = sigmoid(P[:-1],series.ages)
     fit_label = 'Simple fit ({}={:.3f})'.format(cfg.score_type, cfg.score(y,fit))
     fits = {fit_label : fit}
     if cv:
-        preds = fit_sigmoid_loo(x,y,L)
+        preds = fit_sigmoid_loo(x,y)
         loo_label = 'LOO predictions ({}={:.3f})'.format(cfg.score_type, cfg.score(y,preds))
-        fits[loo_label] = preds
-    more_title = r'$\lambda={:.3g}$'.format(L)
-    plot_one_series(series, fits, more_title)
-
-def find_best_L(series, Ls=None):
-    if Ls is None:
-        Ls = np.logspace(-4,3,20)
-    def score(L):
-        print 'Computing score for L={}'.format(L)
-        preds = fit_sigmoid_loo(series.ages,series.expression,L)
-        return cfg.score(series.expression, preds)
-    scores = array([score(L) for L in Ls])
-    plot_L_scores(Ls,scores)
+        fits[loo_label] = preds        
+    plot_one_series(series, fits)
 
 data = load_data()   
 series = data.get_one_series(0,0)
+x = series.ages
+y = series.expression
 
-#cfg.n_optimization_restarts = 100
-#find_best_L(series, Ls=np.logspace(-3,-1,20))
-
-#draw_with_fit(series)
+draw_with_fit(series)
