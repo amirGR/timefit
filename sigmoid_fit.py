@@ -54,8 +54,10 @@ def minimize_with_restarts(f_minimize, f_get_P0):
                 print 'Found {} results after {} attempts'.format(n,i+1)
             break
     else:
-        assert False, 'Optimization failed. Got only {}/{} results in {} attempts'.format(n_results,n,n_max)
-    best_res = min(results, key=lambda res: res.fun)
+        msg = 'Optimization failed. Got only {}/{} results in {} attempts'.format(n_results,n,n_max)
+        assert cfg.b_allow_less_restarts, msg
+        print 'Warning: ', msg
+    best_res = min(results[:n_results], key=lambda res: res.fun)
     return best_res.x
 
 def fit_sigmoid_simple(x,y):

@@ -5,13 +5,14 @@ random_seed = 0 # None means initialize using time or /dev/urandom
 fontsize = 18
 
 b_verbose_optmization = False
+b_allow_less_restarts = True
 b_minimal_restarts = False
 if b_minimal_restarts:
     n_optimization_restarts = 2
     n_max_optimization_attempt_factor = 10
 else:
     n_optimization_restarts = 10
-    n_max_optimization_attempt_factor = 5
+    n_max_optimization_attempt_factor = 20
 
 # theta = [a,h,mu,w]
 theta_prior_mean = np.array([5, 5, 30, 2.5])

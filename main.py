@@ -5,6 +5,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sigmoid_fit import *
 from plots import *
+from all_fits import *
 import config as cfg
 
 import warnings
@@ -30,3 +31,4 @@ x = series.ages
 y = series.expression
 
 #draw_with_fit(series)
+#fits = get_all_fits(data)
