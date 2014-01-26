@@ -29,4 +29,4 @@ series = data.get_one_series(0,0)
 x = series.ages
 y = series.expression
 
-draw_with_fit(series)
+#draw_with_fit(series)

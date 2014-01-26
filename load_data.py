@@ -1,7 +1,8 @@
 from scipy.io import loadmat
 import numpy as np
 from collections import namedtuple
-    
+import project_dirs
+
 GeneDataBase = namedtuple('GeneData', [
     'expression', 'gene_names', 'region_names', 'genders', 'ages',
 ])
@@ -20,7 +21,7 @@ class GeneData(GeneDataBase):
 OneGeneRegion = namedtuple('OneGeneRegion', ['expression', 'ages', 'gene_name', 'region_name'])
 
 def load_data(serotonin_only=True):
-    datadir = r'C:\data\HTR\data'
+    datadir = project_dirs.data_dir()
     if serotonin_only:
         filename = 'kang2011_serotonin.mat'
     else:
@@ -38,4 +39,3 @@ def load_data(serotonin_only=True):
 
 def convert_matlab_string_cell(cell_array):
     return np.array([x[0] for x in cell_array.flat])
-
