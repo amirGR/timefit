@@ -77,25 +77,28 @@ def create_html(data, basedir, gene_dir, series_dir):
     
     html = Template("""
 <html>
+<head>
+    <link rel="stylesheet" type="text/css" href="fits.css">
+</head>
 <body>
-<H1>All Regions per Gene</H1>
-<P>
-    {% for gene_name in data.gene_names %}
-        <a href="{{gene_dir}}/{{gene_name}}.png">{{gene_name}}</a> &nbsp&nbsp
-        {% if loop.index % 5 == 0 %}
-            </br>
-        {% endif %}
-    {% endfor %}
-</P>
-
 <H1>Fits for every Gene and Region</H1>
 <P>
 <table>
+    <th>
+        {% for region_name in data.region_names %}
+        <td class="tableHeading">
+            <b>{{region_name}}</b>
+        </td>
+        {% endfor %}
+    </th>
     {% for gene_name in data.gene_names %}
     <tr>
+        <td>
+            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
+        </td>
         {% for region_name in data.region_names %}
         <td>
-            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">{{gene_name}}@{{region_name}}</a>
+            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">X</a>
         </td>
         {% endfor %}
     </tr>
