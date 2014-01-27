@@ -30,9 +30,9 @@ def get_all_fits(data):
         return fits    
         
     # compute the fits that are missing
-    for g,gene_name in enumerate(data.gene_names):
+    for g in data.gene_names:
         has_change = False
-        for r,_ in enumerate(data.region_names):
+        for r in data.region_names:
             if (g,r) not in fits:
                 has_change = True
                 series = data.get_one_series(g,r)
@@ -40,7 +40,7 @@ def get_all_fits(data):
     
         # save checkpoint after each gene
         if has_change:
-            print 'Saving fits for gene {}'.format(gene_name)
+            print 'Saving fits for gene {}'.format(g)
             with open(filename,'w') as f:
                 pickle.dump(fits,f)
     
