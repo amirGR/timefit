@@ -1,13 +1,19 @@
 import matplotlib.pyplot as plt
 import config as cfg
+from all_fits import get_all_fits
 
-def plot_gene(data, iGene):
+def plot_gene(data, iGene, with_fits=True):
+    fits = get_all_fits(data)
     fig = plt.figure()
     for iRegion in range(len(data.region_names)):
         series = data.get_one_series(iGene,iRegion)
         ax = fig.add_subplot(4,4,iRegion+1)
         ax.plot(series.ages,series.expression,'ro')
-        ax.plot(series.ages,series.expression,'b-')
+        if with_fits:
+            fit = fits[(series.gene_name,series.region_name)]
+            ax.plot(series.ages, fit.fit_predictions, 'b-')
+        else:
+            ax.plot(series.ages,series.expression,'b-')
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
             ax.set_ylabel('Expression Level')

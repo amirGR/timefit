@@ -22,3 +22,4 @@ y = series.expression
 fits = get_all_fits(data)
 
 #draw_with_fit(series)
+#plot_gene(data,0)
