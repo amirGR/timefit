@@ -8,12 +8,15 @@ GeneDataBase = namedtuple('GeneData', [
 ])
 
 class GeneData(GeneDataBase):
-    def get_one_series(self, iGene, iRegion):
+    def get_one_series(self, iGene, iRegion, remove_prenatal=True):
         expression = self.expression[:,iGene,iRegion]
-        not_nan = ~np.isnan(expression)
+        ages = self.ages
+        valid = ~np.isnan(expression)
+        if remove_prenatal:
+            valid = valid & (ages>0)
         return OneGeneRegion(
-            expression = expression[not_nan],
-            ages = self.ages[not_nan],
+            expression = expression[valid],
+            ages = ages[valid],
             gene_name = self.gene_names[iGene],
             region_name = self.region_names[iRegion],
         )
