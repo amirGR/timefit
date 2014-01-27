@@ -57,7 +57,7 @@ def plot_and_save_all_genes(data, dirname):
     for iGene,gene_name in enumerate(data.gene_names):
         print 'Saving figure for gene {}'.format(gene_name)
         fig = plot_gene(data,iGene,fits)
-        filename = join(dirname, 'fits_{}.png'.format(gene_name))
+        filename = join(dirname, '{}.png'.format(gene_name))
         save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, dirname):
@@ -70,3 +70,49 @@ def plot_and_save_all_series(data, dirname):
             fig = plot_one_series(series,fits)
             filename = join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
             save_figure(fig, filename, b_close=True)
+
+def create_html(data, basedir, gene_dir, series_dir):
+    from os.path import join
+    from jinja2 import Template
+    
+    html = Template("""
+<html>
+<body>
+<H1>All Regions per Gene</H1>
+<P>
+    {% for gene_name in data.gene_names %}
+        <a href="{{gene_dir}}/{{gene_name}}.png">{{gene_name}}</a> &nbsp&nbsp
+        {% if loop.index % 5 == 0 %}
+            </br>
+        {% endif %}
+    {% endfor %}
+</P>
+
+<H1>Fits for every Gene and Region</H1>
+<P>
+<table>
+    {% for gene_name in data.gene_names %}
+    <tr>
+        {% for region_name in data.region_names %}
+        <td>
+            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">{{gene_name}}@{{region_name}}</a>
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+</P>
+
+</body>
+</html>    
+""").render(**locals())
+    with open(join(basedir,'fits.html'), 'w') as f:
+        f.write(html)
+
+def save_fits_and_create_html(data, dirname):
+    from os.path import join
+    gene_dir = 'gene-subplot'
+    series_dir = 'gene-region-fits'
+    plot_and_save_all_genes(data, join(dirname,gene_dir))
+    plot_and_save_all_series(data, join(dirname,series_dir))
+    create_html(data, dirname, gene_dir, series_dir)

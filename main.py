@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from sigmoid_fit import *
 from plots import *
 from all_fits import *
-from misc import *
 import config as cfg
 
 # setup

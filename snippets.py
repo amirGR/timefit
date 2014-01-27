@@ -6,6 +6,9 @@ Created on Mon Jan 27 11:08:14 2014
 """
 
 ## 
+dirname = r'C:\Users\ronnie\Google Drive\brain\my stuff\Gal\HTR\results\Jan 27 all fits'
+save_fits_and_create_html(data, dirname)
+
 dirname = r'C:\Users\ronnie\Google Drive\brain\my stuff\Gal\HTR\results\Jan 27 all fits\gene subplots'
 plot_and_save_all_genes(data,dirname)
 
