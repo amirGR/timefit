@@ -1,6 +1,12 @@
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
+import os.path
+from os import makedirs
+    
+def ensure_dir(d):
+    if not os.path.exists(d):
+        makedirs(d)
 
 def save_figure(fig, filename, b_close=False):
     fig.set_size_inches(cfg.default_figure_size_x, cfg.default_figure_size_y)
@@ -52,23 +58,23 @@ def plot_one_series(series, fits=None):
     return fig
     
 def plot_and_save_all_genes(data, dirname):
-    from os.path import join
+    ensure_dir(dirname)
     fits = get_all_fits(data)
     for iGene,gene_name in enumerate(data.gene_names):
         print 'Saving figure for gene {}'.format(gene_name)
         fig = plot_gene(data,iGene,fits)
-        filename = join(dirname, '{}.png'.format(gene_name))
+        filename = os.path.join(dirname, '{}.png'.format(gene_name))
         save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, dirname):
-    from os.path import join
+    ensure_dir(dirname)
     fits = get_all_fits(data)
     for iGene,gene_name in enumerate(data.gene_names):
         for iRegion, region_name in enumerate(data.region_names):
             print 'Saving figure for {}@{}'.format(gene_name,region_name)
             series = data.get_one_series(iGene,iRegion)
             fig = plot_one_series(series,fits)
-            filename = join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
+            filename = os.path.join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
             save_figure(fig, filename, b_close=True)
 
 def create_html(data, basedir, gene_dir, series_dir):
@@ -113,9 +119,8 @@ def create_html(data, basedir, gene_dir, series_dir):
         f.write(html)
 
 def save_fits_and_create_html(data, dirname):
-    from os.path import join
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
-    plot_and_save_all_genes(data, join(dirname,gene_dir))
-    plot_and_save_all_series(data, join(dirname,series_dir))
+    plot_and_save_all_genes(data, os.path.join(dirname,gene_dir))
+    plot_and_save_all_series(data, os.path.join(dirname,series_dir))
     create_html(data, dirname, gene_dir, series_dir)

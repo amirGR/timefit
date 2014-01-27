@@ -30,12 +30,12 @@ def get_all_fits(data):
         return fits    
         
     # compute the fits that are missing
-    for g in data.gene_names:
+    for ig,g in enumerate(data.gene_names):
         has_change = False
-        for r in data.region_names:
+        for ir,r in enumerate(data.region_names):
             if (g,r) not in fits:
                 has_change = True
-                series = data.get_one_series(g,r)
+                series = data.get_one_series(ig,ir)
                 fits[(g,r)] = compute_fit(series)
     
         # save checkpoint after each gene
