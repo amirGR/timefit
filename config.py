@@ -26,3 +26,10 @@ theta_prior_sigma = np.array([5, 5, 30, 2.5])
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'
+
+sorted_regions = [
+    'DFC','OFC','VFC','MFC',
+    'M1C','S1C','IPC',
+    'ITC','STC','A1C','V1C',
+    'AMY', 'CBC','HIP', 'MD','STR',
+];

@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
@@ -43,10 +44,12 @@ def plot_one_series(series, fits=None):
         fit = fits[(g,r)]
         preds = fit.fit_predictions
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-        ax.plot(series.ages, preds, linewidth=2, label=label)
+        ax.plot(series.ages, preds, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
-        label = 'LOO ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-        ax.plot(series.ages, preds, linewidth=2, label=label)
+        for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
+            label = 'LOO ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds)) if i==0 else None
+            ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
+            ax.plot(x, y_loo, 'gx')
     a,h,mu,w,p = fit.P
     sigma = 1/p
     P_ttl = r'(a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}, $\sigma$={sigma:.2f})'.format(**locals())
@@ -77,10 +80,23 @@ def plot_and_save_all_series(data, dirname):
             filename = os.path.join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
             save_figure(fig, filename, b_close=True)
 
+def plot_score_distribution(fits):
+    LOO_R2 = np.array([fit.LOO_score for fit in fits.itervalues()])
+    low,high = -1, 1
+    n_low = np.count_nonzero(LOO_R2 < low)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.hist(LOO_R2, 50, range=(low,high))
+    ax.set_title('LOO R2 score distribution\n(another {} scores below {})'.format(n_low,low), fontsize=cfg.fontsize)
+    ax.set_xlabel('R2', fontsize=cfg.fontsize)
+    ax.set_ylabel('Count', fontsize=cfg.fontsize)    
+    return fig
+
 def create_html(data, basedir, gene_dir, series_dir):
     from os.path import join
     from jinja2 import Template
-    
+
+    fits = get_all_fits(data)    
     html = Template("""
 <html>
 <head>
@@ -89,9 +105,10 @@ def create_html(data, basedir, gene_dir, series_dir):
 <body>
 <H1>Fits for every Gene and Region</H1>
 <P>
+<a href="R2-hist.png">Distribution of LOO R2 scores</a>
 <table>
     <th>
-        {% for region_name in data.region_names %}
+        {% for region_name in sorted_regions %}
         <td class="tableHeading">
             <b>{{region_name}}</b>
         </td>
@@ -104,7 +121,9 @@ def create_html(data, basedir, gene_dir, series_dir):
         </td>
         {% for region_name in data.region_names %}
         <td>
-            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">X</a>
+            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+               {{fits[(gene_name,region_name)].LOO_score | round(2)}}
+            </a>
         </td>
         {% endfor %}
     </tr>
@@ -114,7 +133,7 @@ def create_html(data, basedir, gene_dir, series_dir):
 
 </body>
 </html>    
-""").render(**locals())
+""").render(sorted_regions=cfg.sorted_regions,**locals())
     with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
 
@@ -123,4 +142,6 @@ def save_fits_and_create_html(data, dirname):
     series_dir = 'gene-region-fits'
     plot_and_save_all_genes(data, os.path.join(dirname,gene_dir))
     plot_and_save_all_series(data, os.path.join(dirname,series_dir))
+    fig = plot_score_distribution(fits)
+    save_figure(fig, os.path.join(dirname,'R2-hist.png'), b_close=True)
     create_html(data, dirname, gene_dir, series_dir)

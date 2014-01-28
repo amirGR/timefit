@@ -27,7 +27,7 @@ def get_all_fits(data):
         
     # check if it already contains all the fits (heuristic by number of fits)
     if len(fits) == len(data.gene_names)*len(data.region_names):
-        return fits    
+        return compute_scores(data, fits)  
         
     # compute the fits that are missing
     for ig,g in enumerate(data.gene_names):
@@ -44,7 +44,16 @@ def get_all_fits(data):
             with open(filename,'w') as f:
                 pickle.dump(fits,f)
     
-    return fits    
+    return compute_scores(data, fits)  
+
+def compute_scores(data,fits):
+    for ig,g in enumerate(data.gene_names):
+        for ir,r in enumerate(data.region_names):
+            series = data.get_one_series(ig,ir)
+            fit = fits[(g,r)]
+            fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
+            fit.LOO_score = cfg.score(series.expression, fit.LOO_predictions)
+    return fits
             
 def compute_fit(series):
     print 'Computing fit for {}@{}'.format(series.gene_name, series.region_name)
