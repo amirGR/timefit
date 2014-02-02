@@ -15,7 +15,7 @@ np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/shoul
 
 # load some data
 data = load_data()   
-series = data.get_one_series(0,0)
+series = data.get_one_series('SLC6A4','MD')
 x = series.ages
 y = series.expression
 fits = get_all_fits(data)

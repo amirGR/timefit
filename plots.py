@@ -36,13 +36,14 @@ def plot_gene(data, iGene, fits=None):
     fig.suptitle('Gene {}'.format(series.gene_name))
     return fig
     
-def plot_one_series(series, fits=None):
+def plot_one_series(series, fits=None, fit=None):
     g,r = series.gene_name, series.region_name
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(series.ages,series.expression,'ro')
-    if fits is not None:
+    if fit is None and fits is not None:
         fit = fits[(g,r)]
+    if fit is not None:        
         preds = fit.fit_predictions
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
         ax.plot(series.ages, preds, 'b-', linewidth=2, label=label)
