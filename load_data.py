@@ -9,6 +9,10 @@ GeneDataBase = namedtuple('GeneData', [
 
 class GeneData(GeneDataBase):
     def get_one_series(self, iGene, iRegion, remove_prenatal=True):
+        if isinstance(iGene, basestring):
+            iGene = np.where(self.gene_names == iGene)[0][0]
+        if isinstance(iRegion, basestring):
+            iRegion = np.where(self.region_names == iRegion)[0][0]
         expression = self.expression[:,iGene,iRegion]
         ages = self.ages
         valid = ~np.isnan(expression)
