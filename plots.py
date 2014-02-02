@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
+from sigmoid_fit import sigmoid
 import os.path
 from os import makedirs
 from project_dirs import resources_dir
@@ -43,10 +44,13 @@ def plot_one_series(series, fits=None, fit=None):
     ax.plot(series.ages,series.expression,'ro')
     if fit is None and fits is not None:
         fit = fits[(g,r)]
-    if fit is not None:        
+    if fit is not None:
         preds = fit.fit_predictions
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-        ax.plot(series.ages, preds, 'b-', linewidth=2, label=label)
+        x_smooth = np.linspace(series.ages.min(),series.ages.max(),100)
+        theta = fit.P[:-1]
+        y_smooth = sigmoid(theta, x_smooth)
+        ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
         for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
             label = 'LOO ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds)) if i==0 else None
