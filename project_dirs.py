@@ -12,6 +12,9 @@ def base_dir():
 
 def code_dir():
     return join(base_dir(), 'code')
+
+def resources_dir():
+    return join(base_dir(), 'code', 'resources')
     
 def data_dir():
     return join(base_dir(), 'data')

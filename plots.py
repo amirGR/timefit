@@ -4,6 +4,7 @@ import config as cfg
 from all_fits import get_all_fits
 import os.path
 from os import makedirs
+from project_dirs import resources_dir
     
 def ensure_dir(d):
     if not os.path.exists(d):
@@ -95,6 +96,7 @@ def plot_score_distribution(fits):
 def create_html(data, basedir, gene_dir, series_dir):
     from os.path import join
     from jinja2 import Template
+    import shutil
 
     fits = get_all_fits(data)    
     html = Template("""
@@ -136,6 +138,8 @@ def create_html(data, basedir, gene_dir, series_dir):
 """).render(sorted_regions=cfg.sorted_regions,**locals())
     with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
+    
+    shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
 
 def save_fits_and_create_html(data, basedir):
     gene_dir = 'gene-subplot'

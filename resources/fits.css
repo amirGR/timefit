@@ -1,0 +1,24 @@
+table  
+{ 
+	border-collapse:collapse; 
+	width:90%;
+}
+
+th, td
+{
+	text-align:center;
+	padding:2px;
+}
+
+table,th,td  
+{ 
+	border:1px solid black; 
+}
+
+.tableHeading
+{
+	background-color:green;
+	color:white;
+}
+
+a {text-decoration:none;}
