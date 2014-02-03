@@ -87,6 +87,11 @@ def fit_sigmoid_loo(x,y):
         test_preds[i] = sigmoid(theta,x[test])
     return test_preds
 
+def high_res_preds(x,theta):
+    x_smooth = np.linspace(x.min(),x.max(),cfg.n_sigmoid_points_to_plot)
+    y_smooth = sigmoid(theta, x_smooth)
+    return x_smooth,y_smooth
+
 def check_grad(n=100):
     import scipy.optimize
     rng = np.random.RandomState(0)

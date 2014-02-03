@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from sigmoid_fit import sigmoid
+from sigmoid_fit import high_res_preds
 import os.path
 from os import makedirs
 from project_dirs import resources_dir
@@ -25,9 +25,8 @@ def plot_gene(data, iGene, fits=None):
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
             fit = fits[(series.gene_name,series.region_name)]
-            ax.plot(series.ages, fit.fit_predictions, 'b-')
-        else:
-            ax.plot(series.ages,series.expression,'b-')
+            x_smooth,y_smooth = high_res_preds(series.ages, fit.P[:-1])
+            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
             ax.set_ylabel('Expression Level')
@@ -46,10 +45,8 @@ def plot_one_series(series, fits=None, fit=None):
         fit = fits[(g,r)]
     if fit is not None:
         preds = fit.fit_predictions
+        x_smooth,y_smooth = high_res_preds(series.ages, fit.P[:-1])        
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-        x_smooth = np.linspace(series.ages.min(),series.ages.max(),100)
-        theta = fit.P[:-1]
-        y_smooth = sigmoid(theta, x_smooth)
         ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
         for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
