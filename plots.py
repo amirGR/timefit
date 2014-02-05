@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
 from sigmoid_fit import high_res_preds, loo_score
+import utils
 import os.path
 from os import makedirs
 from project_dirs import resources_dir
@@ -66,22 +67,24 @@ def plot_one_series(series, fits=None, fit=None):
 def plot_and_save_all_genes(data, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data)
-    for iGene,gene_name in enumerate(data.gene_names):
-        print 'Saving figure for gene {}'.format(gene_name)
-        fig = plot_gene(data,iGene,fits)
-        filename = os.path.join(dirname, '{}.png'.format(gene_name))
-        save_figure(fig, filename, b_close=True)
+    with utils.interactive(False):
+        for iGene,gene_name in enumerate(data.gene_names):
+            print 'Saving figure for gene {}'.format(gene_name)
+            fig = plot_gene(data,iGene,fits)
+            filename = os.path.join(dirname, '{}.png'.format(gene_name))
+            save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data)
-    for iGene,gene_name in enumerate(data.gene_names):
-        for iRegion, region_name in enumerate(data.region_names):
-            print 'Saving figure for {}@{}'.format(gene_name,region_name)
-            series = data.get_one_series(iGene,iRegion)
-            fig = plot_one_series(series,fits)
-            filename = os.path.join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
-            save_figure(fig, filename, b_close=True)
+    with utils.interactive(False):
+        for iGene,gene_name in enumerate(data.gene_names):
+            for iRegion, region_name in enumerate(data.region_names):
+                print 'Saving figure for {}@{}'.format(gene_name,region_name)
+                series = data.get_one_series(iGene,iRegion)
+                fig = plot_one_series(series,fits)
+                filename = os.path.join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
+                save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
     LOO_R2 = np.array([fit.LOO_score for fit in fits.itervalues()])
@@ -146,11 +149,12 @@ def create_html(data, basedir, gene_dir, series_dir):
     
     shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, basedir):
+def save_fits_and_create_html(data, fits, basedir):
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
     plot_and_save_all_genes(data, os.path.join(basedir,gene_dir))
     plot_and_save_all_series(data, os.path.join(basedir,series_dir))
-    fig = plot_score_distribution(fits)
-    save_figure(fig, os.path.join(basedir,'R2-hist.png'), b_close=True)
+    with utils.interactive(False):
+        fig = plot_score_distribution(fits)
+        save_figure(fig, os.path.join(basedir,'R2-hist.png'), b_close=True)
     create_html(data, basedir, gene_dir, series_dir)
