@@ -21,4 +21,10 @@ table,th,td
 	color:white;
 }
 
+.highScore
+{
+	color:green;
+	font-weight:bold;
+}
+
 a {text-decoration:none;}

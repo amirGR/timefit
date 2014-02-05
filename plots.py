@@ -132,7 +132,9 @@ def create_html(data, basedir, gene_dir, series_dir):
         {% for region_name in sorted_regions %}
         <td>
             <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                <div {{'class="highScore"' if  fits[(gene_name,region_name)].LOO_score > highScore}}>
                {{fits[(gene_name,region_name)].LOO_score | round(2)}}
+               </div>
             </a>
         </td>
         {% endfor %}
@@ -143,7 +145,7 @@ def create_html(data, basedir, gene_dir, series_dir):
 
 </body>
 </html>    
-""").render(sorted_regions=cfg.sorted_regions,**locals())
+""").render(sorted_regions=cfg.sorted_regions, highScore=cfg.html_table_threshold_score, **locals())
     with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
     
