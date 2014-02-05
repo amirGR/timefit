@@ -18,9 +18,13 @@ class GeneData(GeneDataBase):
         valid = ~np.isnan(expression)
         if remove_prenatal:
             valid = valid & (ages>0)
+        ages, expression = ages[valid], expression[valid]
+        # sort by ascending ages (some code later can rely on ages being sorted)
+        inds = ages.argsort()
+        ages, expression = ages[inds], expression[inds]
         return OneGeneRegion(
-            expression = expression[valid],
-            ages = ages[valid],
+            expression = expression,
+            ages = ages,
             gene_name = self.gene_names[iGene],
             region_name = self.region_names[iRegion],
         )

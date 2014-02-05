@@ -87,6 +87,17 @@ def fit_sigmoid_loo(x,y):
         test_preds[i] = sigmoid(theta,x[test])
     return test_preds
 
+def loo_score(y,y_loo):
+    """Compute score of LOO predictions. 
+       For this purpose we ignore the fits taken with the first and last points left out,
+       because these fits are then evaluated outside the range they were trained which can
+       cause bad overfitting for functions like a sigmoid when the data is basically flat.
+       This type of overfitting doesn't affect the fit on the whole data if we only consider the
+       fit within the range it was trained on (which we do), so excluding the first and last points 
+       should give a better estimate of the generalization error.
+    """
+    return cfg.score(y[1:-1], y_loo[1:-1])
+
 def high_res_preds(x,theta):
     x_smooth = np.linspace(x.min(),x.max(),cfg.n_sigmoid_points_to_plot)
     y_smooth = sigmoid(theta, x_smooth)

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from sigmoid_fit import high_res_preds
+from sigmoid_fit import high_res_preds, loo_score
 import os.path
 from os import makedirs
 from project_dirs import resources_dir
@@ -50,7 +50,7 @@ def plot_one_series(series, fits=None, fit=None):
         ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
         for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
-            label = 'LOO ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds)) if i==0 else None
+            label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
             ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
             ax.plot(x, y_loo, 'gx')
     a,h,mu,w,p = fit.P
@@ -90,7 +90,10 @@ def plot_score_distribution(fits):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.hist(LOO_R2, 50, range=(low,high))
-    ax.set_title('LOO R2 score distribution\n(another {} scores below {})'.format(n_low,low), fontsize=cfg.fontsize)
+    ttl = 'LOO R2 score distribution'
+    if n_low > 0:
+        ttl = ttl + '\n(another {} scores below {})'.format(n_low,low)
+    ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_xlabel('R2', fontsize=cfg.fontsize)
     ax.set_ylabel('Count', fontsize=cfg.fontsize)    
     return fig

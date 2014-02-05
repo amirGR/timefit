@@ -7,7 +7,7 @@ Created on Sun Jan 26 09:26:02 2014
 
 import pickle
 from sklearn.datasets.base import Bunch
-from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo
+from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo, loo_score
 import config as cfg
 import project_dirs
 
@@ -52,7 +52,7 @@ def compute_scores(data,fits):
             series = data.get_one_series(ig,ir)
             fit = fits[(g,r)]
             fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
-            fit.LOO_score = cfg.score(series.expression, fit.LOO_predictions)
+            fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
     return fits
             
 def compute_fit(series):
