@@ -1,3 +1,4 @@
+import setup
 from load_data import load_data
 import numpy as np
 import scipy as sp
@@ -7,11 +8,6 @@ from sigmoid_fit import *
 from plots import *
 from all_fits import *
 import config as cfg
-
-# setup
-import warnings
-warnings.filterwarnings(action='ignore', category=DeprecationWarning)
-np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/should we handle these warnings?
 
 # load some data
 data = load_data()   
