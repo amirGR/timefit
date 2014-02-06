@@ -5,13 +5,9 @@ from all_fits import get_all_fits
 from sigmoid_fit import high_res_preds, loo_score
 import utils
 import os.path
-from os import makedirs
 from project_dirs import resources_dir
+from utils import ensure_dir
     
-def ensure_dir(d):
-    if not os.path.exists(d):
-        makedirs(d)
-
 def save_figure(fig, filename, b_close=False):
     fig.set_size_inches(cfg.default_figure_size_x, cfg.default_figure_size_y)
     fig.savefig(filename, facecolor=cfg.default_figure_facecolor, dpi=cfg.default_figure_dpi)
