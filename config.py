@@ -36,3 +36,21 @@ sorted_regions = [
 ];
 
 html_table_threshold_score = 0.3
+
+pathways = {
+    'test' : ['HTR2A', 'HTR2B'],
+    'serotonin': [
+        'HTR2A', 'HTR2B', 'HTR2C', 
+        'HTR1A', 'HTR1B', 'HTR1D', 'HTR1E', 'HTR1F', 
+        'HTR3A', 'HTR3B', 'HTR3C', 'HTR3D', 'HTR3E', 
+        'HTR4', 'HTR5A', 'HTR6', 'HTR7', 
+        'TPH2', 'TPH1', 'DDC', 
+        'SLC18A1', 'SLC18A2', 'SLC6A4', 
+        'MAOA', 'MAOB',
+    ],
+    'cannabinoids': [
+        'CNR1','CNR2','CALB1','CALB2','DAGLA','DAGLB',
+        'NAPEPLD','GDE1','ABHD4','PTPN22', 'MGLL','ABHD6','FAAH',
+    ],
+    
+}

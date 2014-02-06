@@ -11,12 +11,12 @@ from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo, loo_score
 import config as cfg
 import project_dirs
 
-def _cache_file():
+def _cache_file(pathway):
     from os.path import join    
-    return join(project_dirs.cache_dir(), 'fits.pkl')
+    return join(project_dirs.cache_dir(), 'fits-{}.pkl'.format(pathway))
 
 def get_all_fits(data):
-    filename = _cache_file()
+    filename = _cache_file(data.pathway)
     
     # load the cache we have so far
     try:

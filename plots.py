@@ -111,7 +111,7 @@ def create_html(data, basedir, gene_dir, series_dir):
 <body>
 <H1>Fits for every Gene and Region</H1>
 <P>
-<a href="R2-hist.png">Distribution of LOO R2 scores</a>
+<a href="{{data.pathway}}-R2-hist.png">Distribution of LOO R2 scores</a>
 <table>
     <th>
         {% for region_name in sorted_regions %}
@@ -142,17 +142,18 @@ def create_html(data, basedir, gene_dir, series_dir):
 </body>
 </html>    
 """).render(sorted_regions=cfg.sorted_regions, highScore=cfg.html_table_threshold_score, **locals())
-    with open(join(basedir,'fits.html'), 'w') as f:
+    with open(join(basedir,'{}-fits.html'.format(data.pathway)), 'w') as f:
         f.write(html)
     
     shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
 
 def save_fits_and_create_html(data, fits, basedir):
+    ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
     plot_and_save_all_genes(data, os.path.join(basedir,gene_dir))
     plot_and_save_all_series(data, os.path.join(basedir,series_dir))
     with utils.interactive(False):
         fig = plot_score_distribution(fits)
-        save_figure(fig, os.path.join(basedir,'R2-hist.png'), b_close=True)
+        save_figure(fig, os.path.join(basedir,'{}-R2-hist.png'.format(data.pathway)), b_close=True)
     create_html(data, basedir, gene_dir, series_dir)
