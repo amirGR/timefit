@@ -13,8 +13,10 @@ import matplotlib.pyplot as plt
 def interactive(b):
     b_prev = plt.isinteractive()
     plt.interactive(b)
-    yield
-    plt.interactive(b_prev)
+    try:
+        yield
+    finally:
+        plt.interactive(b_prev)
 
 def ensure_dir(d):
     if not os.path.exists(d):
