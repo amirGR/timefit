@@ -28,7 +28,9 @@ def get_all_fits(data):
     # check if it already contains all the fits (heuristic by number of fits)
     if len(fits) == len(data.gene_names)*len(data.region_names):
         return compute_scores(data, fits)  
-        
+    
+    assert len(data.gene_names) < 100, "So many genes... Not doing this!"
+    
     # compute the fits that are missing
     for ig,g in enumerate(data.gene_names):
         has_change = False
