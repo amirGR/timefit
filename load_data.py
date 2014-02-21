@@ -42,13 +42,18 @@ def load_data(pathway='serotonin',dataset='kang2011'):
     all_expression_levels = mat['expression']
     if all_expression_levels.ndim == 2: # extend shape to represent a single region name
         all_expression_levels.shape = list(all_expression_levels.shape)+[1] 
-    assert pathway in cfg.pathways, 'Unknown pathway: {}'.format(pathway)
-    pathway_genes = cfg.pathways[pathway]
-    inds = [np.where(all_gene_names == gene)[0][0] for gene in pathway_genes]
-    pathway_expression = all_expression_levels[:,inds,:]
+    if pathway == 'all':
+        pathway_expression = all_expression_levels
+        gene_names = all_gene_names    
+    else:
+        assert pathway in cfg.pathways, 'Unknown pathway: {}'.format(pathway)
+        pathway_genes = cfg.pathways[pathway]
+        inds = [np.where(all_gene_names == gene)[0][0] for gene in pathway_genes]
+        pathway_expression = all_expression_levels[:,inds,:]
+        gene_names = np.array(pathway_genes)    
     data = GeneData(
         expression = pathway_expression,
-        gene_names = np.array(pathway_genes),
+        gene_names = gene_names,
         region_names = convert_matlab_string_cell(mat['region_names']),
         genders = convert_matlab_string_cell(mat['genders']),
         ages = np.array(mat['ages'].flat),
