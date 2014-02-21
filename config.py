@@ -23,6 +23,7 @@ else:
 # theta = [a,h,mu,w]
 theta_prior_mean = np.array([5, 5, 30, 2.5])
 theta_prior_sigma = np.array([5, 5, 30, 2.5])
+n_folds_for_hadas_fit = 10
 
 # these two settings must change together
 from sklearn.metrics import r2_score as score

@@ -49,14 +49,15 @@ def fit_sigmoid_simple(x,y,L):
     return minimize_with_restarts(f_minimize, get_theta0)
 
 def fit_sigmoid_loo_with_L(x,y,L):
-    from sklearn.cross_validation import LeaveOneOut
+    from sklearn.cross_validation import KFold
+    rng = np.random.RandomState(cfg.random_seed)
     n = len(y)
+    k = cfg.n_folds_for_hadas_fit
     test_preds = np.empty(n)
-    for i,(train,test) in enumerate(LeaveOneOut(n)):
+    for train,test in KFold(n,k,shuffle=True,random_state=rng):
         theta = fit_sigmoid_simple(x[train],y[train],L)
         assert not np.isnan(theta).any()
-        assert y[test] == y[i]  # this should hold for LOO
-        test_preds[i] = sigmoid(theta,x[test])
+        test_preds[test] = sigmoid(theta,x[test])
     return test_preds
 
 def find_best_L(x,y,Ls=None):
@@ -70,16 +71,17 @@ def find_best_L(x,y,Ls=None):
     return Ls[np.argmax(scores)]
 
 def fit_sigmoid_loo(x,y,Ls=None):
-    from sklearn.cross_validation import LeaveOneOut
+    from sklearn.cross_validation import KFold
+    rng = np.random.RandomState(cfg.random_seed)
     n = len(y)
+    k = cfg.n_folds_for_hadas_fit
     test_preds = np.empty(n)
-    for i,(train,test) in enumerate(LeaveOneOut(n)):
-        print 'Computing prediction for point #{}'.format(i)        
+    for train,test in KFold(n,k,shuffle=True,random_state=rng):
+        print 'Computing prediction for points {}'.format(list(test))        
         L = find_best_L(x[train],y[train],Ls)
         theta = fit_sigmoid_simple(x[train],y[train],L)
         assert not np.isnan(theta).any()
-        assert y[test] == y[i]  # this should hold for LOO
-        test_preds[i] = sigmoid(theta,x[test])
+        test_preds[test] = sigmoid(theta,x[test])
     return test_preds
 
 def check_grad(n=10):
