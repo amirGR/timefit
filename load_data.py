@@ -1,3 +1,4 @@
+import os.path
 from scipy.io import loadmat
 import numpy as np
 from collections import namedtuple
@@ -5,7 +6,7 @@ import project_dirs
 import config as cfg
 
 GeneDataBase = namedtuple('GeneData', [
-    'expression', 'gene_names', 'region_names', 'genders', 'ages', 'pathway'
+    'expression', 'gene_names', 'region_names', 'genders', 'ages', 'pathway','dataset',
 ])
 
 class GeneData(GeneDataBase):
@@ -32,13 +33,15 @@ class GeneData(GeneDataBase):
 
 OneGeneRegion = namedtuple('OneGeneRegion', ['expression', 'ages', 'gene_name', 'region_name'])
 
-def load_data(pathway='serotonin'):
+def load_data(pathway='serotonin',dataset='kang2011'):
     datadir = project_dirs.data_dir()
-    filename = 'kang2011_allGenes.mat'
-    path = r'{}\{}'.format(datadir,filename)
+    filename = '{}_allGenes.mat'.format(dataset)
+    path = os.path.join(datadir,filename)
     mat = loadmat(path)
     all_gene_names = convert_matlab_string_cell(mat['gene_names'])
-    all_expression_levels = expression = mat['expression']
+    all_expression_levels = mat['expression']
+    if all_expression_levels.ndim == 2: # extend shape to represent a single region name
+        all_expression_levels.shape = list(all_expression_levels.shape)+[1] 
     assert pathway in cfg.pathways, 'Unknown pathway: {}'.format(pathway)
     pathway_genes = cfg.pathways[pathway]
     inds = [np.where(all_gene_names == gene)[0][0] for gene in pathway_genes]
@@ -48,10 +51,13 @@ def load_data(pathway='serotonin'):
         gene_names = np.array(pathway_genes),
         region_names = convert_matlab_string_cell(mat['region_names']),
         genders = convert_matlab_string_cell(mat['genders']),
-        ages = mat['ages'][0,:],
+        ages = np.array(mat['ages'].flat),
         pathway = pathway,
+        dataset = dataset,
     )
     return data
 
 def convert_matlab_string_cell(cell_array):
-    return np.array([x[0] for x in cell_array.flat])
+    def convert_one(x):
+        return x[0] if x else None # some data files contain empty names (with some of these have different type)
+    return np.array([convert_one(x) for x in cell_array.flat])
