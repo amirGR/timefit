@@ -54,6 +54,8 @@ def get_all_fits(data, b_hadas_fits=False):
     return compute_scores(data, fits)  
 
 def _compute_fit_job(data, g, r, b_hadas_fits):
+    import utils
+    utils.disable_all_warnings()
     series = data.get_one_series(g,r)
     f = compute_fit(series, b_hadas_fits)
     return g,r,f    

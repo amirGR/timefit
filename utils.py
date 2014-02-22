@@ -4,10 +4,16 @@ Created on Wed Feb 05 10:38:26 2014
 
 @author: ronnie
 """
+import warnings
 from contextlib import contextmanager
 from os import makedirs
 import os.path
+import numpy as np
 import matplotlib.pyplot as plt
+
+def disable_all_warnings():
+    warnings.filterwarnings(action='ignore', category=DeprecationWarning)
+    np.seterr(all='ignore') # Ignore numeric overflow/underflow etc. YYY - can/should we handle these warnings?
 
 @contextmanager
 def interactive(b):
