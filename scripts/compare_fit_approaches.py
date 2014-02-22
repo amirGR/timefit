@@ -26,7 +26,9 @@ import sys
 if __name__ == '__main__':
     try:
         progname, gene, region = sys.argv
-        compare(gene,region)
     except:
         progname = sys.argv[0]
         print 'Usage: {} <gene> <region>'.format(progname)
+    else:
+        compare(gene,region)
+

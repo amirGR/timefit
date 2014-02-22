@@ -64,7 +64,6 @@ def find_best_L(x,y,Ls=None):
     if Ls is None:
         Ls = np.logspace(-2,2,10)
     def score(L):
-        print 'Computing score for L={}'.format(L)
         preds = fit_sigmoid_loo_with_L(x,y,L)
         return cfg.score(y, preds)
     scores = np.array([score(L) for L in Ls])
@@ -76,8 +75,8 @@ def fit_sigmoid_loo(x,y,Ls=None):
     n = len(y)
     k = cfg.n_folds_for_hadas_fit
     test_preds = np.empty(n)
-    for train,test in KFold(n,k,shuffle=True,random_state=rng):
-        print 'Computing prediction for points {}'.format(list(test))        
+    for i,(train,test) in enumerate(KFold(n,k,shuffle=True,random_state=rng)):
+        print 'Computing prediction for points {} (batch {}/{})'.format(list(test),i+1,k)        
         L = find_best_L(x[train],y[train],Ls)
         theta = fit_sigmoid_simple(x[train],y[train],L)
         assert not np.isnan(theta).any()
