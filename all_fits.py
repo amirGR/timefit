@@ -6,17 +6,21 @@ Created on Sun Jan 26 09:26:02 2014
 """
 
 import pickle
+import numpy as np
 from sklearn.datasets.base import Bunch
-from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo, loo_score
+from sigmoid_fit import loo_score
 import config as cfg
 import project_dirs
 
-def _cache_file(pathway, dataset):
-    from os.path import join    
-    return join(project_dirs.cache_dir(), dataset, 'fits-{}.pkl'.format(pathway))
+def _cache_file(pathway, dataset, b_hadas_fits):
+    from os.path import join
+    if b_hadas_fits:
+        return join(project_dirs.cache_dir(), dataset, 'fits-{}-hadas.pkl'.format(pathway))
+    else:
+        return join(project_dirs.cache_dir(), dataset, 'fits-{}.pkl'.format(pathway))
 
-def get_all_fits(data):
-    filename = _cache_file(data.pathway,data.dataset)
+def get_all_fits(data, b_hadas_fits=False):
+    filename = _cache_file(data.pathway, data.dataset, b_hadas_fits)
     
     # load the cache we have so far
     try:
@@ -32,13 +36,13 @@ def get_all_fits(data):
     assert len(data.gene_names) < 100, "So many genes... Not doing this!"
     
     # compute the fits that are missing
-    for ig,g in enumerate(data.gene_names):
+    for g in data.gene_names:
         has_change = False
-        for ir,r in enumerate(data.region_names):
+        for r in data.region_names:
             if (g,r) not in fits:
                 has_change = True
-                series = data.get_one_series(ig,ir)
-                fits[(g,r)] = compute_fit(series)
+                series = data.get_one_series(g,r)
+                fits[(g,r)] = compute_fit(series, b_hadas_fits)
     
         # save checkpoint after each gene
         if has_change:
@@ -56,14 +60,26 @@ def compute_scores(data,fits):
             fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
             fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
     return fits
-            
-def compute_fit(series):
+   
+def compute_fit(series, b_hadas_fits):
     print 'Computing fit for {}@{}'.format(series.gene_name, series.region_name)
     x = series.ages
     y = series.expression
-    P = fit_sigmoid_simple(x,y)
-    fit_predictions = sigmoid(P[:-1],x)
-    LOO_predictions = fit_sigmoid_loo(x,y)
+
+    if b_hadas_fits:
+        from sigmoid_fit_hadas import sigmoid, fit_sigmoid_simple, find_best_L, fit_sigmoid_loo      
+        L = find_best_L(x,y)
+        theta = fit_sigmoid_simple(x,y,L)
+        p = 1 # YYY - compute this from residuals
+        P = np.array(list(theta) + [p])
+        fit_predictions = sigmoid(theta,x)
+        LOO_predictions = fit_sigmoid_loo(x,y)
+    else:
+        from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo         
+        P = fit_sigmoid_simple(x,y)
+        fit_predictions = sigmoid(P[:-1],x)
+        LOO_predictions = fit_sigmoid_loo(x,y)
+    
     return Bunch(
         seed = cfg.random_seed,
         P = P,
