@@ -2,12 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from sigmoid_fit import high_res_preds, loo_score
+from sigmoid_fit import high_res_preds
+from fit_score import loo_score
 import utils
 import os.path
 from project_dirs import resources_dir
 from utils import ensure_dir
-    
+
 def save_figure(fig, filename, b_close=False):
     fig.set_size_inches(cfg.default_figure_size_x, cfg.default_figure_size_y)
     fig.savefig(filename, facecolor=cfg.default_figure_facecolor, dpi=cfg.default_figure_dpi)

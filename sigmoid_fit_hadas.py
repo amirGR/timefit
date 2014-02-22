@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import minimize
 import config as cfg
 from minimization import minimize_with_restarts
+from fit_score import loo_score
 
 def sigmoid(theta,x):
     a,h,mu,w = theta
@@ -56,8 +57,11 @@ def fit_sigmoid_loo_with_L(x,y,L):
     test_preds = np.empty(n)
     for train,test in KFold(n,k,shuffle=True,random_state=rng):
         theta = fit_sigmoid_simple(x[train],y[train],L)
-        assert not np.isnan(theta).any()
-        test_preds[test] = sigmoid(theta,x[test])
+        if theta is None:
+            test_preds[test] = np.nan
+        else:
+            assert not np.isnan(theta).any()
+            test_preds[test] = sigmoid(theta,x[test])
     return test_preds
 
 def find_best_L(x,y,Ls=None):
@@ -65,7 +69,7 @@ def find_best_L(x,y,Ls=None):
         Ls = np.logspace(-2,2,10)
     def score(L):
         preds = fit_sigmoid_loo_with_L(x,y,L)
-        return cfg.score(y, preds)
+        return loo_score(y, preds)
     scores = np.array([score(L) for L in Ls])
     return Ls[np.argmax(scores)]
 
@@ -79,8 +83,11 @@ def fit_sigmoid_loo(x,y,Ls=None):
         print 'Computing prediction for points {} (batch {}/{})'.format(list(test),i+1,k)        
         L = find_best_L(x[train],y[train],Ls)
         theta = fit_sigmoid_simple(x[train],y[train],L)
-        assert not np.isnan(theta).any()
-        test_preds[test] = sigmoid(theta,x[test])
+        if theta is None:
+            test_preds[test] = np.nan
+        else:
+            assert not np.isnan(theta).any()
+            test_preds[test] = sigmoid(theta,x[test])
     return test_preds
 
 def check_grad(n=10):

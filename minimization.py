@@ -22,5 +22,7 @@ def minimize_with_restarts(f_minimize, f_get_P0):
         msg = 'Optimization failed. Got only {}/{} results in {} attempts'.format(n_results,n,n_max)
         assert cfg.b_allow_less_restarts, msg
         print 'Warning: ', msg
+    if not n_results:
+        return None
     best_res = min(results[:n_results], key=lambda res: res.fun)
     return best_res.x

@@ -9,7 +9,7 @@ import pickle
 import numpy as np
 from sklearn.datasets.base import Bunch
 from sklearn.externals.joblib import Parallel, delayed
-from sigmoid_fit import loo_score
+from fit_score import loo_score
 import config as cfg
 import project_dirs
 
@@ -76,6 +76,7 @@ def compute_fit(series, b_hadas_fits):
         from sigmoid_fit_hadas import sigmoid, fit_sigmoid_simple, find_best_L, fit_sigmoid_loo      
         L = find_best_L(x,y)
         theta = fit_sigmoid_simple(x,y,L)
+        assert theta is not None, "Optimization failed during overall fit"
         p = 1 # YYY - compute this from residuals
         P = np.array(list(theta) + [p])
         fit_predictions = sigmoid(theta,x)
@@ -83,6 +84,7 @@ def compute_fit(series, b_hadas_fits):
     else:
         from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo         
         P = fit_sigmoid_simple(x,y)
+        assert P is not None, "Optimization failed during overall fit"
         fit_predictions = sigmoid(P[:-1],x)
         LOO_predictions = fit_sigmoid_loo(x,y)
     

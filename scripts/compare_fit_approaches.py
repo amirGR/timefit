@@ -2,7 +2,7 @@ import setup
 from load_data import load_data
 import sigmoid_fit as new_fits
 import sigmoid_fit_hadas as old_fits
-from sigmoid_fit import loo_score
+from fit_score import loo_score
 
 def compare(gene,region):
     data = load_data()   
