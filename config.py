@@ -19,6 +19,8 @@ if b_minimal_restarts:
 else:
     n_optimization_restarts = 10
     n_max_optimization_attempt_factor = 20
+all_fits_n_jobs = -2 #1
+all_fits_verbose = 70 #0
 
 # theta = [a,h,mu,w]
 theta_prior_mean = np.array([5, 5, 30, 2.5])

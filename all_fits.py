@@ -8,6 +8,7 @@ Created on Sun Jan 26 09:26:02 2014
 import pickle
 import numpy as np
 from sklearn.datasets.base import Bunch
+from sklearn.externals.joblib import Parallel, delayed
 from sigmoid_fit import loo_score
 import config as cfg
 import project_dirs
@@ -37,21 +38,26 @@ def get_all_fits(data, b_hadas_fits=False):
     
     # compute the fits that are missing
     for g in data.gene_names:
-        has_change = False
-        for r in data.region_names:
-            if (g,r) not in fits:
-                has_change = True
-                series = data.get_one_series(g,r)
-                fits[(g,r)] = compute_fit(series, b_hadas_fits)
-    
-        # save checkpoint after each gene
-        if has_change:
-            print 'Saving fits for gene {}'.format(g)
-            with open(filename,'w') as f:
-                pickle.dump(fits,f)
+        pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
+        df = delayed(_compute_fit_job)
+        changes = pool(df(data,g,r,b_hadas_fits) for r in data.region_names if (g,r) not in fits)
+        if not changes:
+            continue
+        
+        # apply changes and save checkpoint after each gene
+        for g2,r2,f in changes:
+            fits[(g2,r2)] = f
+        print 'Saving fits for gene {}'.format(g)
+        with open(filename,'w') as f:
+            pickle.dump(fits,f)
     
     return compute_scores(data, fits)  
 
+def _compute_fit_job(data, g, r, b_hadas_fits):
+    series = data.get_one_series(g,r)
+    f = compute_fit(series, b_hadas_fits)
+    return g,r,f    
+    
 def compute_scores(data,fits):
     for ig,g in enumerate(data.gene_names):
         for ir,r in enumerate(data.region_names):
