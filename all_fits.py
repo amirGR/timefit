@@ -13,15 +13,12 @@ from fit_score import loo_score
 import config as cfg
 import project_dirs
 
-def _cache_file(pathway, dataset, b_hadas_fits):
+def _cache_file(pathway, dataset):
     from os.path import join
-    if b_hadas_fits:
-        return join(project_dirs.cache_dir(), dataset, 'fits-{}-hadas.pkl'.format(pathway))
-    else:
-        return join(project_dirs.cache_dir(), dataset, 'fits-{}.pkl'.format(pathway))
+    return join(project_dirs.cache_dir(), dataset, 'fits-{}.pkl'.format(pathway))
 
-def get_all_fits(data, b_hadas_fits=False):
-    filename = _cache_file(data.pathway, data.dataset, b_hadas_fits)
+def get_all_fits(data):
+    filename = _cache_file(data.pathway, data.dataset)
     
     # load the cache we have so far
     try:
@@ -40,7 +37,7 @@ def get_all_fits(data, b_hadas_fits=False):
     for g in data.gene_names:
         pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
         df = delayed(_compute_fit_job)
-        changes = pool(df(data,g,r,b_hadas_fits) for r in data.region_names if (g,r) not in fits)
+        changes = pool(df(data,g,r) for r in data.region_names if (g,r) not in fits)
         if not changes:
             continue
         
@@ -53,11 +50,11 @@ def get_all_fits(data, b_hadas_fits=False):
     
     return compute_scores(data, fits)  
 
-def _compute_fit_job(data, g, r, b_hadas_fits):
+def _compute_fit_job(data, g, r):
     import utils
     utils.disable_all_warnings()
     series = data.get_one_series(g,r)
-    f = compute_fit(series, b_hadas_fits)
+    f = compute_fit(series)
     return g,r,f    
     
 def compute_scores(data,fits):
@@ -69,26 +66,16 @@ def compute_scores(data,fits):
             fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
     return fits
    
-def compute_fit(series, b_hadas_fits):
+def compute_fit(series):
     print 'Computing fit for {}@{}'.format(series.gene_name, series.region_name)
     x = series.ages
     y = series.expression
 
-    if b_hadas_fits:
-        from sigmoid_fit_hadas import sigmoid, fit_sigmoid_simple, find_best_L, fit_sigmoid_loo      
-        L = find_best_L(x,y)
-        theta = fit_sigmoid_simple(x,y,L)
-        assert theta is not None, "Optimization failed during overall fit"
-        p = 1 # YYY - compute this from residuals
-        P = np.array(list(theta) + [p])
-        fit_predictions = sigmoid(theta,x)
-        LOO_predictions = fit_sigmoid_loo(x,y)
-    else:
-        from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo         
-        P = fit_sigmoid_simple(x,y)
-        assert P is not None, "Optimization failed during overall fit"
-        fit_predictions = sigmoid(P[:-1],x)
-        LOO_predictions = fit_sigmoid_loo(x,y)
+    from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo         
+    P = fit_sigmoid_simple(x,y)
+    assert P is not None, "Optimization failed during overall fit"
+    fit_predictions = sigmoid(P[:-1],x)
+    LOO_predictions = fit_sigmoid_loo(x,y)
     
     return Bunch(
         seed = cfg.random_seed,
