@@ -23,8 +23,8 @@ all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 
 # theta = [a,h,mu,w]
-theta_prior_mean = np.array([5, 5, 30, 2.5])
-theta_prior_sigma = np.array([5, 5, 30, 2.5])
+sigmoid_theta_prior_mean = np.array([5, 5, 30, 2.5])
+sigmoid_theta_prior_sigma = np.array([5, 5, 30, 2.5])
 n_folds_for_hadas_fit = 10
 
 # these two settings must change together
