@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from sigmoid_fit import high_res_preds
+from fitting.sigmoid import Sigmoid
 from fit_score import loo_score
 import utils
 import os.path
@@ -23,7 +23,7 @@ def plot_gene(data, iGene, fits=None):
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
             fit = fits[(series.gene_name,series.region_name)]
-            x_smooth,y_smooth = high_res_preds(series.ages, fit.P[:-1])
+            x_smooth,y_smooth = Sigmoid().high_res_preds(series.ages, fit.theta)
             ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
@@ -43,7 +43,7 @@ def plot_one_series(series, fits=None, fit=None):
         fit = fits[(g,r)]
     if fit is not None:
         preds = fit.fit_predictions
-        x_smooth,y_smooth = high_res_preds(series.ages, fit.P[:-1])        
+        x_smooth,y_smooth = Sigmoid().high_res_preds(series.ages, fit.theta)        
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
         ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
@@ -51,8 +51,8 @@ def plot_one_series(series, fits=None, fit=None):
             label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
             ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
             ax.plot(x, y_loo, 'gx')
-    a,h,mu,w,p = fit.P
-    sigma = 1/p
+    a,h,mu,w = fit.theta
+    sigma = fit.sigma
     P_ttl = r'(a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}, $\sigma$={sigma:.2f})'.format(**locals())
     ttl = 'Gene: {}, Region: {}\n{}'.format(series.gene_name, series.region_name, P_ttl)
     ax.set_title(ttl, fontsize=cfg.fontsize)

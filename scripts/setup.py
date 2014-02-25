@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 06 11:04:35 2014
-
-@author: ronnie
-"""
 from os.path import dirname, join, abspath
 import sys
 

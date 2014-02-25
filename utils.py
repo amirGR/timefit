@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb 05 10:38:26 2014
-
-@author: ronnie
-"""
 import warnings
 from contextlib import contextmanager
 from os import makedirs

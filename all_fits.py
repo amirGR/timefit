@@ -1,24 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 26 09:26:02 2014
-
-@author: ronnie
-"""
-
 import pickle
-import numpy as np
 from sklearn.datasets.base import Bunch
 from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
 import project_dirs
 
-def _cache_file(pathway, dataset):
+def _cache_file(pathway, dataset, fitter_name):
     from os.path import join
-    return join(project_dirs.cache_dir(), dataset, 'fits-{}.pkl'.format(pathway))
+    return join(project_dirs.cache_dir(), dataset, 'fits-{}-{}.pkl'.format(pathway, fitter_name))
 
-def get_all_fits(data):
-    filename = _cache_file(data.pathway, data.dataset)
+def get_all_fits(data,fitter=None):
+    if fitter is None:
+        from fitting.sigmoid import Sigmoid
+        fitter = Sigmoid()
+    filename = _cache_file(data.pathway, data.dataset, fitter.cache_name())
     
     # load the cache we have so far
     try:
@@ -71,15 +66,33 @@ def compute_fit(series):
     x = series.ages
     y = series.expression
 
-    from sigmoid_fit import sigmoid, fit_sigmoid_simple, fit_sigmoid_loo         
-    P = fit_sigmoid_simple(x,y)
-    assert P is not None, "Optimization failed during overall fit"
-    fit_predictions = sigmoid(P[:-1],x)
-    LOO_predictions = fit_sigmoid_loo(x,y)
+    from fitting.sigmoid import Sigmoid
+    fitter = Sigmoid()
+    theta,sigma = fitter.fit_simple(x,y)
+    assert theta is not None, "Optimization failed during overall fit"
+    fit_predictions = fitter.f(theta,x)
+    LOO_predictions = fitter.fit_loo(x,y)
     
     return Bunch(
         seed = cfg.random_seed,
-        P = P,
+        theta = theta,
+        sigma = sigma,
         fit_predictions = fit_predictions,
         LOO_predictions = LOO_predictions,
     )
+
+def convert_format(filename, f_convert):
+    """Utility function for converting the format of cached fits.
+       See e.g. scripts/convert_fit_format.py
+    """
+    with open(filename) as f:
+        fits = pickle.load(f)        
+    print 'Found cache file with {} fits'.format(len(fits))
+    
+    print 'Converting...'
+    new_fits = {k:f_convert(v) for k,v in fits.iteritems()}
+    
+    print 'Saving converted fits to {}'.format(filename)
+    with open(filename,'w') as f:
+        pickle.dump(new_fits,f)
+
