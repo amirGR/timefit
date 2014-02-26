@@ -11,8 +11,9 @@ def _cache_file(pathway, dataset, fitter_name):
 
 def get_all_fits(data,fitter=None):
     if fitter is None:
-        from fitting.sigmoid import Sigmoid
-        fitter = Sigmoid()
+        from shapes.sigmoid import Sigmoid
+        from fitter import Fitter
+        fitter = Fitter(Sigmoid())
     filename = _cache_file(data.pathway, data.dataset, fitter.cache_name())
     
     # load the cache we have so far
@@ -66,11 +67,12 @@ def compute_fit(series):
     x = series.ages
     y = series.expression
 
-    from fitting.sigmoid import Sigmoid
-    fitter = Sigmoid()
+    from fitter import Fitter
+    from shapes.sigmoid import Sigmoid
+    fitter = Fitter(Sigmoid())
     theta,sigma = fitter.fit_simple(x,y)
     assert theta is not None, "Optimization failed during overall fit"
-    fit_predictions = fitter.f(theta,x)
+    fit_predictions = fitter.predict(theta,x)
     LOO_predictions = fitter.fit_loo(x,y)
     
     return Bunch(

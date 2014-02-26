@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from fitting.sigmoid import Sigmoid
+from shapes.sigmoid import Sigmoid
 from fit_score import loo_score
 import utils
 import os.path
@@ -14,7 +14,7 @@ def save_figure(fig, filename, b_close=False):
     fig.savefig(filename, facecolor=cfg.default_figure_facecolor, dpi=cfg.default_figure_dpi)
     if b_close:
         plt.close(fig)
- 
+
 def plot_gene(data, iGene, fits=None):
     fig = plt.figure()
     for iRegion in range(len(data.region_names)):

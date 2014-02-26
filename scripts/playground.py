@@ -10,7 +10,7 @@ import config as cfg
 
 # load some data
 data = load_data()   
-series = data.get_one_series('SLC6A4','MD')
+series = data.get_one_series('HTR2B','VFC')
 x = series.ages
 y = series.expression
 #fits = get_all_fits(data)
