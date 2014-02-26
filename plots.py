@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
-from shapes.sigmoid import Sigmoid
 from fit_score import loo_score
 import utils
 import os.path
@@ -23,7 +22,7 @@ def plot_gene(data, iGene, fits=None):
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
             fit = fits[(series.gene_name,series.region_name)]
-            x_smooth,y_smooth = Sigmoid().high_res_preds(series.ages, fit.theta)
+            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(series.ages, fit.theta)
             ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
@@ -43,7 +42,7 @@ def plot_one_series(series, fits=None, fit=None):
         fit = fits[(g,r)]
     if fit is not None:
         preds = fit.fit_predictions
-        x_smooth,y_smooth = Sigmoid().high_res_preds(series.ages, fit.theta)        
+        x_smooth,y_smooth = fit.fitter.shape.high_res_preds(series.ages, fit.theta)        
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
         ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
@@ -61,9 +60,9 @@ def plot_one_series(series, fits=None, fit=None):
     ax.legend()
     return fig
     
-def plot_and_save_all_genes(data, dirname):
+def plot_and_save_all_genes(data, fitter, dirname):
     ensure_dir(dirname)
-    fits = get_all_fits(data)
+    fits = get_all_fits(data, fitter)
     with utils.interactive(False):
         for iGene,gene_name in enumerate(data.gene_names):
             print 'Saving figure for gene {}'.format(gene_name)
@@ -71,9 +70,9 @@ def plot_and_save_all_genes(data, dirname):
             filename = os.path.join(dirname, '{}.png'.format(gene_name))
             save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, dirname):
+def plot_and_save_all_series(data, fitter, dirname):
     ensure_dir(dirname)
-    fits = get_all_fits(data)
+    fits = get_all_fits(data,fitter)
     with utils.interactive(False):
         for iGene,gene_name in enumerate(data.gene_names):
             for iRegion, region_name in enumerate(data.region_names):
@@ -98,12 +97,12 @@ def plot_score_distribution(fits):
     ax.set_ylabel('Count', fontsize=cfg.fontsize)    
     return fig
 
-def create_html(data, basedir, gene_dir, series_dir):
+def create_html(data, fitter, basedir, gene_dir, series_dir):
     from os.path import join
     from jinja2 import Template
     import shutil
 
-    fits = get_all_fits(data)    
+    fits = get_all_fits(data,fitter)    
     html = Template("""
 <html>
 <head>
@@ -148,13 +147,13 @@ def create_html(data, basedir, gene_dir, series_dir):
     
     shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, fits, basedir):
+def save_fits_and_create_html(data, fitter, fits, basedir):
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
-    plot_and_save_all_genes(data, os.path.join(basedir,gene_dir))
-    plot_and_save_all_series(data, os.path.join(basedir,series_dir))
+    plot_and_save_all_genes(data, fitter, os.path.join(basedir,gene_dir))
+    plot_and_save_all_series(data, fitter, os.path.join(basedir,series_dir))
     with utils.interactive(False):
         fig = plot_score_distribution(fits)
         save_figure(fig, os.path.join(basedir,'{}-R2-hist.png'.format(data.pathway)), b_close=True)
-    create_html(data, basedir, gene_dir, series_dir)
+    create_html(data, fitter, basedir, gene_dir, series_dir)

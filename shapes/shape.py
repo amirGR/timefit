@@ -5,7 +5,6 @@ class Shape(object):
     """Base class for different shape objects, e.g. sigmoid.    
        Derived classes should implement:
            str = cache_name()
-           str = name() (optional: for providing a nicer human readable name)
            y = f(theta,x)
            
            d_theta = f_grad(theta,x)
@@ -13,7 +12,7 @@ class Shape(object):
            log_P_theta = log_prob_theta(theta)
            d_theta0 = d_theta_prior(theta)
     """
-    def name(self):
+    def __str__(self):
         return self.cache_name()
 
     def high_res_preds(self, x, theta):

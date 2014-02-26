@@ -7,12 +7,15 @@ import matplotlib.pyplot as plt
 from plots import *
 from all_fits import *
 import config as cfg
+from fitter import Fitter
+from shapes.sigmoid import Sigmoid
 
 # load some data
 data = load_data()   
 series = data.get_one_series('HTR2B','VFC')
 x = series.ages
 y = series.expression
-#fits = get_all_fits(data)
+fitter = Fitter(Sigmoid())
+#fits = get_all_fits(data,fitter)
 
 #plot_gene(data,0)

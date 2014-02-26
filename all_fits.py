@@ -9,7 +9,7 @@ def _cache_file(pathway, dataset, fitter_name):
     from os.path import join
     return join(project_dirs.cache_dir(), dataset, 'fits-{}-{}.pkl'.format(pathway, fitter_name))
 
-def get_all_fits(data,fitter=None):
+def get_all_fits(data,fitter):
     if fitter is None:
         from shapes.sigmoid import Sigmoid
         from fitter import Fitter
@@ -33,7 +33,7 @@ def get_all_fits(data,fitter=None):
     for g in data.gene_names:
         pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
         df = delayed(_compute_fit_job)
-        changes = pool(df(data,g,r) for r in data.region_names if (g,r) not in fits)
+        changes = pool(df(data,g,r,fitter) for r in data.region_names if (g,r) not in fits)
         if not changes:
             continue
         
@@ -46,24 +46,22 @@ def get_all_fits(data,fitter=None):
     
     return compute_scores(data, fits)  
 
-def _compute_fit_job(data, g, r):
+def _compute_fit_job(data, g, r, fitter):
     import utils
     utils.disable_all_warnings()
     series = data.get_one_series(g,r)
-    f = compute_fit(series)
+    f = compute_fit(series,fitter)
     return g,r,f    
     
 def compute_scores(data,fits):
-    for ig,g in enumerate(data.gene_names):
-        for ir,r in enumerate(data.region_names):
-            series = data.get_one_series(ig,ir)
-            fit = fits[(g,r)]
-            fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
-            fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
+    for (g,r),fit in fits.iteritems():
+        series = data.get_one_series(g,r)
+        fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
+        fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
     return fits
    
-def compute_fit(series):
-    print 'Computing fit for {}@{}'.format(series.gene_name, series.region_name)
+def compute_fit(series, fitter):
+    print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.expression
 
@@ -76,6 +74,7 @@ def compute_fit(series):
     LOO_predictions = fitter.fit_loo(x,y)
     
     return Bunch(
+        fitter = fitter,
         seed = cfg.random_seed,
         theta = theta,
         sigma = sigma,

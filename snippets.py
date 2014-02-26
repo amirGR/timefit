@@ -7,12 +7,12 @@ Created on Mon Jan 27 11:08:14 2014
 
 ## 
 dirname = r'C:\Users\ronnie\Google Drive\brain\my stuff\Gal\HTR\results\Jan 27 all fits'
-save_fits_and_create_html(data, dirname)
+save_fits_and_create_html(data, fitter, dirname)
 
 dirname = r'C:\Users\ronnie\Google Drive\brain\my stuff\Gal\HTR\results\Jan 27 all fits\gene subplots'
-plot_and_save_all_genes(data,dirname)
+plot_and_save_all_genes(data,fitte,dirname)
 
 dirname = r'C:\Users\ronnie\Google Drive\brain\my stuff\Gal\HTR\results\Jan 27 all fits\gene_region_fits'
-plot_and_save_all_series(data,dirname)
+plot_and_save_all_series(data, fitter, dirname)
 
 ##
