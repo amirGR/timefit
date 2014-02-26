@@ -64,10 +64,6 @@ def compute_fit(series, fitter):
     print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.expression
-
-    from fitter import Fitter
-    from shapes.sigmoid import Sigmoid
-    fitter = Fitter(Sigmoid())
     theta,sigma = fitter.fit_simple(x,y)
     assert theta is not None, "Optimization failed during overall fit"
     fit_predictions = fitter.predict(theta,x)

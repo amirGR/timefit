@@ -38,7 +38,7 @@ sorted_regions = [
     'M1C','S1C','IPC',
     'ITC','STC','A1C','V1C',
     'AMY', 'CBC','HIP', 'MD','STR',
-];
+]
 
 html_table_threshold_score = 0.3
 

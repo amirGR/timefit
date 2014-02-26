@@ -15,7 +15,7 @@ class Shape(object):
     def __str__(self):
         return self.cache_name()
 
-    def high_res_preds(self, x, theta):
+    def high_res_preds(self, theta, x):
         x_smooth = np.linspace(x.min(),x.max(),cfg.n_curve_points_to_plot)
         y_smooth = self.f(theta, x_smooth)
         return x_smooth,y_smooth

@@ -22,7 +22,7 @@ def plot_gene(data, iGene, fits=None):
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
             fit = fits[(series.gene_name,series.region_name)]
-            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(series.ages, fit.theta)
+            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
             ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
@@ -38,11 +38,12 @@ def plot_one_series(series, fits=None, fit=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(series.ages,series.expression,'ro')
+    ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
     if fit is None and fits is not None:
         fit = fits[(g,r)]
     if fit is not None:
         preds = fit.fit_predictions
-        x_smooth,y_smooth = fit.fitter.shape.high_res_preds(series.ages, fit.theta)        
+        x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)        
         label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
         ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
@@ -50,14 +51,14 @@ def plot_one_series(series, fits=None, fit=None):
             label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
             ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
             ax.plot(x, y_loo, 'gx')
-    a,h,mu,w = fit.theta
-    sigma = fit.sigma
-    P_ttl = r'(a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}, $\sigma$={sigma:.2f})'.format(**locals())
-    ttl = 'Gene: {}, Region: {}\n{}'.format(series.gene_name, series.region_name, P_ttl)
+        a,h,mu,w = fit.theta
+        sigma = fit.sigma
+        P_ttl = r'(a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}, $\sigma$={sigma:.2f})'.format(**locals())
+        ttl = '{}\n{}'.format(ttl,P_ttl)
+        ax.legend()
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_ylabel('Expression Level', fontsize=cfg.fontsize)
     ax.set_xlabel('Age [years]', fontsize=cfg.fontsize)
-    ax.legend()
     return fig
     
 def plot_and_save_all_genes(data, fitter, dirname):

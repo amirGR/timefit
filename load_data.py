@@ -30,6 +30,18 @@ class GeneData(GeneDataBase):
             gene_name = self.gene_names[iGene],
             region_name = self.region_names[iRegion],
         )
+        
+    def restrict_regions(self, lst_regions):
+        inds = [np.where(self.region_names == region)[0][0] for region in lst_regions]
+        return GeneData(
+            expression = self.expression[:,:,inds],
+            gene_names = self.gene_names,
+            region_names = self.region_names[inds],
+            genders = self.genders,
+            ages = self.ages,
+            pathway = self.pathway,
+            dataset = self.dataset,
+        )
 
 OneGeneRegion = namedtuple('OneGeneRegion', ['expression', 'ages', 'gene_name', 'region_name'])
 
