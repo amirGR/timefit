@@ -9,7 +9,7 @@ def minimize_with_restarts(f_minimize, f_get_P0):
     n_results = 0
     for i in xrange(n_max):
         P0 = f_get_P0()
-        res = f_minimize(P0)
+        res = f_minimize(P0,i)
         if not res.success or np.isnan(res.fun):
             continue
         results[n_results] = res
