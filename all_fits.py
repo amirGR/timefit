@@ -56,7 +56,10 @@ def _compute_fit_job(data, g, r, fitter):
 def compute_scores(data,fits):
     for (g,r),fit in fits.iteritems():
         series = data.get_one_series(g,r)
-        fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
+        if fit.fit_predictions is None:
+            fit.fit_score = None
+        else:
+            fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
         fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
     return fits
    
@@ -65,8 +68,11 @@ def compute_fit(series, fitter):
     x = series.ages
     y = series.expression
     theta,sigma = fitter.fit_simple(x,y)
-    assert theta is not None, "Optimization failed during overall fit"
-    fit_predictions = fitter.predict(theta,x)
+    if theta is None:
+        print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
+        fit_predictions = None
+    else:
+        fit_predictions = fitter.predict(theta,x)
     LOO_predictions = fitter.fit_loo(x,y)
     
     return Bunch(
