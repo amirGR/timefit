@@ -3,7 +3,7 @@ import numpy as np
 random_seed = 0 # None means initialize using time or /dev/urandom
 
 fontsize = 18
-n_curve_points_to_plot = 100
+n_curve_points_to_plot = 200
 
 default_figure_size_x = 18.5
 default_figure_size_y = 10.5

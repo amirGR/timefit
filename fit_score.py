@@ -14,4 +14,8 @@ def loo_score(y_real,y_pred):
     y_real = y_real[1:-1]
     y_pred = y_pred[1:-1]
     valid = ~np.isnan(y_real) & ~np.isnan(y_pred)
-    return cfg.score(y_real[valid], y_pred[valid])
+    y_real = y_real[valid]
+    y_pred = y_pred[valid]
+    if len(y_real) < 3:
+        return None
+    return cfg.score(y_real, y_pred)
