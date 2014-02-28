@@ -51,9 +51,7 @@ def plot_one_series(series, fits=None, fit=None):
             label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
             ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
             ax.plot(x, y_loo, 'gx')
-        a,h,mu,w = fit.theta
-        sigma = fit.sigma
-        P_ttl = r'(a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}, $\sigma$={sigma:.2f})'.format(**locals())
+        P_ttl = fit.fitter.format_params(fit.theta, fit.sigma, latex=True)
         ttl = '{}\n{}'.format(ttl,P_ttl)
         ax.legend()
     ax.set_title(ttl, fontsize=cfg.fontsize)

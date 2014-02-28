@@ -5,6 +5,7 @@ class Shape(object):
     """Base class for different shape objects, e.g. sigmoid.    
        Derived classes should implement:
            str = cache_name()
+           str = format_params(theta, latex=False)
            y = f(theta,x)
            
            d_theta = f_grad(theta,x)

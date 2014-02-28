@@ -5,6 +5,13 @@ from shape import Shape
 class Sigmoid(Shape):
     def cache_name(self):
         return 'sigmoid'
+        
+    def format_params(self, theta, latex=False):
+        a,h,mu,w = theta
+        if latex:
+            return r'a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}'.format(**locals())
+        else:
+            return r'a={a:.2f}, h={h:.2f}, mu={mu:.2f}, w={w:.2f}'.format(**locals())
 
     def f(self,theta,x):
         a,h,mu,w = theta

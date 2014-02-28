@@ -10,10 +10,6 @@ def _cache_file(pathway, dataset, fitter_name):
     return join(project_dirs.cache_dir(), dataset, 'fits-{}-{}.pkl'.format(pathway, fitter_name))
 
 def get_all_fits(data,fitter):
-    if fitter is None:
-        from shapes.sigmoid import Sigmoid
-        from fitter import Fitter
-        fitter = Fitter(Sigmoid())
     filename = _cache_file(data.pathway, data.dataset, fitter.cache_name())
     
     # load the cache we have so far

@@ -19,6 +19,13 @@ class Fitter(object):
         sigma = int(self.use_sigma_prior)
         return '{}-t{}-s{}'.format(shape,theta,sigma)
         
+    def format_params(self, theta, sigma, latex=False):
+        shape_params = self.shape.format_params(theta,latex)
+        if latex:
+            return r'{}, $\sigma$={:.2f}'.format(shape_params, sigma)
+        else:
+            return r'{}, sigma={:.2f}'.format(shape_params, sigma)
+
     def fit_simple(self,x,y):
         rng = np.random.RandomState(cfg.random_seed)
         P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
