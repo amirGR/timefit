@@ -56,11 +56,17 @@ def _compute_fit_job(data, g, r, fitter):
 def compute_scores(data,fits):
     for (g,r),fit in fits.iteritems():
         series = data.get_one_series(g,r)
-        if fit.fit_predictions is None:
+        try:
+            if fit.fit_predictions is None:
+                fit.fit_score = None
+            else:
+                fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
+        except:
             fit.fit_score = None
-        else:
-            fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
-        fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
+        try:
+            fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
+        except:
+            fit.LOO_score = None
     return fits
    
 def compute_fit(series, fitter):
