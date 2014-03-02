@@ -32,11 +32,7 @@ class Fitter(object):
         def get_P0():
             return P0_base + rng.normal(0,1,size=P0_base.shape)
         def f_minimize(P0,i):
-            if i % 2:
-                method = 'BFGS'
-            else:
-                method = 'CG'
-            return minimize(self._Err, P0, args=(x,y), method=method, jac=self._Err_grad)
+            return minimize(self._Err, P0, args=(x,y), method='BFGS', jac=self._Err_grad, tol=cfg.minimization_tol)
         P = minimize_with_restarts(f_minimize, get_P0)
         if P is None:
             return None,None
