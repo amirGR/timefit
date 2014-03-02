@@ -21,10 +21,12 @@ table,th,td
 	color:white;
 }
 
-.highScore
-{
-	color:green;
-	font-weight:bold;
-}
+.score { font-weight:bold; }
+.rank0 { color:black; }
+.rank1 { color:blue; }
+.rank2 { color:green; }
+.rank3 { color:brown; }
+.rank4 { color:orange; }
+.rank5 { color:red; }
 
 a {text-decoration:none;}

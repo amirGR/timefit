@@ -22,8 +22,9 @@ def plot_gene(data, iGene, fits=None):
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
             fit = fits[(series.gene_name,series.region_name)]
-            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
-            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
+            if fit.theta is not None:
+                x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
+                ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(series.region_name))
         if iRegion % 4 == 0:
             ax.set_ylabel('Expression Level')
@@ -43,15 +44,21 @@ def plot_one_series(series, fits=None, fit=None):
         fit = fits[(g,r)]
     if fit is not None:
         preds = fit.fit_predictions
-        x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)        
-        label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-        ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
+        if fit.theta is not None:
+            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)        
+            label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
+            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
         preds = fit.LOO_predictions
         for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
+            if y_loo is None or np.isnan(y_loo):
+                continue
             label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
             ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
             ax.plot(x, y_loo, 'gx')
-        P_ttl = fit.fitter.format_params(fit.theta, fit.sigma, latex=True)
+        if fit.theta is not None:
+            P_ttl = fit.fitter.format_params(fit.theta, fit.sigma, latex=True)
+        else:
+            P_ttl = 'Global fit failed - parameters not extracted'
         ttl = '{}\n{}'.format(ttl,P_ttl)
         ax.legend()
     ax.set_title(ttl, fontsize=cfg.fontsize)
@@ -82,15 +89,16 @@ def plot_and_save_all_series(data, fitter, dirname):
                 save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
-    LOO_R2 = np.array([fit.LOO_score for fit in fits.itervalues()])
+    n_failed = len([1 for fit in fits.itervalues() if fit.LOO_score is None])
+    LOO_R2 = np.array([fit.LOO_score for fit in fits.itervalues() if fit.LOO_score is not None])
     low,high = -1, 1
     n_low = np.count_nonzero(LOO_R2 < low)
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.hist(LOO_R2, 50, range=(low,high))
     ttl = 'LOO R2 score distribution'
-    if n_low > 0:
-        ttl = ttl + '\n(another {} scores below {})'.format(n_low,low)
+    if n_low or n_failed:
+        ttl = ttl + '\n(another {} failed fits and {} scores below {})'.format(n_failed, n_low,low)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_xlabel('R2', fontsize=cfg.fontsize)
     ax.set_ylabel('Count', fontsize=cfg.fontsize)    
@@ -101,7 +109,13 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
     from jinja2 import Template
     import shutil
 
-    fits = get_all_fits(data,fitter)    
+    fits = get_all_fits(data,fitter)
+    n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
+    for fit in fits.itervalues():
+        if fit.LOO_score is None or fit.LOO_score < 0:
+            fit.rank = 0
+        else:
+            fit.rank = int(np.ceil(n_ranks * fit.LOO_score))
     html = Template("""
 <html>
 <head>
@@ -127,9 +141,13 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
         {% for region_name in sorted_regions %}
         <td>
             <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-                <div {{'class="highScore"' if  fits[(gene_name,region_name)].LOO_score > highScore}}>
+            {% if fits[(gene_name,region_name)].LOO_score %}
+                <div class="score rank{{fits[(gene_name,region_name)].rank}}">
                {{fits[(gene_name,region_name)].LOO_score | round(2)}}
                </div>
+            {% else %}
+               None
+            {% endif %}
             </a>
         </td>
         {% endfor %}
@@ -146,13 +164,18 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
     
     shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, fitter, fits, basedir):
+def save_fits_and_create_html(data, fitter, basedir, do_genes=True, do_series=True, do_hist=True, do_html=True):
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
-    plot_and_save_all_genes(data, fitter, os.path.join(basedir,gene_dir))
-    plot_and_save_all_series(data, fitter, os.path.join(basedir,series_dir))
-    with utils.interactive(False):
-        fig = plot_score_distribution(fits)
-        save_figure(fig, os.path.join(basedir,'{}-R2-hist.png'.format(data.pathway)), b_close=True)
-    create_html(data, fitter, basedir, gene_dir, series_dir)
+    if do_genes:
+        plot_and_save_all_genes(data, fitter, os.path.join(basedir,gene_dir))
+    if do_series:
+        plot_and_save_all_series(data, fitter, os.path.join(basedir,series_dir))
+    if do_hist:
+        with utils.interactive(False):
+            fits = get_all_fits(data,fitter)
+            fig = plot_score_distribution(fits)
+            save_figure(fig, os.path.join(basedir,'{}-R2-hist.png'.format(data.pathway)), b_close=True)
+    if do_html:
+        create_html(data, fitter, basedir, gene_dir, series_dir)
