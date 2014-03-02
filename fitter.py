@@ -1,6 +1,6 @@
+from functools import partial
 import config as cfg
 import numpy as np
-from scipy.optimize import minimize
 from minimization import minimize_with_restarts
 from sklearn.cross_validation import LeaveOneOut
 
@@ -31,9 +31,9 @@ class Fitter(object):
         P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
         def get_P0():
             return P0_base + rng.normal(0,1,size=P0_base.shape)
-        def f_minimize(P0,i):
-            return minimize(self._Err, P0, args=(x,y), method='BFGS', jac=self._Err_grad, tol=cfg.minimization_tol)
-        P = minimize_with_restarts(f_minimize, get_P0)
+        f = partial(self._Err, x=x, y=y)
+        f_grad = partial(self._Err_grad, x=x, y=y)
+        P = minimize_with_restarts(f,f_grad,get_P0)
         if P is None:
             return None,None
         assert not np.isnan(P).any()

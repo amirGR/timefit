@@ -13,13 +13,11 @@ default_figure_dpi = 100
 b_verbose_optmization = False
 b_allow_less_restarts = True
 b_minimal_restarts = False
-minimization_tol = 1E-3
+minimization_tol = None
 if b_minimal_restarts:
     n_optimization_restarts = 2
-    n_max_optimization_attempt_factor = 10
 else:
     n_optimization_restarts = 10
-    n_max_optimization_attempt_factor = 20
 all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 

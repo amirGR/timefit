@@ -12,13 +12,12 @@ series = data.get_one_series('MAOB','DFC')
 x = series.ages
 y = series.expression
 
-def E(P):
-    return fitter._Err(P,x,y)
-def E_grad(P):
-    return fitter._Err_grad(P,x,y)
-
-P0 = np.array(shape.get_theta_guess(x,y) + [1])
-
-method = 'BFGS' # 'CG'
-res = minimize(E, P0, method=method, jac=E_grad)
-print res
+#def E(P):
+#    return fitter._Err(P,x,y)
+#def E_grad(P):
+#    return fitter._Err_grad(P,x,y)
+#
+#P0 = np.array(shape.get_theta_guess(x,y) + [1])
+#
+#res = minimize(E, P0, method='BFGS', jac=E_grad, tol=1E-5, callback=cb)
+#print 'Final result={}'.format(res.fun)
