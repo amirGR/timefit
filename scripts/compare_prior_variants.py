@@ -73,6 +73,24 @@ def plot_pctiles(variations, min_q):
     plt.title('Dependence of R2 percentiles on priors', fontsize=cfg.fontsize)
     plt.legend(fontsize=cfg.fontsize, loc='top left')
 
+def plot_theta_diff_scatter(shape):
+    yFitter = Fitter(shape,True,False)
+    nFitter = Fitter(shape,False,False)
+    yFits = get_all_fits(data,yFitter)
+    nFits = get_all_fits(data,nFitter)
+    pairs = [(nFits[k].LOO_score, yFits[k].LOO_score) for k in yFits.iterkeys()]
+    diff_pairs = [(n,y-n) for n,y in pairs if n is not None and y is not None]
+    n,d = zip(*diff_pairs)
+    
+    plt.figure()
+    plt.scatter(n, d, alpha=0.5)
+    xlims = plt.xlim()
+    plt.plot(xlims,[0, 0],'k--')
+    plt.xlim(*xlims)
+    plt.title(r'Improvement from prior on $\theta$ vs. baseline R2', fontsize=cfg.fontsize)
+    plt.xlabel(r'R2(No priors)', fontsize=cfg.fontsize)
+    plt.ylabel(r'R2($\theta$) - R2(No priors)', fontsize=cfg.fontsize)    
+    
 data = load_data()
 def analyze_variant(shape,theta,sigma):
     fitter = Fitter(shape,theta,sigma)
@@ -93,3 +111,4 @@ plot_bar(variations)
 plot_bar(variations,q=95)
 plot_pctiles(variations, min_q=5)
 plot_pctiles(variations, min_q=80)
+plot_theta_diff_scatter(shape)
