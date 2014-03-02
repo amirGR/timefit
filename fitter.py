@@ -27,28 +27,19 @@ class Fitter(object):
             return r'{}, sigma={:.2f}'.format(shape_params, sigma)
 
     def fit_simple(self,x,y):
-        rng = np.random.RandomState(cfg.random_seed)
-        P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
-        def get_P0():
-            return P0_base + rng.normal(0,1,size=P0_base.shape)
-        f = partial(self._Err, x=x, y=y)
-        f_grad = partial(self._Err_grad, x=x, y=y)
-        P = minimize_with_restarts(f,f_grad,get_P0)
-        if P is None:
-            return None,None
-        assert not np.isnan(P).any()
-        theta = P[:-1]
-        sigma = 1/P[-1]
-        return theta,sigma    
+        P = self._fit(x,y)
+        return self._unpack_P(P)
 
     def fit_loo(self, x, y):
+        P0 = self._fit(x,y)
         n = len(y)
         test_preds = np.empty(n)
         for train,test in LeaveOneOut(n):
-            theta,sigma = self.fit_simple(x[train],y[train])
-            if theta is None:
+            P = self._fit(x[train],y[train],single_init_P0=P0)
+            if P is None:
                 test_preds[test] = np.nan
             else:
+                theta,sigma = self._unpack_P(P)
                 test_preds[test] = self.predict(theta,x[test])
         return test_preds
         
@@ -58,6 +49,30 @@ class Fitter(object):
     ##########################################################
     # Private methods for fitting
     ##########################################################
+
+    def _fit(self,x,y,single_init_P0=None):
+        n_restarts = cfg.n_optimization_restarts
+        if single_init_P0 is not None:
+            n_restarts = n_restarts + 1
+        rng = np.random.RandomState(cfg.random_seed)
+        P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
+        def get_P0(i):
+            if single_init_P0 is not None and i==0:
+                return single_init_P0
+            else:
+                return P0_base + rng.normal(0,1,size=P0_base.shape)
+        f = partial(self._Err, x=x, y=y)
+        f_grad = partial(self._Err_grad, x=x, y=y)
+        P = minimize_with_restarts(f, f_grad, get_P0, n_restarts)
+        return P
+        
+    def _unpack_P(self, P):
+        if P is None:
+            return None,None
+        assert not np.isnan(P).any()
+        theta = P[:-1]
+        sigma = 1/P[-1]
+        return theta,sigma
  
     def _Err(self,P,x,y):
         theta,p = P[:-1],P[-1]
