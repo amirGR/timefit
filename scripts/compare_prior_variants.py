@@ -71,7 +71,7 @@ def plot_pctiles(variations, min_q):
     plt.xlabel('Percentile', fontsize=cfg.fontsize)
     plt.ylabel('R2 score', fontsize=cfg.fontsize)
     plt.title('Dependence of R2 percentiles on priors', fontsize=cfg.fontsize)
-    plt.legend(fontsize=cfg.fontsize, loc='top left')
+    plt.legend(fontsize=cfg.fontsize, loc='upper left')
 
 def plot_theta_diff_scatter(shape):
     yFitter = Fitter(shape,True,False)
