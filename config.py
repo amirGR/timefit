@@ -21,15 +21,6 @@ else:
 all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 
-# theta = [a,h,mu,w]
-inv_sigma_prior_mean = 5
-inv_sigma_prior_sigma = 5
-sigmoid_theta_prior_mean = np.array([5, 5, 30, 2.5])
-sigmoid_theta_prior_sigma = np.array([5, 5, 30, 2.5])
-poly_theta_prior_mean = np.array(10*[0])
-poly_theta_prior_sigma = np.array(10*[10])
-n_folds_for_hadas_fit = 10
-
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'

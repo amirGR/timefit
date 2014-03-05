@@ -25,4 +25,4 @@ def do_fit(shape=None, theta_prior=True, sigma_prior=True):
     plt.title('theta_prior={}, simga_prior={}\n{}'.format(theta_prior, sigma_prior,P_ttl))
 
 sigmoid = Sigmoid()
-poly = Poly(3)
+do_fit(sigmoid, theta_prior=True, sigma_prior=True)

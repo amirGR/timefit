@@ -6,15 +6,33 @@ class Shape(object):
        Derived classes should implement:
            str = cache_name()
            str = format_params(theta, latex=False)
-           y = f(theta,x)
-           
+           y = f(theta,x)           
            d_theta = f_grad(theta,x)
            theta0 = get_theta_guess(x,y)
-           log_P_theta = log_prob_theta(theta)
-           d_theta0 = d_theta_prior(theta)
     """
+    def __init__(self, priors):
+        """Prior function for each parameter should be passed by the derived class.
+           NOTE: We are modeling distributions as independent, which may not be good enough later on.
+                 If this assumption changes, some code will need to move around.
+        """
+        self.priors = priors
+
     def __str__(self):
         return self.cache_name()
+
+    def n_params(self):
+        return len(self.priors)        
+        
+    def bounds(self):
+        return [pr.bounds() for pr in self.priors]
+
+    def log_prob_theta(self, theta):
+        # NOTE: This assumes the priors for different parameters are independent
+        return sum(pr.log_prob(t) for pr,t in zip(self.priors,theta))
+        
+    def d_log_prob_theta(self, theta):
+        # NOTE: This assumes the priors for different parameters are independent
+        return np.array([pr.d_log_prob(t) for pr,t in zip(self.priors,theta)])
 
     def high_res_preds(self, theta, x):
         x_smooth = np.linspace(x.min(),x.max(),cfg.n_curve_points_to_plot)

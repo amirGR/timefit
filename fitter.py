@@ -3,12 +3,16 @@ import config as cfg
 import numpy as np
 from minimization import minimize_with_restarts
 from sklearn.cross_validation import LeaveOneOut
+from shapes.priors import NormalPrior, GammaPrior
 
 class Fitter(object):
     def __init__(self, shape, use_theta_prior=True, use_sigma_prior=False):
         self.shape = shape
         self.use_theta_prior = use_theta_prior
         self.use_sigma_prior = use_sigma_prior
+
+        self.inv_sigma_prior = NormalPrior(mu=5,sigma=5) # backward compatibility
+        #self.inv_sigma_prior = GammaPrior(2.61,0.87,0.64)
         
     def __str__(self):
         return 'Fitter({}, theta_prior={}, sigma_prior={})'.format(self.shape, self.use_theta_prior, self.use_sigma_prior)
@@ -63,7 +67,16 @@ class Fitter(object):
                 return P0_base + rng.normal(0,1,size=P0_base.shape)
         f = partial(self._Err, x=x, y=y)
         f_grad = partial(self._Err_grad, x=x, y=y)
-        P = minimize_with_restarts(f, f_grad, get_P0, n_restarts)
+        if self.use_theta_prior:
+            theta_bounds = self.shape.bounds()
+        else:
+            theta_bounds = self.shape.n_params() * [(None,None)]
+        if self.use_sigma_prior:
+            p_bounds = self.inv_sigma_prior.bounds()
+        else:
+            p_bounds = (None,None)
+        bounds = theta_bounds + [p_bounds]
+        P = minimize_with_restarts(f, f_grad, get_P0, bounds, n_restarts)
         return P
         
     def _unpack_P(self, P):
@@ -83,10 +96,7 @@ class Fitter(object):
         if self.use_theta_prior:
             E = E - self.shape.log_prob_theta(theta)
         if self.use_sigma_prior:
-            # using a normal distribution for priors (should convert to Gamma)
-            z = (p - cfg.inv_sigma_prior_mean) / cfg.inv_sigma_prior_sigma
-            log_prob_p = -0.5 * z**2
-            E = E - log_prob_p
+            E = E - self.inv_sigma_prior.log_prob(p)
         return E
         
     def _Err_grad(self,P,x,y):
@@ -95,11 +105,10 @@ class Fitter(object):
         diffs = self.shape.f(theta,x) - y
         d_theta = np.array([p**2 * sum(diffs*d) for d in self.shape.f_grad(theta,x)])
         if self.use_theta_prior:
-            d_theta = d_theta - self.shape.d_theta_prior(theta)
+            d_theta = d_theta - self.shape.d_log_prob_theta(theta)
         d_p = -n/p + p*sum(diffs**2)
         if self.use_sigma_prior:
-            d_p_prior = - (p - cfg.inv_sigma_prior_mean) / cfg.inv_sigma_prior_sigma**2
-            d_p = d_p - d_p_prior
+            d_p = d_p - self.inv_sigma_prior.d_log_prob(p)
         return np.r_[d_theta, d_p]
 
 def check_grad(n=100):
