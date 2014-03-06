@@ -26,7 +26,7 @@ def get_all_fits(data,fitter):
     if len(fits) == len(data.gene_names)*len(data.region_names):
         return compute_scores(data, fits)  
     
-    assert len(data.gene_names) < 100, "So many genes... Not doing this!"
+    assert len(data.gene_names) < 500, "So many genes... Not doing this!"
     
     # compute the fits that are missing
     for g in data.gene_names:

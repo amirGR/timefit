@@ -78,3 +78,12 @@ def convert_matlab_string_cell(cell_array):
     def convert_one(x):
         return x[0] if x else None # some data files contain empty names (with some of these have different type)
     return np.array([convert_one(x) for x in cell_array.flat])
+
+def load_matlab_gene_set(pathway):
+    print 'PATHWAY: {}'.format(pathway)
+    datadir = project_dirs.data_dir()
+    file_names = {'pathway17_seq_sim': 'gene_list_pathways_pairs_seqSim.mat' }
+    full_path = os.path.join(datadir,file_names.get(pathway))
+    mat = loadmat(full_path)
+    pathway_gene_names = convert_matlab_string_cell(mat['geneSymbol_list'])
+    return pathway_gene_names
