@@ -37,7 +37,7 @@ class GammaPrior(object):
 
     @property
     def rv(self):
-        return stats.gamma(self.a,self.mu,self.b)
+        return stats.gamma(self.a, loc=self.mu, scale=1/self.b)
         
     def generate(self):
         return self.rv.rvs()

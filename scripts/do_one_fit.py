@@ -22,7 +22,7 @@ def do_fit(shape=None, theta_prior=True, sigma_prior=True):
     fit = compute_fit(series,fitter)
     plot_one_series(series,fit=fit)
     P_ttl = fitter.format_params(fit.theta, fit.sigma, latex=True)
-    plt.title('theta_prior={}, simga_prior={}\n{}'.format(theta_prior, sigma_prior,P_ttl))
+    plt.title('theta_prior={}, sigma_prior={}\n{}'.format(theta_prior, sigma_prior,P_ttl))
 
 sigmoid = Sigmoid()
 do_fit(sigmoid, theta_prior=True, sigma_prior=True)

@@ -36,12 +36,13 @@ def create_hist(p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=Fa
         ttl2 = '(created with low={}, high={})'.format(low,high)
         ttl = '\n'.join([ttl1,ttl2])
         if fit_gamma:
-            alpha,loc,beta=stats.gamma.fit(vals)
-            rv = stats.gamma(alpha,loc,beta)
+            alpha,loc,scale=stats.gamma.fit(vals)
+            beta = 1/scale
+            rv = stats.gamma(alpha,loc,scale)
             x = np.linspace(loc,xmax,100)
             prob = rv.pdf(x)
             plt.plot(x,prob,'g',linewidth=3)
-            ttl_fit = r'Gamma fit: $\alpha$={:.2f}, $\beta$={:.2f}, $loc$={:.2f}'.format(alpha,beta,loc)
+            ttl_fit = r'Gamma fit: $\alpha$={:.3f}, $\beta$={:.3f}, $loc$={:.3f}'.format(alpha,beta,loc)
             ttl = '\n'.join([ttl, ttl_fit])
         if fit_normal:
             loc,sigma=stats.norm.fit(vals)
@@ -49,7 +50,7 @@ def create_hist(p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=Fa
             x = np.linspace(xmin,xmax,100)
             prob = rv.pdf(x)
             plt.plot(x,prob,'k',linewidth=3)
-            ttl_fit = r'Normal fit: $loc$={:.2f}, $\sigma$={:.2f}'.format(loc,sigma)
+            ttl_fit = r'Normal fit: $loc$={:.3f}, $\sigma$={:.3f}'.format(loc,sigma)
             ttl = '\n'.join([ttl, ttl_fit])
         plt.title(ttl)
     return vals

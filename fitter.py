@@ -10,9 +10,7 @@ class Fitter(object):
         self.shape = shape
         self.use_theta_prior = use_theta_prior
         self.use_sigma_prior = use_sigma_prior
-
-        self.inv_sigma_prior = NormalPrior(mu=5,sigma=5) # backward compatibility
-        #self.inv_sigma_prior = GammaPrior(2.61,0.87,0.64)
+        self.inv_sigma_prior = GammaPrior(2.61,1.15,0.65)
         
     def __str__(self):
         return 'Fitter({}, theta_prior={}, sigma_prior={})'.format(self.shape, self.use_theta_prior, self.use_sigma_prior)
@@ -60,12 +58,19 @@ class Fitter(object):
         if single_init_P0 is not None:
             n_restarts = n_restarts + 1
         rng = np.random.RandomState(cfg.random_seed)
+        np.random.seed(cfg.random_seed) # for prior.generate() which doesn't have a way to control rng
         P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
         def get_P0(i):
             if single_init_P0 is not None and i==0:
                 return single_init_P0
             else:
-                return P0_base + rng.normal(0,1,size=P0_base.shape)
+                # if we're using priors, draw from the prior distribution
+                P0 = P0_base + rng.normal(0,1,size=P0_base.shape)
+                if self.use_theta_prior:
+                    P0[:-1] = np.array([pr.generate() for pr in self.shape.priors])
+                if self.use_sigma_prior:
+                    P0[-1] = self.inv_sigma_prior.generate()
+                return P0
         f = partial(self._Err, x=x, y=y)
         f_grad = partial(self._Err_grad, x=x, y=y)
         if self.use_theta_prior:
@@ -112,30 +117,58 @@ class Fitter(object):
             d_p = d_p - self.inv_sigma_prior.d_log_prob(p)
         return np.r_[d_theta, d_p]
 
+
+from scipy.optimize import approx_fprime
+_epsilon = np.sqrt(np.finfo(float).eps)
+def my_check_grad(func, grad, x0, *args):
+    "Copied from scipy.optimize - allows tweaking to see which parameter causes the error"
+    g = grad(x0, *args)
+    a = approx_fprime(x0, func, _epsilon, *args)
+    d = g-a
+    return np.sqrt(sum(d**2))
+
 def check_grad(n=100):
     import utils
     utils.disable_all_warnings()
-    import scipy.optimize
     from shapes.sigmoid import Sigmoid
-    for use_theta_prior in [True,False]:
-        for use_sigma_prior in [True, False]:
-            rng = np.random.RandomState(0)
-            print 'Checking theta_prior={}, sigma_prior={}'.format(use_theta_prior, use_sigma_prior)
-            fitter = Fitter(Sigmoid(), use_theta_prior=use_theta_prior, use_sigma_prior=use_sigma_prior)
-            def check_one():
-                x = np.arange(-10,11)
-                y = fitter.predict([-1,3,2,2],x) + rng.normal(size=x.shape)
-                a,b,c,d = rng.uniform(size=4)
-                p = np.e
-                P = [a, a+b, c, d, p]
-                diff = scipy.optimize.check_grad(fitter._Err, fitter._Err_grad, P, x, y)
-                return diff
-            max_diff = max([check_one() for _ in xrange(n)])
-            print 'Max difference over {} iterations: {}'.format(n,max_diff)
-            if max_diff < 1E-4:
-                print 'Gradient is OK'
-            else:
-                print 'Difference is too big. Gradient is NOT OK!'
+
+    def check_one(fitter, use_theta_prior, use_sigma_prior, rng):
+        theta = [pr.rv.mean()*rng.normal(1,0.05) for pr in fitter.shape.priors]
+        x = np.arange(-10,11)
+        y = fitter.predict(theta,x) + rng.normal(size=x.shape)
+        theta_guess = fitter.shape.get_theta_guess(x,y)
+        p_guess = 1
+        P = np.r_[theta_guess, p_guess]
+        if use_theta_prior:
+            P[:-1] = np.array([pr.generate() for pr in fitter.shape.priors])
+        if use_sigma_prior:
+            P[-1] = fitter.inv_sigma_prior.generate()
+        diff = my_check_grad(fitter._Err, fitter._Err_grad, P, x, y)
+        return diff
+
+    def check_variation(shape, use_theta_prior, use_sigma_prior, n):
+        np.random.seed(cfg.random_seed) # for prior.generate() which doesn't have a way to control rng     
+        rng = np.random.RandomState(cfg.random_seed)
+        print '\n',
+        80*'='
+        print 'Checking theta_prior={}, sigma_prior={}'.format(use_theta_prior, use_sigma_prior)
+        fitter = Fitter(shape, use_theta_prior=use_theta_prior, use_sigma_prior=use_sigma_prior)
+        max_diff = max([check_one(fitter, use_theta_prior, use_sigma_prior, rng) for _ in xrange(n)])
+        print 'Max difference over {} iterations: {}'.format(n,max_diff)
+        if max_diff < 1E-3:
+            print 'Gradient is OK'
+        else:
+            print '*** FAILED: Difference is too big. Gradient is NOT OK!'
+        return max_diff
+
+#    cfg.random_seed = 46 #608
+#    check_variation(Sigmoid(),True,False, 1)
+#    return
+    
+    shape = Sigmoid()
+    for tp in [False,True]:
+        for sp in [False,True]:
+            check_variation(shape,tp, sp, n)
 
 if __name__ == '__main__':
     check_grad()
