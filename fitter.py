@@ -36,6 +36,7 @@ class Fitter(object):
 
     def fit_loo(self, x, y):
         P0 = self._fit(x,y)
+        t0,s0 = self._unpack_P(P0)
         n = len(y)
         test_preds = np.empty(n)
         for train,test in LeaveOneOut(n):
@@ -45,7 +46,7 @@ class Fitter(object):
             else:
                 theta,sigma = self._unpack_P(P)
                 test_preds[test] = self.predict(theta,x[test])
-        return test_preds
+        return t0,s0,test_preds
         
     def predict(self, theta, x):
         return self.shape.f(theta,x)
