@@ -1,9 +1,11 @@
 import pickle
+from os.path import dirname
 from sklearn.datasets.base import Bunch
 from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
 import project_dirs
+from utils import ensure_dir
 
 def _cache_file(pathway, dataset, fitter_name):
     from os.path import join
@@ -11,6 +13,7 @@ def _cache_file(pathway, dataset, fitter_name):
 
 def get_all_fits(data,fitter):
     filename = _cache_file(data.pathway, data.dataset, fitter.cache_name())
+    ensure_dir(dirname(filename))
     
     # load the cache we have so far
     try:
