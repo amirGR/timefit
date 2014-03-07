@@ -53,3 +53,17 @@ class Shape(object):
             print 'Gradient is OK'
         else:
             print 'Difference is too big. Gradient is NOT OK!'
+
+def get_shape_by_name(shape_name):
+    import re
+    if shape_name == 'sigmoid':
+        from sigmoid import Sigmoid
+        return Sigmoid()
+    elif shape_name.startswith('poly'):
+        m = re.match('poly(\d)',shape_name)
+        assert m, 'Illegal polynomial shape name'
+        degree = int(m.group(1))
+        from poly import Poly
+        return Poly(degree)
+    else:
+        raise Exception('Unknown shape: {}'.format(shape_name))

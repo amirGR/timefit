@@ -1,10 +1,12 @@
 import numpy as np
-import config as cfg
 from shape import Shape
+from priors import NormalPrior
 
 class Poly(Shape):
     def __init__(self,n):
         self.n = n
+        priors = [NormalPrior(0,1) for _ in range(n+1)] # placeholder
+        Shape.__init__(self, priors)
         
     def cache_name(self):
         return 'poly{}'.format(self.n)
@@ -24,17 +26,6 @@ class Poly(Shape):
     
     def get_theta_guess(self,x,y):
         return [y.mean()] + self.n*[0]
-    
-    def log_prob_theta(self, theta):
-        mu = cfg.poly_theta_prior_mean[:self.n+1]
-        sigma = cfg.poly_theta_prior_sigma[:self.n+1]
-        z = (theta - mu) / sigma
-        return -0.5*sum(z ** 2 )
-        
-    def d_theta_prior(self, theta):
-        mu = cfg.poly_theta_prior_mean[:self.n+1]
-        sigma = cfg.poly_theta_prior_sigma[:self.n+1]
-        return -(theta - mu) / sigma**2
 
 if __name__ == '__main__':
     thresholds = [1E-10, 1E-7, 1E-6, 1E-4]
