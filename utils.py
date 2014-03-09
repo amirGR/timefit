@@ -21,3 +21,15 @@ def interactive(b):
 def ensure_dir(d):
     if not os.path.exists(d):
         makedirs(d)
+
+def list_of_strings_to_matlab_cell_array(lst_string):
+    def convert_one(x):
+        return x if x is not None else ''
+    lst = [convert_one(x) for x in lst_string]
+    return np.array(lst, dtype='object') # tells savemat to produce a cell array
+
+def init_array(val, *shape):
+    a = np.empty(shape)
+    a.fill(val)
+    return a
+        
