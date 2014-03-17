@@ -4,6 +4,7 @@ import numpy as np
 from collections import namedtuple
 import project_dirs
 import config as cfg
+from utils import matlab_cell_array_to_list_of_strings
 
 GeneDataBase = namedtuple('GeneData', [
     'expression', 'gene_names', 'region_names', 'genders', 'ages', 'pathway','dataset', 'postnatal_only',
@@ -50,7 +51,7 @@ def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
     path = os.path.join(datadir,filename)
     mat = loadmat(path)
     ages = np.array(mat['ages'].flat)
-    all_gene_names = convert_matlab_string_cell(mat['gene_names'])
+    all_gene_names = matlab_cell_array_to_list_of_strings(mat['gene_names'])
     all_expression_levels = mat['expression']
     if all_expression_levels.ndim == 2: # extend shape to represent a single region name
         all_expression_levels.shape = list(all_expression_levels.shape)+[1] 
@@ -72,8 +73,8 @@ def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
     data = GeneData(
         expression = pathway_expression,
         gene_names = gene_names,
-        region_names = convert_matlab_string_cell(mat['region_names']),
-        genders = convert_matlab_string_cell(mat['genders']),
+        region_names = matlab_cell_array_to_list_of_strings(mat['region_names']),
+        genders = matlab_cell_array_to_list_of_strings(mat['genders']),
         ages = ages,
         pathway = pathway,
         dataset = dataset,
@@ -81,16 +82,11 @@ def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
     )
     return data
 
-def convert_matlab_string_cell(cell_array):
-    def convert_one(x):
-        return x[0] if x else None # some data files contain empty names (with some of these have different type)
-    return np.array([convert_one(x) for x in cell_array.flat])
-
 def load_matlab_gene_set(pathway):
     print 'PATHWAY: {}'.format(pathway)
     datadir = project_dirs.data_dir()
     file_names = {'pathway17_seq_sim': 'gene_list_pathways_pairs_seqSim.mat' }
     full_path = os.path.join(datadir,file_names.get(pathway))
     mat = loadmat(full_path)
-    pathway_gene_names = convert_matlab_string_cell(mat['geneSymbol_list'])
+    pathway_gene_names = matlab_cell_array_to_list_of_strings(mat['geneSymbol_list'])
     return pathway_gene_names
