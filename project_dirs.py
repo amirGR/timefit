@@ -21,3 +21,6 @@ def data_dir():
 
 def cache_dir():
     return join(base_dir(), 'cache')
+
+def results_dir():
+    return join(base_dir(), 'results')
