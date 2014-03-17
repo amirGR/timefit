@@ -31,19 +31,19 @@ class Fitter(object):
     def fit(self, x, y, loo=False):
         P0 = self._fit(x,y)
         t0,s0 = self._unpack_P(P0)
-        if not loo:
-            return t0,s0
-            
-        n = len(y)
-        test_preds = np.empty(n)
-        for train,test in LeaveOneOut(n):
-            P = self._fit(x[train],y[train],single_init_P0=P0)
-            if P is None:
-                test_preds[test] = np.nan
-            else:
-                theta,sigma = self._unpack_P(P)
-                test_preds[test] = self.predict(theta,x[test])
-        return t0,s0,test_preds
+        if loo:            
+            n = len(y)
+            test_preds = np.empty(n)
+            for train,test in LeaveOneOut(n):
+                P = self._fit(x[train],y[train],single_init_P0=P0)
+                if P is None:
+                    test_preds[test] = np.nan
+                else:
+                    theta,sigma = self._unpack_P(P)
+                    test_preds[test] = self.predict(theta,x[test])
+        else:
+            test_preds = None
+        return t0, s0, test_preds
         
     def predict(self, theta, x):
         return self.shape.f(theta,x)

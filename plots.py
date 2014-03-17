@@ -14,78 +14,79 @@ def save_figure(fig, filename, b_close=False):
     if b_close:
         plt.close(fig)
 
-def plot_gene(data, iGene, fits=None):
+def plot_gene(data, g, fits=None):
     fig = plt.figure()
-    for iRegion in range(len(data.region_names)):
-        series = data.get_one_series(iGene,iRegion)
+    for iRegion,r in enumerate(data.region_names):
+        series = data.get_one_series(g,r)
         ax = fig.add_subplot(4,4,iRegion+1)
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
-            fit = fits[(series.gene_name,series.region_name)]
+            fit = fits[(g,r)]
             if fit.theta is not None:
                 x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
                 ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
-        ax.set_title('Region {}'.format(series.region_name))
+        ax.set_title('Region {}'.format(r))
         if iRegion % 4 == 0:
             ax.set_ylabel('Expression Level')
         if iRegion / 4 >= 3:
             ax.set_xlabel('Age')
     fig.tight_layout(h_pad=0,w_pad=0)
-    fig.suptitle('Gene {}'.format(series.gene_name))
+    fig.suptitle('Gene {}'.format(g))
     return fig
-    
-def plot_one_series(series, fits=None, fit=None):
-    g,r = series.gene_name, series.region_name
+
+def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
+    x = series.ages
+    y = series.expression    
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(series.ages,series.expression,'ro')
-    ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
-    if fit is None and fits is not None:
-        fit = fits[(g,r)]
-    if fit is not None:
-        preds = fit.fit_predictions
-        if fit.theta is not None:
-            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)        
-            label = 'fit ({}={:.3f})'.format(cfg.score_type, cfg.score(series.expression,preds))
-            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
-        preds = fit.LOO_predictions
-        for i,(x,y,y_loo) in enumerate(zip(series.ages, series.expression, preds)):
-            if y_loo is None or np.isnan(y_loo):
-                continue
-            label = 'LOO ({}={:.3f})'.format(cfg.score_type, loo_score(series.expression,preds)) if i==0 else None
-            ax.plot([x, x], [y, y_loo], 'g-', linewidth=2, label=label)
-            ax.plot(x, y_loo, 'gx')
-        if fit.theta is not None:
-            P_ttl = fit.fitter.format_params(fit.theta, fit.sigma, latex=True)
-        else:
-            P_ttl = 'Global fit failed - parameters not extracted'
-        ttl = '{}\n{}'.format(ttl,P_ttl)
-        ax.legend()
-    ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_ylabel('Expression Level', fontsize=cfg.fontsize)
     ax.set_xlabel('Age', fontsize=cfg.fontsize)
+    ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
+
+    if shape is not None and theta is not None:
+        more_ttl = shape.format_params(theta,latex=True)
+        ttl = '\n'.join([ttl, more_ttl])
+        
+        score = cfg.score(y,shape.f(theta,x))
+        x_smooth,y_smooth = shape.high_res_preds(theta,x)        
+        label = 'fit ({}={:.3g})'.format(cfg.score_type, score)
+        ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
+
+        if LOO_predictions is not None:
+            score = loo_score(y,LOO_predictions)
+            for i,(xi,yi,y_loo) in enumerate(zip(x,y,LOO_predictions)):
+                if y_loo is None or np.isnan(y_loo):
+                    continue
+                label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0 else None
+                ax.plot([xi, xi], [yi, y_loo], 'g-', linewidth=2, label=label)
+                ax.plot(xi, y_loo, 'gx')
+        ax.legend()
+        
+    ax.set_title(ttl, fontsize=cfg.fontsize)
     return fig
-    
+
 def plot_and_save_all_genes(data, fitter, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data, fitter)
     with utils.interactive(False):
-        for iGene,gene_name in enumerate(data.gene_names):
-            print 'Saving figure for gene {}'.format(gene_name)
-            fig = plot_gene(data,iGene,fits)
-            filename = os.path.join(dirname, '{}.png'.format(gene_name))
+        for g in data.gene_names:
+            print 'Saving figure for gene {}'.format(g)
+            fig = plot_gene(data,g,fits)
+            filename = os.path.join(dirname, '{}.png'.format(g))
             save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data,fitter)
     with utils.interactive(False):
-        for iGene,gene_name in enumerate(data.gene_names):
-            for iRegion, region_name in enumerate(data.region_names):
-                print 'Saving figure for {}@{}'.format(gene_name,region_name)
-                series = data.get_one_series(iGene,iRegion)
-                fig = plot_one_series(series,fits)
-                filename = os.path.join(dirname, 'fit-{}-{}.png'.format(gene_name,region_name))
+        for g in data.gene_names:
+            for r in data.region_names:
+                print 'Saving figure for {}@{}'.format(g,r)
+                series = data.get_one_series(g,r)
+                fit = fits[(g,r)]
+                fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
+                filename = os.path.join(dirname, 'fit-{}-{}.png'.format(g,r))
                 save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
