@@ -29,7 +29,7 @@ def plot_gene(data, iGene, fits=None):
         if iRegion % 4 == 0:
             ax.set_ylabel('Expression Level')
         if iRegion / 4 >= 3:
-            ax.set_xlabel('Age [years]')
+            ax.set_xlabel('Age')
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(series.gene_name))
     return fig
@@ -63,7 +63,7 @@ def plot_one_series(series, fits=None, fit=None):
         ax.legend()
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_ylabel('Expression Level', fontsize=cfg.fontsize)
-    ax.set_xlabel('Age [years]', fontsize=cfg.fontsize)
+    ax.set_xlabel('Age', fontsize=cfg.fontsize)
     return fig
     
 def plot_and_save_all_genes(data, fitter, dirname):

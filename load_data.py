@@ -22,6 +22,7 @@ class GeneData(object):
         self.dataset = dataset
         self.pathway = 'all'
         self.postnatal_only = False
+        self.age_scaler = None
         
     @staticmethod
     def load(dataset):
@@ -61,6 +62,7 @@ class GeneData(object):
     
     def restrict_postnatal(self, b=True):
         if b:
+            assert self.age_scaler is None, 'restrict_postnatal cannot be called after scaling'
             valid = (self.ages>0)
             self.ages = self.ages[valid]
             self.expression = self.expression[valid,:,:]
@@ -71,6 +73,12 @@ class GeneData(object):
         inds = [np.where(self.region_names == region)[0][0] for region in lst_regions]
         self.expression = self.expression[:,:,inds]
         self.region_names = self.region_names[inds]
+        return self
+        
+    def scale_ages(self, scaler):
+        assert self.age_scaler is None, 'More than one scaling is not supported'
+        self.ages = scaler.scale(self.ages)
+        self.age_scaler = scaler
         return self
     
     def get_one_series(self, iGene, iRegion):
