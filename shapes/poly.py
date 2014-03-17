@@ -8,6 +8,9 @@ class Poly(Shape):
         priors = [NormalPrior(0,1) for _ in range(n+1)] # placeholder
         Shape.__init__(self, priors)
         
+    def n_params(self):
+        return self.n+1
+        
     def cache_name(self):
         return 'poly{}'.format(self.n)
 
@@ -31,4 +34,4 @@ if __name__ == '__main__':
     thresholds = [1E-10, 1E-7, 1E-6, 1E-4]
     for n in xrange(4):
         print 'Testing polynomial of degree {}'.format(n)
-        Poly(n).TEST_check_grad(theta_size=n+1, threshold=thresholds[n])
+        Poly(n).TEST_check_grad(threshold=thresholds[n])

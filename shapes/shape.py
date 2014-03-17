@@ -4,6 +4,7 @@ import numpy as np
 class Shape(object):
     """Base class for different shape objects, e.g. sigmoid.    
        Derived classes should implement:
+           n = n_params()
            str = cache_name()
            str = format_params(theta, latex=False)
            y = f(theta,x)           
@@ -20,9 +21,6 @@ class Shape(object):
     def __str__(self):
         return self.cache_name()
 
-    def n_params(self):
-        return len(self.priors)        
-        
     def bounds(self):
         return [pr.bounds() for pr in self.priors]
 
@@ -39,12 +37,12 @@ class Shape(object):
         y_smooth = self.f(theta, x_smooth)
         return x_smooth,y_smooth
 
-    def TEST_check_grad(self, theta_size, n=100, threshold=1E-7):
+    def TEST_check_grad(self, n=100, threshold=1E-7):
         import scipy.optimize
         rng = np.random.RandomState(0)
         def check_one():
             x = rng.uniform(-10,10)
-            theta = rng.uniform(size=theta_size)
+            theta = rng.uniform(size=self.n_params())
             diff = scipy.optimize.check_grad(self.f, self.f_grad, theta, x)
             return diff
         max_diff = max([check_one() for _ in xrange(n)])

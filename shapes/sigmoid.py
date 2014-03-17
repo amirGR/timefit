@@ -14,6 +14,9 @@ class Sigmoid(Shape):
             ]
         Shape.__init__(self, priors)
         
+    def n_params(self):
+        return 4
+                
     def cache_name(self):
         return 'sigmoid'
 
@@ -47,4 +50,4 @@ class Sigmoid(Shape):
         ]
     
 if __name__ == '__main__':
-    Sigmoid().TEST_check_grad(theta_size=4)
+    Sigmoid().TEST_check_grad()
