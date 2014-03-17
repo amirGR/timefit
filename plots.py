@@ -124,7 +124,7 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
 <body>
 <H1>Fits for every Gene and Region</H1>
 <P>
-<a href="{{data.pathway}}-R2-hist.png">Distribution of LOO R2 scores</a>
+<a href="R2-hist.png">Distribution of LOO R2 scores</a>
 <table>
     <th>
         {% for region_name in sorted_regions %}
@@ -159,7 +159,7 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
 </body>
 </html>    
 """).render(sorted_regions=cfg.sorted_regions, highScore=cfg.html_table_threshold_score, **locals())
-    with open(join(basedir,'{}-fits.html'.format(data.pathway)), 'w') as f:
+    with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
     
     shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
@@ -176,6 +176,6 @@ def save_fits_and_create_html(data, fitter, basedir, do_genes=True, do_series=Tr
         with utils.interactive(False):
             fits = get_all_fits(data,fitter)
             fig = plot_score_distribution(fits)
-            save_figure(fig, os.path.join(basedir,'{}-R2-hist.png'.format(data.pathway)), b_close=True)
+            save_figure(fig, os.path.join(basedir,'R2-hist.png'), b_close=True)
     if do_html:
         create_html(data, fitter, basedir, gene_dir, series_dir)
