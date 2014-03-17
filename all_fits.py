@@ -80,7 +80,7 @@ def compute_fit(series, fitter):
     print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.expression
-    theta,sigma,LOO_predictions = fitter.fit_loo(x,y)
+    theta,sigma,LOO_predictions = fitter.fit(x,y,loo=True)
     if theta is None:
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
         fit_predictions = None

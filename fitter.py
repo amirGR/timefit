@@ -28,13 +28,12 @@ class Fitter(object):
         else:
             return r'{}, sigma={:.2f}'.format(shape_params, sigma)
 
-    def fit_simple(self,x,y):
-        P = self._fit(x,y)
-        return self._unpack_P(P)
-
-    def fit_loo(self, x, y):
+    def fit(self, x, y, loo=False):
         P0 = self._fit(x,y)
         t0,s0 = self._unpack_P(P0)
+        if not loo:
+            return t0,s0
+            
         n = len(y)
         test_preds = np.empty(n)
         for train,test in LeaveOneOut(n):
