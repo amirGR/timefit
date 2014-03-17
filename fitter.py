@@ -6,7 +6,7 @@ from sklearn.cross_validation import LeaveOneOut
 from shapes.priors import NormalPrior, GammaPrior
 
 class Fitter(object):
-    def __init__(self, shape, use_theta_prior=True, use_sigma_prior=False):
+    def __init__(self, shape, use_theta_prior=False, use_sigma_prior=False):
         self.shape = shape
         self.use_theta_prior = use_theta_prior
         self.use_sigma_prior = use_sigma_prior

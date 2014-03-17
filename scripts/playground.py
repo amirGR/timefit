@@ -15,7 +15,7 @@ data = load_data()
 series = data.get_one_series('HTR2B','VFC')
 x = series.ages
 y = series.expression
-fitter = Fitter(Sigmoid())
+fitter = Fitter(Sigmoid(),False,False)
 #fits = get_all_fits(data,fitter)
 
 #plot_gene(data,0)

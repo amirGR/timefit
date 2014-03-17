@@ -7,7 +7,7 @@ from shapes.sigmoid import Sigmoid
 def f_convert(fit):
     "added fitter and shape params"
     return Bunch(
-        fitter = Fitter(Sigmoid()),
+        fitter = fit.fitter,
         seed = fit.seed,
         theta = fit.theta,
         sigma = fit.sigma,
