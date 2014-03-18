@@ -117,6 +117,9 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
             fit.rank = 0
         else:
             fit.rank = int(np.ceil(n_ranks * fit.LOO_score))
+            
+    sorted_regions = cfg.sorted_regions[data.dataset]
+    
     html = Template("""
 <html>
 <head>
@@ -159,7 +162,7 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
 
 </body>
 </html>    
-""").render(sorted_regions=cfg.sorted_regions, highScore=cfg.html_table_threshold_score, **locals())
+""").render(**locals())
     with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
     
