@@ -104,12 +104,3 @@ def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
     """This function is mostly for backward compatibility / syntactic sugar.
     """
     return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal)
-
-def load_matlab_gene_set(pathway):
-    print 'PATHWAY: {}'.format(pathway)
-    datadir = project_dirs.data_dir()
-    file_names = {'pathway17_seq_sim': 'gene_list_pathways_pairs_seqSim.mat' }
-    full_path = os.path.join(datadir,file_names.get(pathway))
-    mat = loadmat(full_path)
-    pathway_gene_names = matlab_cell_array_to_list_of_strings(mat['geneSymbol_list'])
-    return pathway_gene_names
