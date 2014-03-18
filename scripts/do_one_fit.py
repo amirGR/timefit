@@ -35,7 +35,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     shape = get_shape_by_name(args.shape)
-    data = GeneData.load(args.dataset).restrict_postnatal(args.postnatal)
+    data = GeneData.load(args.dataset)
     if args.postnatal:
         data.restrict_postnatal()
     if args.logx:

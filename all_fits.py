@@ -31,8 +31,12 @@ def get_all_fits(data,fitter):
         fits = {}
         
     # check if it already contains all the fits (heuristic by number of fits)
-    if len(fits) == len(data.gene_names)*len(data.region_names):
-        return compute_scores(data, fits)  
+    n_expected = len(data.gene_names)*len(data.region_names)
+    n_found = len(fits)
+    if cfg.verbosity > 0:
+        print 'Found {} of {} fits in {}'.format(n_found, n_expected, filename)
+    if n_found == n_expected:
+        return compute_scores(data, fits)
     
     assert len(data.gene_names) < 500, "So many genes... Not doing this!"
     
