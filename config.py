@@ -21,6 +21,8 @@ else:
 all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 
+kang_log_scale_x0 = -45.0/52
+
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'

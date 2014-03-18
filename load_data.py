@@ -1,15 +1,86 @@
 import os.path
-from scipy.io import loadmat
 import numpy as np
-from collections import namedtuple
+from scipy.io import loadmat
 import project_dirs
 import config as cfg
+from utils import matlab_cell_array_to_list_of_strings
 
-GeneDataBase = namedtuple('GeneData', [
-    'expression', 'gene_names', 'region_names', 'genders', 'ages', 'pathway','dataset', 'postnatal_only',
-])
+class OneGeneRegion(object):
+    def __init__(self, expression, ages, gene_name, region_name):
+        self.expression = expression
+        self.ages = ages
+        self.gene_name = gene_name
+        self.region_name = region_name
 
-class GeneData(GeneDataBase):
+class GeneData(object):
+    def __init__(self, expression, gene_names, region_names, genders, ages, dataset):
+        self.expression = expression
+        self.gene_names = gene_names
+        self.region_names = region_names
+        self.genders = genders
+        self.ages = ages        
+        self.dataset = dataset
+        self.pathway = 'all'
+        self.postnatal_only = False
+        self.age_scaler = None
+        
+    @staticmethod
+    def load(dataset):
+        datadir = project_dirs.data_dir()
+        filename = '{}_allGenes.mat'.format(dataset)
+        path = os.path.join(datadir,filename)
+        mat = loadmat(path)
+        ages = np.array(mat['ages'].flat)
+        gene_names = matlab_cell_array_to_list_of_strings(mat['gene_names'])
+        expression = mat['expression']
+        if expression.ndim == 2: # extend shape to represent a single region name
+            expression.shape = list(expression.shape)+[1]             
+        return GeneData(
+            expression = expression,
+            gene_names = gene_names,
+            region_names = matlab_cell_array_to_list_of_strings(mat['region_names']),
+            genders = matlab_cell_array_to_list_of_strings(mat['genders']),
+            ages = ages,
+            dataset = dataset
+        )
+
+    def restrict_pathway(self, pathway, ad_hoc_genes=None):
+        if pathway == 'all':
+            return self
+        if pathway in cfg.pathways:
+            assert ad_hoc_genes is None, 'Specifying ad_hoc_genes for a known pathway is not allowed. Pathway: {}'.format(pathway)
+            pathway_genes = cfg.pathways[pathway]
+        elif ad_hoc_genes is not None:
+            pathway_genes = ad_hoc_genes
+        else:
+            raise Exception('Unknown pathway: {}'.format(pathway))
+        inds = [np.where(self.gene_names == gene)[0][0] for gene in pathway_genes]
+        self.expression = self.expression[:,inds,:]
+        self.gene_names = np.array(pathway_genes)
+        self.pathway = pathway
+        return self
+    
+    def restrict_postnatal(self, b=True):
+        if b:
+            assert self.age_scaler is None, 'restrict_postnatal cannot be called after scaling'
+            valid = (self.ages>0)
+            self.ages = self.ages[valid]
+            self.expression = self.expression[valid,:,:]
+            self.postnatal_only = True
+        return self    
+
+    def restrict_regions(self, lst_regions):
+        inds = [np.where(self.region_names == region)[0][0] for region in lst_regions]
+        self.expression = self.expression[:,:,inds]
+        self.region_names = self.region_names[inds]
+        return self
+        
+    def scale_ages(self, scaler):
+        assert self.age_scaler is None, 'More than one scaling is not supported'
+        self.ages = scaler.scale(self.ages)
+        self.age_scaler = scaler
+        return self
+    
     def get_one_series(self, iGene, iRegion):
         if isinstance(iGene, basestring):
             iGene = np.where(self.gene_names == iGene)[0][0]
@@ -26,65 +97,13 @@ class GeneData(GeneDataBase):
             expression = expression,
             ages = ages,
             gene_name = self.gene_names[iGene],
-            region_name = self.region_names[iRegion],
+            region_name = self.region_names[iRegion]
         )
         
-    def restrict_regions(self, lst_regions):
-        inds = [np.where(self.region_names == region)[0][0] for region in lst_regions]
-        return GeneData(
-            expression = self.expression[:,:,inds],
-            gene_names = self.gene_names,
-            region_names = self.region_names[inds],
-            genders = self.genders,
-            ages = self.ages,
-            pathway = self.pathway,
-            dataset = self.dataset,
-            postnatal_only = self.postnatal_only,
-        )
-
-OneGeneRegion = namedtuple('OneGeneRegion', ['expression', 'ages', 'gene_name', 'region_name'])
-
 def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
-    datadir = project_dirs.data_dir()
-    filename = '{}_allGenes.mat'.format(dataset)
-    path = os.path.join(datadir,filename)
-    mat = loadmat(path)
-    ages = np.array(mat['ages'].flat)
-    all_gene_names = convert_matlab_string_cell(mat['gene_names'])
-    all_expression_levels = mat['expression']
-    if all_expression_levels.ndim == 2: # extend shape to represent a single region name
-        all_expression_levels.shape = list(all_expression_levels.shape)+[1] 
-    if pathway == 'all':
-        pathway_expression = all_expression_levels
-        gene_names = all_gene_names    
-    else:
-        assert pathway in cfg.pathways, 'Unknown pathway: {}'.format(pathway)
-        pathway_genes = cfg.pathways[pathway]
-        inds = [np.where(all_gene_names == gene)[0][0] for gene in pathway_genes]
-        pathway_expression = all_expression_levels[:,inds,:]
-        gene_names = np.array(pathway_genes)
-        
-    if remove_prenatal:
-        valid = (ages>0)
-        ages = ages[valid]
-        pathway_expression = pathway_expression[valid,:,:]
-        
-    data = GeneData(
-        expression = pathway_expression,
-        gene_names = gene_names,
-        region_names = convert_matlab_string_cell(mat['region_names']),
-        genders = convert_matlab_string_cell(mat['genders']),
-        ages = ages,
-        pathway = pathway,
-        dataset = dataset,
-        postnatal_only = remove_prenatal,
-    )
-    return data
-
-def convert_matlab_string_cell(cell_array):
-    def convert_one(x):
-        return x[0] if x else None # some data files contain empty names (with some of these have different type)
-    return np.array([convert_one(x) for x in cell_array.flat])
+    """This function is mostly for backward compatibility / syntactic sugar.
+    """
+    return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal)
 
 def load_matlab_gene_set(pathway):
     print 'PATHWAY: {}'.format(pathway)
@@ -92,5 +111,5 @@ def load_matlab_gene_set(pathway):
     file_names = {'pathway17_seq_sim': 'gene_list_pathways_pairs_seqSim.mat' }
     full_path = os.path.join(datadir,file_names.get(pathway))
     mat = loadmat(full_path)
-    pathway_gene_names = convert_matlab_string_cell(mat['geneSymbol_list'])
+    pathway_gene_names = matlab_cell_array_to_list_of_strings(mat['geneSymbol_list'])
     return pathway_gene_names

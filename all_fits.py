@@ -9,17 +9,18 @@ import config as cfg
 import project_dirs
 from utils import ensure_dir, list_of_strings_to_matlab_cell_array, init_array
 
-def _cache_file_from_fields(pathway, dataset, postnatal_only, fitter_name):
+def _cache_file(data, fitter):
     from os.path import join
-    if postnatal_only:
-        pathway = 'postnatal-{}'.format(pathway)
-    return join(project_dirs.cache_dir(), dataset, 'fits-{}-{}.pkl'.format(pathway, fitter_name))
-
-def _cache_file_from_data(data, fitter):
-    return _cache_file_from_fields(data.pathway, data.dataset, data.postnatal_only, fitter.cache_name())
+    s = data.pathway
+    if data.age_scaler is not None:
+        s = '{}-{}'.format(data.age_scaler.cache_name(),s)
+    if data.postnatal_only:
+        s = 'postnatal-{}'.format(s)
+    filename = 'fits-{}-{}.pkl'.format(s, fitter.cache_name())
+    return join(project_dirs.cache_dir(), data.dataset, filename)
 
 def get_all_fits(data,fitter):
-    filename = _cache_file_from_data(data, fitter)
+    filename = _cache_file(data, fitter)
     ensure_dir(dirname(filename))
     
     # load the cache we have so far
@@ -79,7 +80,7 @@ def compute_fit(series, fitter):
     print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.expression
-    theta,sigma,LOO_predictions = fitter.fit_loo(x,y)
+    theta,sigma,LOO_predictions = fitter.fit(x,y,loo=True)
     if theta is None:
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
         fit_predictions = None

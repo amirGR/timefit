@@ -6,12 +6,7 @@ from load_data import load_data
 from fitter import Fitter
 from shapes.sigmoid import Sigmoid
 from all_fits import get_all_fits
-from plots import save_figure
 import config as cfg
-
-data = load_data()
-fitter = Fitter(Sigmoid(),False,False)
-fits = get_all_fits(data,fitter)
 
 params = {
     'a': ('$a$', lambda f: f.theta[0]),
@@ -21,7 +16,7 @@ params = {
     'p': (r'$1/\sigma$', lambda f: 1/f.sigma),
 }
 
-def create_hist(p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=False):
+def create_hist(fits, p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=False):
     latex,getter = params[p]
     vals = np.array([getter(f) for f in fits.itervalues()])
     vals = vals[(vals>low) & (vals<high)]
@@ -55,4 +50,8 @@ def create_hist(p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=Fa
         plt.title(ttl)
     return vals
 
-#
+# This script is meant to be run as a setup, then run commands interactively, e.g.:
+#data = load_data()
+#fitter = Fitter(Sigmoid(),False,False)
+#fits = get_all_fits(data,fitter)
+#create_hist(fits, 'a', 0, 10, fit_gamma=True)
