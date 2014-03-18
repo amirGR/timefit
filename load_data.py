@@ -69,6 +69,7 @@ class GeneData(object):
             assert self.age_scaler is None, 'restrict_postnatal cannot be called after scaling'
             valid = (self.ages>0)
             self.ages = self.ages[valid]
+            self.genders = self.genders[valid]
             self.expression = self.expression[valid,:,:]
             self.postnatal_only = True
         return self    
