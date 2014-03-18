@@ -83,9 +83,15 @@ class GeneData(object):
     
     def get_one_series(self, iGene, iRegion):
         if isinstance(iGene, basestring):
-            iGene = np.where(self.gene_names == iGene)[0][0]
+            match_positions = np.where(self.gene_names == iGene)[0]
+            if not match_positions:
+                raise Exception('Gene {} not found'.format(iGene))
+            iGene = match_positions[0]
         if isinstance(iRegion, basestring):
-            iRegion = np.where(self.region_names == iRegion)[0][0]
+            match_positions = np.where(self.region_names == iRegion)[0]
+            if not match_positions:
+                raise Exception('Region {} not found'.format(iRegion))
+            iRegion = match_positions[0]
         expression = self.expression[:,iGene,iRegion]
         ages = self.ages
         valid = ~np.isnan(expression)
