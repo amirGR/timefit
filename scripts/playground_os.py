@@ -22,20 +22,13 @@ len(cfg.pathways.get('pathway17_seq_sim'))
 #[name for name in curr_gene_set_str if name not in gene_names]
 #pathway='serotonin'
 dataset = 'kang2011'
-data = load_data(pathway,dataset)   
+remove_prenatal=False
+
+data = load_data(pathway,dataset,remove_prenatal)   
 series = data.get_one_series('HTR2B','VFC')
 x = series.ages
 y = series.expression
 fitter = Fitter(Sigmoid())
 fits = get_all_fits(data,fitter)
-
-
-filename = join(project_dirs.cache_dir(), dataset, 'fits-{}-{}.pkl'.format(pathway, fitter.cache_name()))  
-    # load the cache we have so far
-filename = "C:\\work\\HTR\\cache\\kang2011\\fits-serotonin-sigmoid-t1-s0.pkl"
-    try:
-        with open(filename) as f:
-            fits = pickle.load(f)
-    except:
-        fits = {}
-        
+save_as_mat_file(fits, 'try1.mat')
+save_fits_and_create_html(data, fitter, project_dirs.results_dir())
