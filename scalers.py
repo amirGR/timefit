@@ -1,4 +1,5 @@
 import numpy as np
+import config as cfg
 
 class LogScaler(object):
     def __init__(self, x0=0):
@@ -22,7 +23,7 @@ class LinearScaler(object):
         self.r =  r
 
     @staticmethod
-    def fromData(self,x):
+    def fromData(x):
         mu = np.mean(x)
         r =  max(x) - min(x)
         return LinearScaler(mu,r)
@@ -35,3 +36,26 @@ class LinearScaler(object):
 
     def unscale(self, sx):
         return sx*self.r + self.mu
+
+##########################################################
+# Building scaler from command line input
+##########################################################
+def allowed_scaler_names():
+    return ['none', 'linear', 'log']
+
+def build_scaler(name, data):
+    if name == 'none':
+        return None
+    elif name == 'linear':
+        return LinearScaler.fromData(data.ages)
+    elif name == 'log':
+        if data.dataset == 'kang2011':
+            x0 = cfg.kang_log_scale_x0
+        elif data.dataset == 'colantuoni2011':
+            x0 = cfg.colantuoni_log_scale_x0
+        else:
+            x0 = cfg.log_scale_x0
+            print "Don't know where x0 is for this dataset. Using default: x0={}".format(x0)
+        return LogScaler(x0)
+    else:
+        raise Exception('Unknown scaler: {}'.format(name))

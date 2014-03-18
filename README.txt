@@ -38,7 +38,7 @@ This is handled by the script compute_fits.py. To see the options:
 >> python compute_fits.py --help
 
 A good way to check you can run this:
->> python compute_fits.py --pathway test --html ~/www/pyfit poly1
+>> python compute_fits.py --pathway test --shape poly1 --html ~/www/pyfit 
 This will fit a 1st order polynomial on a "test" pathway containing two genes. 
 It will create the fits under a cache directory and then use them to create the html files.
 Assuming you're running on cortex, you can see the html at http://chechiklab.biu.ac.il/~yourlogin/pyfit/poly1/fits.html

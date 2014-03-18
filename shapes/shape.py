@@ -52,6 +52,12 @@ class Shape(object):
         else:
             print 'Difference is too big. Gradient is NOT OK!'
 
+#####################################################
+# Building shape from command line input
+#####################################################
+def allowed_shape_names():
+    return ['sigmoid', 'poly0', 'poly1', 'poly2', 'poly3']
+
 def get_shape_by_name(shape_name):
     import re
     if shape_name == 'sigmoid':
