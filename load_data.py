@@ -44,7 +44,7 @@ class GeneData(object):
             dataset = dataset
         )
 
-    def restrict_pathway(self, pathway, ad_hoc_genes=None):
+    def restrict_pathway(self, pathway, ad_hoc_genes=None, allow_missing_genes=True):
         if pathway == 'all':
             return self
         if pathway in cfg.pathways:
@@ -54,9 +54,13 @@ class GeneData(object):
             pathway_genes = ad_hoc_genes
         else:
             raise Exception('Unknown pathway: {}'.format(pathway))
-        inds = [np.where(self.gene_names == gene)[0][0] for gene in pathway_genes]
+        inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
+        if cfg.verbosity > 0:
+            missing = [g for g,i in zip(pathway_genes,inds) if i is None]
+            print 'Dataset {} is missing {} genes from pathway {}: {}'.format(self.dataset, len(missing), pathway, missing)
+        inds = [x for x in inds if x is not None]
         self.expression = self.expression[:,inds,:]
-        self.gene_names = np.array(pathway_genes)
+        self.gene_names = self.gene_names[inds]
         self.pathway = pathway
         return self
     
@@ -83,15 +87,9 @@ class GeneData(object):
     
     def get_one_series(self, iGene, iRegion):
         if isinstance(iGene, basestring):
-            match_positions = np.where(self.gene_names == iGene)[0]
-            if not match_positions:
-                raise Exception('Gene {} not found'.format(iGene))
-            iGene = match_positions[0]
+            iGene = self._find_gene_index(iGene)
         if isinstance(iRegion, basestring):
-            match_positions = np.where(self.region_names == iRegion)[0]
-            if not match_positions:
-                raise Exception('Region {} not found'.format(iRegion))
-            iRegion = match_positions[0]
+            iRegion = self._find_region_index(iRegion)
         expression = self.expression[:,iGene,iRegion]
         ages = self.ages
         valid = ~np.isnan(expression)
@@ -105,6 +103,22 @@ class GeneData(object):
             gene_name = self.gene_names[iGene],
             region_name = self.region_names[iRegion]
         )
+        
+    def _find_gene_index(self, name, allow_missing=False):
+        match_positions = np.where(self.gene_names == name)[0]
+        if len(match_positions) > 0:
+            return match_positions[0]
+        if allow_missing:
+            return None
+        raise Exception('Gene {} not found'.format(name))
+
+    def _find_region_index(self, name, allow_missing=False):
+        match_positions = np.where(self.region_names == name)[0]
+        if len(match_positions) > 0:
+            return match_positions[0]
+        if allow_missing:
+            return None
+        raise Exception('Region {} not found'.format(name))        
         
 def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
     """This function is mostly for backward compatibility / syntactic sugar.
