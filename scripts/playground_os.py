@@ -24,8 +24,6 @@ def load_matlab_gene_set(pathway):
 # load some data
 pathway='pathway17_seq_sim'
 curr_gene_set = load_matlab_gene_set(pathway)
-curr_gene_list = curr_gene_set.tolist()
-curr_gene_set_str = [str(s) for s in curr_gene_list]
 cfg.pathways[pathway] = curr_gene_set_str;
 len(cfg.pathways.get('pathway17_seq_sim'))
 

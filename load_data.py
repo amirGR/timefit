@@ -31,15 +31,15 @@ class GeneData(object):
         path = os.path.join(datadir,filename)
         mat = loadmat(path)
         ages = np.array(mat['ages'].flat)
-        gene_names = matlab_cell_array_to_list_of_strings(mat['gene_names'])
+        gene_names = np.array(matlab_cell_array_to_list_of_strings(mat['gene_names']))
         expression = mat['expression']
         if expression.ndim == 2: # extend shape to represent a single region name
             expression.shape = list(expression.shape)+[1]             
         return GeneData(
             expression = expression,
             gene_names = gene_names,
-            region_names = matlab_cell_array_to_list_of_strings(mat['region_names']),
-            genders = matlab_cell_array_to_list_of_strings(mat['genders']),
+            region_names = np.array(matlab_cell_array_to_list_of_strings(mat['region_names'])),
+            genders = np.array(matlab_cell_array_to_list_of_strings(mat['genders'])),
             ages = ages,
             dataset = dataset
         )

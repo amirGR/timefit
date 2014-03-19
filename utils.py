@@ -35,8 +35,8 @@ def init_array(val, *shape):
         
 def matlab_cell_array_to_list_of_strings(cell_array):
     def convert_one(x):
-        return x[0] if x else None # some data files contain empty names (with some of these have different type)
-    return np.array([convert_one(x) for x in cell_array.flat])
+        return str(x[0]) if x else None # some data files contain empty names (with some of these have different type)
+    return [convert_one(x) for x in cell_array.flat]
 
 def list_of_strings_to_matlab_cell_array(lst_string):
     def convert_one(x):
