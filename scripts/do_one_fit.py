@@ -1,27 +1,38 @@
 import setup
 from os.path import join
+import matplotlib.pyplot as plt
 from project_dirs import results_dir
 import utils
 from command_line import get_common_parser, process_common_inputs
 from plots import plot_one_series, save_figure
 
-def do_one_fit(series, fitter, loo, filename):
-    theta, sigma, LOO_predictions = fitter.fit(series.ages, series.expression, loo=loo)
-    fig = plot_one_series(series, fitter.shape, theta, LOO_predictions)
+def do_one_fit(series, fitter, loo, filename, b_show):
+    if fitter is not None:
+        theta, sigma, LOO_predictions = fitter.fit(series.ages, series.expression, loo=loo)
+        fig = plot_one_series(series, fitter.shape, theta, LOO_predictions)
+    else:
+        fig = plot_one_series(series)
     if filename is None:
         utils.ensure_dir(results_dir())
         filename = join(results_dir(), 'fit.png')
     print 'Saving figure to {}'.format(filename)
-    save_figure(fig, filename, b_close=True)
+    save_figure(fig, filename)
+    if b_show:
+        plt.show(block=True)
 
 if __name__ == '__main__':
     utils.disable_all_warnings()   
     parser = get_common_parser(include_pathway=False)
     parser.add_argument('-g', '--gene', default='HTR1E')
     parser.add_argument('-r', '--region', default='VFC')
-    parser.add_argument('--loo', help='Show LOO predictions', action='store_true')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--loo', help='Show LOO predictions', action='store_true')
+    group.add_argument('--nofit', help='Only show the data points', action='store_true')
     parser.add_argument('--filename', help='Where to save the figure')
+    parser.add_argument('--show', help='Show figure and wait before exiting', action='store_true')
     args = parser.parse_args()
-    data, fitter = process_common_inputs(args)    
+    data, fitter = process_common_inputs(args)
+    if args.nofit:
+        fitter = None
     series = data.get_one_series(args.gene,args.region)
-    do_one_fit(series, fitter, args.loo, args.filename)
+    do_one_fit(series, fitter, args.loo, args.filename, args.show)
