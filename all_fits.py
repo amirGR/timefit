@@ -72,8 +72,6 @@ def get_all_fits(data, fitter, k_of_n=None):
     if not missing_genes:
         return compute_scores(data, fits)
         
-    assert len(missing_genes) < 500, "So many genes... Not doing this!"
-    
     # compute the fits that are missing
     for g in gene_names:
         pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
