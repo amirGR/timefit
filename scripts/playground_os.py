@@ -2,6 +2,7 @@ import setup
 from load_data import load_data
 import numpy as np
 import scipy as sp
+from scipy.io import loadmat
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from plots import *
@@ -9,6 +10,7 @@ from all_fits import *
 import config as cfg
 from fitter import Fitter
 from shapes.sigmoid import Sigmoid
+from utils import matlab_cell_array_to_list_of_strings
 
 def load_matlab_gene_set(pathway):
     print 'PATHWAY: {}'.format(pathway)
