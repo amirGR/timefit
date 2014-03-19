@@ -28,7 +28,7 @@ if __name__ == '__main__':
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--loo', help='Show LOO predictions', action='store_true')
     group.add_argument('--nofit', help='Only show the data points', action='store_true')
-    parser.add_argument('--filename', help='Where to save the figure')
+    parser.add_argument('--filename', help='Where to save the figure. Default: results/fit.png')
     parser.add_argument('--show', help='Show figure and wait before exiting', action='store_true')
     args = parser.parse_args()
     data, fitter = process_common_inputs(args)
