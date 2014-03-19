@@ -42,3 +42,12 @@ A good way to check you can run this:
 This will fit a 1st order polynomial on a "test" pathway containing two genes. 
 It will create the fits under a cache directory and then use them to create the html files.
 Assuming you're running on cortex, you can see the html at http://chechiklab.biu.ac.il/~yourlogin/pyfit/poly1/fits.html
+
+Note on parallelization:
+Currently for each gene, regions are fit in parallel using N-1 processes, where N is the number of cores on your machine.
+If you're fitting many genes, use the "--part k/n" option to split the work on several machines, e.g.
+ctx03>> python compute_fits.py --pathway test --shape poly1 --part 1/3
+ctx04>> python compute_fits.py --pathway test --shape poly1 --part 2/3
+ctx05>> python compute_fits.py --pathway test --shape poly1 --part 3/3
+Each of these will compute part of the genes and write the fits to files like e.g. <base filename>.pkl.2_of_3
+Once you later run without --part, the package will automatically consolidate all the parts into <base filename>.

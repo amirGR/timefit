@@ -1,5 +1,7 @@
 import pickle
+import os
 from os.path import dirname
+from glob import glob
 import numpy as np
 from scipy.io import savemat
 from sklearn.datasets.base import Bunch
@@ -19,29 +21,61 @@ def _cache_file(data, fitter):
     filename = 'fits-{}-{}.pkl'.format(s, fitter.cache_name())
     return join(project_dirs.cache_dir(), data.dataset, filename)
 
-def get_all_fits(data,fitter):
-    filename = _cache_file(data, fitter)
-    ensure_dir(dirname(filename))
-    
-    # load the cache we have so far
+def _read_one_cache_file(filename):
     try:
+        if cfg.verbosity > 0:
+            print 'Reading fits from {}'.format(filename)
         with open(filename) as f:
             fits = pickle.load(f)
     except:
         fits = {}
-        
-    # check if it already contains all the fits (heuristic by number of fits)
-    n_expected = len(data.gene_names)*len(data.region_names)
-    n_found = len(fits)
-    if cfg.verbosity > 0:
-        print 'Found {} of {} fits in {}'.format(n_found, n_expected, filename)
-    if n_found == n_expected:
-        return compute_scores(data, fits)
+    return fits
     
-    assert len(data.gene_names) < 500, "So many genes... Not doing this!"
+def _save_fits(fits, filename, k_of_n):
+    if k_of_n is not None:
+        k,n = k_of_n
+        filename = '{}.{}-of-{}'.format(filename,k,n)
+    with open(filename,'w') as f:
+        pickle.dump(fits,f)
+
+def _read_all_cache_files(basefile, gene_names, b_consolidate):
+    # collect fits from basefile and all shard files
+    fits = _read_one_cache_file(basefile)
+    partial_files = set(glob(basefile + '*')) - {basefile}
+    for filename in partial_files:
+        fits.update(_read_one_cache_file(filename))
+
+    # reduce to the set we need (especially if we're working on a shard)
+    fits = {(g,r):v for (g,r),v in fits.iteritems() if g in set(gene_names)}
+        
+    if b_consolidate:
+        _save_fits(fits,basefile,None)
+        for filename in partial_files:
+            os.remove(filename)
+
+    return fits
+
+def get_all_fits(data, fitter, k_of_n=None):
+    gene_names = data.gene_names
+    if k_of_n is not None:
+        k,n = k_of_n
+        gene_names = [g for i,g in enumerate(gene_names) if i%n == k-1] # k is one-based
+
+    filename = _cache_file(data, fitter)
+    ensure_dir(dirname(filename))
+    fits = _read_all_cache_files(filename, gene_names, b_consolidate = (k_of_n is None))
+
+    missing_genes = set(g for g in gene_names for r in data.region_names if (g,r) not in fits)
+    if cfg.verbosity > 0:
+        print 'Still need to compute fits for {} of {} genes'.format(len(missing_genes),len(gene_names))
+
+    if not missing_genes:
+        return compute_scores(data, fits)
+        
+    assert len(missing_genes) < 500, "So many genes... Not doing this!"
     
     # compute the fits that are missing
-    for g in data.gene_names:
+    for g in gene_names:
         pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
         df = delayed(_compute_fit_job)
         changes = pool(df(data,g,r,fitter) for r in data.region_names if (g,r) not in fits)
@@ -52,8 +86,7 @@ def get_all_fits(data,fitter):
         for g2,r2,f in changes:
             fits[(g2,r2)] = f
         print 'Saving fits for gene {}'.format(g)
-        with open(filename,'w') as f:
-            pickle.dump(fits,f)
+        _save_fits(fits, filename, k_of_n)
     
     return compute_scores(data, fits)  
 
