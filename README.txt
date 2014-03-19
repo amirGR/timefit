@@ -43,6 +43,15 @@ This will fit a 1st order polynomial on a "test" pathway containing two genes.
 It will create the fits under a cache directory and then use them to create the html files.
 Assuming you're running on cortex, you can see the html at http://chechiklab.biu.ac.il/~yourlogin/pyfit/poly1/fits.html
 
+Some options worth noting when specifying a pathway (set of genes):
+ * You can use one of the preconfigured sets, like 'serotonin'
+ * 'all' will use all the genes in the dataset
+ * Using any other string will try to load the gene names from a file at that path. 
+   It will try the path as is, and relative to the data directory.
+   Accepted formats:
+     * Files ending in .mat that contain a matlab file with one variable that is a cell array of strings
+	 * Files not ending in .mat are expected to be text files with gene names separated by whitespace (and possibly commas)
+
 Note on parallelization:
 Currently for each gene, regions are fit in parallel using N-1 processes, where N is the number of cores on your machine.
 If you're fitting many genes, use the "--part k/n" option to split the work on several machines, e.g.

@@ -55,5 +55,5 @@ pathways = {
         'CNR1','CNR2','CALB1','CALB2','DAGLA','DAGLB',
         'NAPEPLD','GDE1','ABHD4','PTPN22', 'MGLL','ABHD6','FAAH',
     ],
-    
+    '17pathways': '17pathways.txt', # references a file you should hopefully have in the data directory
 }

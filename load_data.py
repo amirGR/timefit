@@ -1,9 +1,14 @@
-import os.path
+from os.path import join, splitext, basename, isfile
 import numpy as np
 from scipy.io import loadmat
 import project_dirs
 import config as cfg
-from utils import matlab_cell_array_to_list_of_strings
+from utils import matlab_cell_array_to_list_of_strings, read_strings_from_file
+
+def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
+    """This function is mostly for backward compatibility / syntactic sugar.
+    """
+    return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal)
 
 class OneGeneRegion(object):
     def __init__(self, expression, ages, gene_name, region_name):
@@ -28,7 +33,7 @@ class GeneData(object):
     def load(dataset):
         datadir = project_dirs.data_dir()
         filename = '{}_allGenes.mat'.format(dataset)
-        path = os.path.join(datadir,filename)
+        path = join(datadir,filename)
         mat = loadmat(path)
         ages = np.array(mat['ages'].flat)
         gene_names = np.array(matlab_cell_array_to_list_of_strings(mat['gene_names']))
@@ -45,15 +50,9 @@ class GeneData(object):
         )
 
     def restrict_pathway(self, pathway, ad_hoc_genes=None, allow_missing_genes=True):
-        if pathway == 'all':
+        pathway, pathway_genes = GeneData._translate_pathway(pathway, ad_hoc_genes)
+        if pathway is None:
             return self
-        if pathway in cfg.pathways:
-            assert ad_hoc_genes is None, 'Specifying ad_hoc_genes for a known pathway is not allowed. Pathway: {}'.format(pathway)
-            pathway_genes = cfg.pathways[pathway]
-        elif ad_hoc_genes is not None:
-            pathway_genes = ad_hoc_genes
-        else:
-            raise Exception('Unknown pathway: {}'.format(pathway))
         inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
         missing = [g for g,i in zip(pathway_genes,inds) if i is None]
         if missing and cfg.verbosity > 0:
@@ -63,7 +62,7 @@ class GeneData(object):
         self.gene_names = self.gene_names[inds]
         self.pathway = pathway
         return self
-    
+
     def restrict_postnatal(self, b=True):
         if b:
             assert self.age_scaler is None, 'restrict_postnatal cannot be called after scaling'
@@ -105,6 +104,10 @@ class GeneData(object):
             region_name = self.region_names[iRegion]
         )
         
+    #####################################################################
+    # Private helper methods
+    #####################################################################        
+        
     def _find_gene_index(self, name, allow_missing=False):
         match_positions = np.where(self.gene_names == name)[0]
         if len(match_positions) > 0:
@@ -120,8 +123,45 @@ class GeneData(object):
         if allow_missing:
             return None
         raise Exception('Region {} not found'.format(name))        
-        
-def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
-    """This function is mostly for backward compatibility / syntactic sugar.
-    """
-    return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal)
+
+    @staticmethod
+    def _translate_pathway(pathway, ad_hoc_genes):
+        if pathway is None or pathway == 'all':
+            return None,None
+        if pathway in cfg.pathways:
+            assert ad_hoc_genes is None, 'Specifying ad_hoc_genes for a known pathway is not allowed. Pathway: {}'.format(pathway)
+            _, pathway_genes = GeneData._translate_gene_list(cfg.pathways[pathway])
+            return pathway, pathway_genes
+        if ad_hoc_genes is not None:
+            _, pathway_genes = GeneData._translate_gene_list(ad_hoc_genes)
+            return pathway, pathway_genes
+            
+        pathway_name, pathway_genes = GeneData._translate_gene_list(pathway)
+        if pathway_genes is not None:
+            assert pathway_name not in cfg.pathways, 'Changing the meaning (gene list) of a known pathway is not allowed. Pathway: {}'.format(pathway_name)
+            return pathway_name, pathway_genes
+            
+        raise Exception('Unknown pathway: {}'.format(pathway))
+    
+    @staticmethod
+    def _translate_gene_list(gene_list):
+        """gene_list can already be a sequence of strings or it could be a path to
+           a file that contains a list of strings. 
+           The path can be relative to the data directory or an absolute path.
+           The file can be any format supported by utils.read_strings_from_file()
+        """
+        # if it's not something that could be a filename assume it's a sequence of strings
+        if not isinstance(gene_list, basestring):
+            return None, gene_list 
+
+        # try to find a matching filename and read the data from it
+        path = gene_list
+        pathway_name = splitext(basename(gene_list))[0] # use the file's basename (without extension) as the pathway name
+        for path in [gene_list, join(project_dirs.data_dir(),gene_list)]:
+            if isfile(path):
+                gene_list = read_strings_from_file(path)
+                return pathway_name, gene_list
+
+        # not found
+        return None,None 
+            
