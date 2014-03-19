@@ -55,8 +55,8 @@ class GeneData(object):
         else:
             raise Exception('Unknown pathway: {}'.format(pathway))
         inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
-        if cfg.verbosity > 0:
-            missing = [g for g,i in zip(pathway_genes,inds) if i is None]
+        missing = [g for g,i in zip(pathway_genes,inds) if i is None]
+        if missing and cfg.verbosity > 0:
             print 'Dataset {} is missing {} genes from pathway {}: {}'.format(self.dataset, len(missing), pathway, missing)
         inds = [x for x in inds if x is not None]
         self.expression = self.expression[:,inds,:]
