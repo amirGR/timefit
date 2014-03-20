@@ -34,6 +34,8 @@ class GeneData(object):
         datadir = project_dirs.data_dir()
         filename = '{}_allGenes.mat'.format(dataset)
         path = join(datadir,filename)
+        if cfg.verbosity > 0:
+            print 'Loading dataset {} from {}'.format(dataset,path)
         mat = loadmat(path)
         ages = np.array(mat['ages'].flat)
         gene_names = np.array(matlab_cell_array_to_list_of_strings(mat['gene_names']))
@@ -159,6 +161,8 @@ class GeneData(object):
         pathway_name = splitext(basename(gene_list))[0] # use the file's basename (without extension) as the pathway name
         for path in [gene_list, join(project_dirs.data_dir(),gene_list)]:
             if isfile(path):
+                if cfg.verbosity > 0:
+                    print 'Reading gene list from {}'.format(path)
                 gene_list = read_strings_from_file(path)
                 return pathway_name, gene_list
 

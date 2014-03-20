@@ -11,6 +11,13 @@ class Fitter(object):
         self.use_theta_prior = use_theta_prior
         self.use_sigma_prior = use_sigma_prior
         self.inv_sigma_prior = GammaPrior(2.61,1.15,0.65)
+        if cfg.verbosity > 0:
+            if self.use_theta_prior:
+                print 'Fitting using prior on theta:'
+                for name,pr in zip(self.shape.param_names(), self.shape.priors):
+                    print '\t{}: {}'.format(name,pr)
+            if self.use_sigma_prior:
+                print 'Fitting using prior on 1/sigma = {}'.format(self.inv_sigma_prior)
         
     def __str__(self):
         return 'Fitter({}, theta_prior={}, sigma_prior={})'.format(self.shape, self.use_theta_prior, self.use_sigma_prior)
