@@ -7,7 +7,9 @@ from fitter import Fitter
 
 def get_common_parser(include_pathway=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument("-v", "--verbosity", action="count", help="increase output verbosity")    
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-v", "--verbose", action="count", default=0, help="increase output verbosity")    
+    group.add_argument("-q", "--quiet", action="count", default=0, help="decrease output verbosity")    
     parser.add_argument('--dataset', default='kang2011', help='Default: kang2011', choices=['kang2011', 'colantuoni2011'])  
     if include_pathway:
         parser.add_argument('--pathway', default='serotonin', help='Default: serotonin', choices=['all'] + cfg.pathways.keys())
@@ -18,7 +20,7 @@ def get_common_parser(include_pathway=True):
     return parser
     
 def process_common_inputs(args):
-    cfg.verbosity = args.verbosity
+    cfg.verbosity = args.verbose - args.quiet
     
     data = GeneData.load(args.dataset)
     data.restrict_pathway(getattr(args, 'pathway', 'all'))
