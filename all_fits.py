@@ -1,6 +1,6 @@
 import pickle
 import os
-from os.path import dirname
+from os.path import dirname, join
 from glob import glob
 import numpy as np
 from scipy.io import savemat
@@ -8,18 +8,11 @@ from sklearn.datasets.base import Bunch
 from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
-import project_dirs
+from project_dirs import cache_dir, fit_results_relative_path
 from utils import ensure_dir, list_of_strings_to_matlab_cell_array, init_array
 
 def _cache_file(data, fitter):
-    from os.path import join
-    s = data.pathway
-    if data.age_scaler is not None:
-        s = '{}-{}'.format(data.age_scaler.cache_name(),s)
-    if data.postnatal_only:
-        s = 'postnatal-{}'.format(s)
-    filename = 'fits-{}-{}.pkl'.format(s, fitter.cache_name())
-    return join(project_dirs.cache_dir(), data.dataset, filename)
+    return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
 
 def _read_one_cache_file(filename):
     try:
@@ -132,6 +125,7 @@ def compute_fit(series, fitter):
     )
 
 def save_as_mat_file(fits, filename):
+    print 'Saving mat file to {}'.format(filename)
     gene_names = sorted(list(set(g for g,r in fits.iterkeys())))
     n_genes = len(gene_names)
     gene_idx = {g:i for i,g in enumerate(gene_names)}

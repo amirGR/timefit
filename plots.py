@@ -4,8 +4,8 @@ import config as cfg
 from all_fits import get_all_fits
 from fit_score import loo_score
 import utils
-import os.path
-from project_dirs import resources_dir
+from os.path import join
+from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils import ensure_dir
 
 def save_figure(fig, filename, b_close=False):
@@ -73,7 +73,7 @@ def plot_and_save_all_genes(data, fitter, dirname):
         for g in data.gene_names:
             print 'Saving figure for gene {}'.format(g)
             fig = plot_gene(data,g,fits)
-            filename = os.path.join(dirname, '{}.png'.format(g))
+            filename = join(dirname, '{}.png'.format(g))
             save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, dirname):
@@ -86,7 +86,7 @@ def plot_and_save_all_series(data, fitter, dirname):
                 series = data.get_one_series(g,r)
                 fit = fits[(g,r)]
                 fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
-                filename = os.path.join(dirname, 'fit-{}-{}.png'.format(g,r))
+                filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
                 save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
@@ -106,7 +106,6 @@ def plot_score_distribution(fits):
     return fig
 
 def create_html(data, fitter, basedir, gene_dir, series_dir):
-    from os.path import join
     from jinja2 import Template
     import shutil
 
@@ -166,20 +165,23 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
     with open(join(basedir,'fits.html'), 'w') as f:
         f.write(html)
     
-    shutil.copy(os.path.join(resources_dir(),'fits.css'), basedir)
+    shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, fitter, basedir, do_genes=True, do_series=True, do_hist=True, do_html=True):
+def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True):
+    if basedir is None:
+        basedir = join(results_dir(), fit_results_relative_path(data,fitter))
+    print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
     if do_genes:
-        plot_and_save_all_genes(data, fitter, os.path.join(basedir,gene_dir))
+        plot_and_save_all_genes(data, fitter, join(basedir,gene_dir))
     if do_series:
-        plot_and_save_all_series(data, fitter, os.path.join(basedir,series_dir))
+        plot_and_save_all_series(data, fitter, join(basedir,series_dir))
     if do_hist:
         with utils.interactive(False):
             fits = get_all_fits(data,fitter)
             fig = plot_score_distribution(fits)
-            save_figure(fig, os.path.join(basedir,'R2-hist.png'), b_close=True)
+            save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
     if do_html:
         create_html(data, fitter, basedir, gene_dir, series_dir)

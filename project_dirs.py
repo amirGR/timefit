@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Jan 26 09:49:32 2014
-
-@author: ronnie
-"""
 from os.path import dirname, join, abspath
 
 def base_dir():
@@ -24,3 +18,12 @@ def cache_dir():
 
 def results_dir():
     return join(base_dir(), 'results')
+
+def fit_results_relative_path(data,fitter):
+    s = data.pathway
+    if data.age_scaler is not None:
+        s = '{}-{}'.format(data.age_scaler.cache_name(),s)
+    if data.postnatal_only:
+        s = 'postnatal-{}'.format(s)
+    fitname = 'fits-{}-{}'.format(s, fitter.cache_name())
+    return join(data.dataset, fitname)
