@@ -6,10 +6,7 @@ class LogScaler(object):
         self.x0 = x0
         
     def cache_name(self):
-        if self.x0 == 0:
-            return 'log'
-        else:
-            return 'log(x0={:.2g})'.format(self.x0)
+        return 'log'
     
     def scale(self, x):
         return np.log(x - self.x0)
