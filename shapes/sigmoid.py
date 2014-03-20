@@ -8,17 +8,16 @@ class Sigmoid(Shape):
             priors = [
                 GammaPrior(alpha=1.87, beta=1.135, mu=3.65), # a
                 NormalPrior(mu=0.28, sigma=0.84), # h
-                GammaPrior(alpha=1.41, beta=0.055, mu=-4.31), # mu    
-                #GammaPrior(alpha=0.25, beta=0.15, mu=0), # w
+                GammaPrior(alpha=1.41, beta=0.055, mu=-4.31), # mu   
                 NormalPrior(mu=2.5, sigma=2.5), # w
             ]
         Shape.__init__(self, priors)
         
     def param_names(self, latex=False):
         if latex:
-            return ['a', 'h', r'$\mu$', 'w']
+            return ['$Baseline$', '$Height$', '$Onset$', '$Width$']
         else:
-            return ['a', 'h', 'mu', 'w']
+            return ['baseline', 'height', 'onset', 'width']
                 
     def cache_name(self):
         return 'sigmoid'
