@@ -14,18 +14,14 @@ class Sigmoid(Shape):
             ]
         Shape.__init__(self, priors)
         
-    def n_params(self):
-        return 4
+    def param_names(self, latex=False):
+        if latex:
+            return ['a', 'h', r'$\mu$', 'w']
+        else:
+            return ['a', 'h', 'mu', 'w']
                 
     def cache_name(self):
         return 'sigmoid'
-
-    def format_params(self, theta, latex=False):
-        a,h,mu,w = theta
-        if latex:
-            return r'a={a:.2f}, h={h:.2f}, $\mu$={mu:.2f}, w={w:.2f}'.format(**locals())
-        else:
-            return r'a={a:.2f}, h={h:.2f}, mu={mu:.2f}, w={w:.2f}'.format(**locals())
 
     def f(self,theta,x):
         a,h,mu,w = theta

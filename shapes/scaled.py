@@ -10,14 +10,11 @@ class ScaledX(Shape):
         self.shape = shape
         self.scaler = scaler
         
-    def n_params(self):
-        return self.shape.n_params()
+    def param_names(self, latex=False):
+        return self.shape.param_names(latex)
 
     def cache_name(self):
         return '{}-{}'.format(self.shape.cache_name(), self.scaler.cache_name())
-
-    def format_params(self, theta, latex=False):
-        return self.shape.format_params(theta,latex)
 
     def f(self,theta,x):
         return self.shape.f(theta, self._sx(x))

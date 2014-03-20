@@ -8,17 +8,14 @@ class Poly(Shape):
         priors = [NormalPrior(0,1) for _ in range(n+1)] # placeholder
         Shape.__init__(self, priors)
         
-    def n_params(self):
-        return self.n+1
+    def param_names(self, latex=False):
+        if latex:
+            return ['$a_{}$'.format(j) for j in xrange(self.n+1)]
+        else:
+            return ['a{}'.format(j) for j in xrange(self.n+1)]
         
     def cache_name(self):
         return 'poly{}'.format(self.n)
-
-    def format_params(self, theta, latex=False):
-        if latex:
-            return ', '.join('$a_{}$={:.2f}'.format(j,a) for j,a in enumerate(theta))
-        else:
-            return ', '.join('a{}={:.2f}'.format(j,a) for j,a in enumerate(theta))
 
     def f(self,theta,x):
         powers = [x**j for j in xrange(self.n+1)]

@@ -4,7 +4,7 @@ import numpy as np
 class Shape(object):
     """Base class for different shape objects, e.g. sigmoid.    
        Derived classes should implement:
-           n = n_params()
+           lst = param_names()
            str = cache_name()
            str = format_params(theta, latex=False)
            y = f(theta,x)           
@@ -20,6 +20,13 @@ class Shape(object):
 
     def __str__(self):
         return self.cache_name()
+        
+    def n_params(self):
+        return len(self.param_names())
+
+    def format_params(self, theta, latex=False):
+        names = self.param_names(latex)
+        return ', '.join('{}={:.2g}'.format(name,val) for name,val in zip(names,theta))
 
     def bounds(self):
         return [pr.bounds() for pr in self.priors]
