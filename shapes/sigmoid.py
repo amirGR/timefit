@@ -1,16 +1,8 @@
 import numpy as np
 from shape import Shape
-from priors import NormalPrior, GammaPrior
 
 class Sigmoid(Shape):
     def __init__(self, priors=None):
-        if priors is None: # XXX - this set is fitted specifically for kang2011/serotonin
-            priors = [
-                GammaPrior(alpha=1.87, beta=1.135, mu=3.65), # a
-                NormalPrior(mu=0.28, sigma=0.84), # h
-                GammaPrior(alpha=1.41, beta=0.055, mu=-4.31), # mu   
-                NormalPrior(mu=2.5, sigma=2.5), # w
-            ]
         Shape.__init__(self, priors)
         
     def param_names(self, latex=False):

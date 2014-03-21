@@ -1,5 +1,6 @@
 import config as cfg
 import numpy as np
+from standard_priors import get_theta_priors
 
 class Shape(object):
     """Base class for different shape objects, e.g. sigmoid.    
@@ -16,7 +17,11 @@ class Shape(object):
            NOTE: We are modeling distributions as independent, which may not be good enough later on.
                  If this assumption changes, some code will need to move around.
         """
+        name, priors = get_theta_priors(priors)
         self.priors = priors
+        self.priors_name = name
+        if priors is not None and len(priors) != self.n_params():
+            raise Exception("Number of priors doesn't match number of parameters. prior={} (size {}), n_params={}".format(name,len(priors),self.n_params()))
 
     def __str__(self):
         return self.cache_name()
@@ -65,16 +70,16 @@ class Shape(object):
 def allowed_shape_names():
     return ['sigmoid', 'poly0', 'poly1', 'poly2', 'poly3']
 
-def get_shape_by_name(shape_name):
+def get_shape_by_name(shape_name, priors):
     import re
     if shape_name == 'sigmoid':
         from sigmoid import Sigmoid
-        return Sigmoid()
+        return Sigmoid(priors)
     elif shape_name.startswith('poly'):
         m = re.match('poly(\d)',shape_name)
         assert m, 'Illegal polynomial shape name'
         degree = int(m.group(1))
         from poly import Poly
-        return Poly(degree)
+        return Poly(degree,priors)
     else:
         raise Exception('Unknown shape: {}'.format(shape_name))

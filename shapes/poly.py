@@ -1,11 +1,9 @@
 import numpy as np
 from shape import Shape
-from priors import NormalPrior
 
 class Poly(Shape):
-    def __init__(self,n):
+    def __init__(self,n,priors=None):
         self.n = n
-        priors = [NormalPrior(0,1) for _ in range(n+1)] # placeholder
         Shape.__init__(self, priors)
         
     def param_names(self, latex=False):
