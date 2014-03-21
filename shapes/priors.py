@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import stats
+import config as cfg
 
 class NormalPrior(object):
     def __init__(self,mu,sigma):
@@ -60,8 +61,8 @@ from project_dirs import priors_dir
 from os.path import join, isfile, basename, splitext
 from glob import glob
 def get_allowed_priors(is_sigma=False):
-    subdir = 'theta' if not is_sigma else 'sigma'
-    pattern = join(priors_dir(), subdir, '*.txt')
+    prior_type = 'theta' if not is_sigma else 'sigma'
+    pattern = join(priors_dir(), prior_type, '*.txt')
     prior_files = glob(pattern)
     names = [splitext(basename(filename))[0] for filename in prior_files]
     return names
@@ -69,9 +70,11 @@ def get_allowed_priors(is_sigma=False):
 def get_prior(name, is_sigma=False):
     if name is None:
         return None
-    subdir = 'theta' if not is_sigma else 'sigma'
-    path = join(priors_dir(), subdir, name+'.txt')
+    prior_type = 'theta' if not is_sigma else 'sigma'
+    path = join(priors_dir(), prior_type, name+'.txt')
     if isfile(path):
+        if cfg.verbosity > 0:
+            print 'Reading priors for {} from {}'.format(prior_type, path)
         with open(path) as f:
             priors = eval(f.read())
         return priors
