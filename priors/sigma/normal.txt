@@ -1,0 +1,1 @@
+NormalPrior(mu=5,sigma=5)

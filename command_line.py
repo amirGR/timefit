@@ -3,8 +3,8 @@ import config as cfg
 from load_data import GeneData
 from scalers import allowed_scaler_names, build_scaler
 from shapes.shape import get_shape_by_name, allowed_shape_names
+from shapes.priors import get_allowed_priors
 from fitter import Fitter
-from shapes.standard_priors import sigma_priors, theta_priors
 
 def get_common_parser(include_pathway=True):
     parser = argparse.ArgumentParser()
@@ -17,8 +17,8 @@ def get_common_parser(include_pathway=True):
     parser.add_argument('--postnatal', help='Use only postnatal data points', action='store_true')
     parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', choices=allowed_scaler_names())
     parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigmoid', default='sigmoid', choices=allowed_shape_names())
-    parser.add_argument('--sigma_prior', metavar='PRIOR', help='Which priors to use for 1/sigma when fitting. Default: None. Use filename or one of {}'.format(sorted(sigma_priors.keys())))
-    parser.add_argument('--priors', metavar='PRIORS', help='Which priors to use for theta when fitting. Default: None. Use filename or one of {}'.format(sorted(theta_priors.keys())))
+    parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: None', choices=get_allowed_priors(is_sigma=True))
+    parser.add_argument('--priors', help='Priors to use for theta when fitting. Default: None', choices=get_allowed_priors())
     return parser
     
 def process_common_inputs(args):

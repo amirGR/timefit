@@ -1,0 +1,6 @@
+[
+	GammaPrior(alpha=1.87, beta=1.135, mu=3.65), # baseline
+	NormalPrior(mu=0.28, sigma=0.84), # height
+	GammaPrior(alpha=1.41, beta=0.055, mu=-4.31), # onset
+	NormalPrior(mu=2.5, sigma=2.5), # width
+]

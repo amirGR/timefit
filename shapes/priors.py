@@ -52,3 +52,27 @@ class GammaPrior(object):
     def d_log_prob(self, x):
         x = x - self.mu
         return (self.a-1)/x - self.b
+
+########################################################
+# Load priors
+########################################################
+from project_dirs import priors_dir
+from os.path import join, isfile, basename, splitext
+from glob import glob
+def get_allowed_priors(is_sigma=False):
+    subdir = 'theta' if not is_sigma else 'sigma'
+    pattern = join(priors_dir(), subdir, '*.txt')
+    prior_files = glob(pattern)
+    names = [splitext(basename(filename))[0] for filename in prior_files]
+    return names
+    
+def get_prior(name, is_sigma=False):
+    if name is None:
+        return None
+    subdir = 'theta' if not is_sigma else 'sigma'
+    path = join(priors_dir(), subdir, name+'.txt')
+    if isfile(path):
+        with open(path) as f:
+            priors = eval(f.read())
+        return priors
+    raise Exception('Could not find prior file at {}'.format(path))

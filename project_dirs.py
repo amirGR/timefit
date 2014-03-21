@@ -18,6 +18,9 @@ def cache_dir():
 
 def results_dir():
     return join(base_dir(), 'results')
+    
+def priors_dir():
+    return join(code_dir(), 'priors')
 
 def fit_results_relative_path(data,fitter):
     s = data.pathway

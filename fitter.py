@@ -3,12 +3,13 @@ import config as cfg
 import numpy as np
 from minimization import minimize_with_restarts
 from sklearn.cross_validation import LeaveOneOut
-from shapes.standard_priors import get_sigma_prior
+from shapes.priors import get_prior
 
 class Fitter(object):
     def __init__(self, shape, sigma_prior=None):
         self.shape = shape
-        self.inv_sigma_prior_name, self.inv_sigma_prior = get_sigma_prior(sigma_prior)
+        self.inv_sigma_prior_name = sigma_prior
+        self.inv_sigma_prior = get_prior(sigma_prior,is_sigma=True)
         if cfg.verbosity > 0:
             if self.shape.priors is not None:
                 print 'Fitting using prior {} on theta:'.format(self.shape.priors_name)
