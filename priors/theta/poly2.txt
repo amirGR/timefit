@@ -1,1 +1,5 @@
-[NormalPrior(0,1) for _ in range(3)]
+{
+  'a0' : NormalPrior(0,1),
+  'a1' : NormalPrior(0,1),
+  'a2' : NormalPrior(0,1),
+}

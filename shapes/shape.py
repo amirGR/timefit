@@ -17,10 +17,16 @@ class Shape(object):
            NOTE: We are modeling distributions as independent, which may not be good enough later on.
                  If this assumption changes, some code will need to move around.
         """
-        self.priors = get_prior(priors)
-        self.priors_name = priors
-        if self.priors is not None and len(self.priors) != self.n_params():
-            raise Exception("Number of priors doesn't match number of parameters. prior={} (size {}), n_params={}".format(self.priors_name,len(self.priors),self.n_params()))
+        priors_name = priors
+        dct_priors = get_prior(priors)
+        priors = []
+        for p in self.param_names():
+            val = dct_priors.get(p)
+            if val is None:
+                raise Exception("Could not find prior for {} in {}".format(p,priors_name))
+            priors.append(val)        
+        self.priors_name = priors_name
+        self.priors = priors            
 
     def __str__(self):
         return self.cache_name()
