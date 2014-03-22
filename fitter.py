@@ -2,7 +2,7 @@ from functools import partial
 import config as cfg
 import numpy as np
 from minimization import minimize_with_restarts
-from sklearn.cross_validation import LeaveOneOut
+from sklearn.cross_validation import LeaveOneOut, KFold
 from shapes.priors import get_prior
 
 class Fitter(object):
@@ -42,9 +42,19 @@ class Fitter(object):
         if loo:            
             n = len(y)
             test_preds = np.empty(n)
-            for i,(train,test) in enumerate(LeaveOneOut(n)):
+            
+            k = cfg.n_folds
+            if k == 0 or k>=n:
+                train_test_split = LeaveOneOut(n)
+                n_batches = n
+            else:
+                rng = np.random.RandomState(cfg.random_seed)
+                train_test_split = KFold(n,k,shuffle=True, random_state=rng)
+                n_batches = k
+                
+            for i,(train,test) in enumerate(train_test_split):
                 if cfg.verbosity >= 2:
-                    print 'LOO fit: doing iteration {}/{}'.format(i,n)
+                    print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i,n_batches)
                 P = self._fit(x[train],y[train],single_init_P0=P0)
                 if P is None:
                     test_preds[test] = np.nan

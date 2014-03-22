@@ -23,6 +23,8 @@ all_fits_batch_size = 16
 all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 
+n_folds = 30 # 0 is LOO
+
 log_scale_x0 = -45.0/52
 kang_log_scale_x0 = log_scale_x0
 colantuoni_log_scale_x0 = log_scale_x0
