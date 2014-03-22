@@ -19,12 +19,15 @@ class Shape(object):
         """
         priors_name = priors
         dct_priors = get_prior(priors)
-        priors = []
-        for p in self.param_names():
-            val = dct_priors.get(p)
-            if val is None:
-                raise Exception("Could not find prior for {} in {}".format(p,priors_name))
-            priors.append(val)        
+        if dct_priors is None:
+            priors = None
+        else:
+            priors = []
+            for p in self.param_names():
+                val = dct_priors.get(p)
+                if val is None:
+                    raise Exception("Could not find prior for {} in {}".format(p,priors_name))
+                priors.append(val)        
         self.priors_name = priors_name
         self.priors = priors            
 
