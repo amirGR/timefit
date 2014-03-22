@@ -2,6 +2,7 @@ import pickle
 import os
 from os.path import dirname, join
 from glob import glob
+from itertools import product
 import numpy as np
 from scipy.io import savemat
 from sklearn.datasets.base import Bunch
@@ -9,7 +10,7 @@ from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
 from project_dirs import cache_dir, fit_results_relative_path
-from utils import ensure_dir, list_of_strings_to_matlab_cell_array, init_array
+from utils import ensure_dir, list_of_strings_to_matlab_cell_array, init_array, batches
 
 def _cache_file(data, fitter):
     return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
@@ -31,7 +32,7 @@ def _save_fits(fits, filename, k_of_n):
     with open(filename,'w') as f:
         pickle.dump(fits,f)
 
-def _read_all_cache_files(basefile, gene_names, b_consolidate):
+def _read_all_cache_files(basefile, gene_regions, b_consolidate):
     # collect fits from basefile and all shard files
     fits = _read_one_cache_file(basefile)
     partial_files = set(glob(basefile + '*')) - {basefile}
@@ -39,7 +40,7 @@ def _read_all_cache_files(basefile, gene_names, b_consolidate):
         fits.update(_read_one_cache_file(filename))
 
     # reduce to the set we need (especially if we're working on a shard)
-    fits = {(g,r):v for (g,r),v in fits.iteritems() if g in set(gene_names)}
+    fits = {gr:v for gr,v in fits.iteritems() if gr in set(gene_regions)}
         
     if b_consolidate:
         _save_fits(fits,basefile,None)
@@ -49,41 +50,39 @@ def _read_all_cache_files(basefile, gene_names, b_consolidate):
     return fits
 
 def get_all_fits(data, fitter, k_of_n=None):
-    gene_names = data.gene_names
-    if k_of_n is not None:
-        k,n = k_of_n
-        gene_names = [g for i,g in enumerate(gene_names) if i%n == k-1] # k is one-based
-
     filename = _cache_file(data, fitter)
     ensure_dir(dirname(filename))
-    fits = _read_all_cache_files(filename, gene_names, b_consolidate = (k_of_n is None))
 
-    missing_genes = set(g for g in gene_names for r in data.region_names if (g,r) not in fits)
+    gene_regions = list(product(data.gene_names,data.region_names))
+    if k_of_n is not None:
+        k,n = k_of_n
+        gene_regions = [gr for i,gr in enumerate(gene_regions) if i%n == k-1] # k is one-based
+
+    fits = _read_all_cache_files(filename, gene_regions, b_consolidate = (k_of_n is None))
+
+    missing_fits = set(gr for gr in gene_regions if gr not in fits)
     if cfg.verbosity > 0:
-        print 'Still need to compute fits for {} of {} genes'.format(len(missing_genes),len(gene_names))
+        print 'Still need to compute {}/{} fits'.format(len(missing_fits),len(gene_regions))
 
-    if not missing_genes:
-        return compute_scores(data, fits)
-        
     # compute the fits that are missing
-    for g in gene_names:
+    gr_batches = batches(missing_fits, cfg.all_fits_batch_size)
+    for i,gr_batch in enumerate(gr_batches):
+        if cfg.verbosity > 0:
+            print 'Fitting batch {}/{} ({} fits per batch)'.format(i,len(gr_batches),cfg.all_fits_batch_size)
         pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
         df = delayed(_compute_fit_job)
-        changes = pool(df(data,g,r,fitter) for r in data.region_names if (g,r) not in fits)
-        if not changes:
-            continue
+        changes = pool(df(data,g,r,fitter,cfg.verbosity) for g,r in gr_batch)
         
         # apply changes and save checkpoint after each gene
         for g2,r2,f in changes:
             fits[(g2,r2)] = f
-        print 'Saving fits for gene {}'.format(g)
         _save_fits(fits, filename, k_of_n)
-    
     return compute_scores(data, fits)  
 
-def _compute_fit_job(data, g, r, fitter):
+def _compute_fit_job(data, g, r, fitter, verbosity):
     import utils
     utils.disable_all_warnings()
+    cfg.verbosity = verbosity
     series = data.get_one_series(g,r)
     f = compute_fit(series,fitter)
     return g,r,f    
@@ -105,7 +104,8 @@ def compute_scores(data,fits):
     return fits
    
 def compute_fit(series, fitter):
-    print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
+    if cfg.verbosity > 0:
+        print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.expression
     theta,sigma,LOO_predictions = fitter.fit(x,y,loo=True)

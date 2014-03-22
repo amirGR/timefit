@@ -19,6 +19,7 @@ if b_minimal_restarts:
     n_optimization_restarts = 2
 else:
     n_optimization_restarts = 10
+all_fits_batch_size = 16
 all_fits_n_jobs = -2 #1
 all_fits_verbose = 70 #0
 

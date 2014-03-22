@@ -42,7 +42,9 @@ class Fitter(object):
         if loo:            
             n = len(y)
             test_preds = np.empty(n)
-            for train,test in LeaveOneOut(n):
+            for i,(train,test) in enumerate(LeaveOneOut(n)):
+                if cfg.verbosity >= 2:
+                    print 'LOO fit: doing iteration {}/{}'.format(i,n)
                 P = self._fit(x[train],y[train],single_init_P0=P0)
                 if P is None:
                     test_preds[test] = np.nan
