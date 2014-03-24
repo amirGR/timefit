@@ -1,6 +1,6 @@
 import argparse
 import config as cfg
-from load_data import GeneData
+from load_data import load_data
 from scalers import allowed_scaler_names, build_scaler
 from shapes.shape import get_shape_by_name, allowed_shape_names
 from shapes.priors import get_allowed_priors
@@ -20,19 +20,23 @@ def get_common_parser(include_pathway=True):
     parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: None', choices=get_allowed_priors(is_sigma=True))
     parser.add_argument('--priors', help='Priors to use for theta when fitting. Default: None', choices=get_allowed_priors())
     return parser
-    
+
 def process_common_inputs(args):
     cfg.verbosity = args.verbose - args.quiet
-    
-    data = GeneData.load(args.dataset)
-    data.restrict_pathway(getattr(args, 'pathway', 'all'))
-    if args.postnatal:
-        data.restrict_postnatal()
-    if args.scaling is not None:
-        scaler = build_scaler(args.scaling,data)
-        data.scale_ages(scaler)
-
-    shape = get_shape_by_name(args.shape, args.priors)
-    fitter = Fitter(shape, sigma_prior=args.sigma_prior)
-
+    pathway = getattr(args, 'pathway', None)
+    data = get_data_from_args(args.dataset, pathway, args.postnatal, args.scaling)
+    fitter = get_fitter_from_args(args.shape, args.priors, args.sigma_prior)
     return data,fitter
+
+def get_data_from_args(dataset, pathway, postnatal, scaling):
+    data = load_data(dataset, pathway, postnatal)
+    if scaling is not None:
+        scaler = build_scaler(scaling,data)
+        data.scale_ages(scaler)
+    return data
+
+def get_fitter_from_args(shape, priors, sigma_prior):
+    shape = get_shape_by_name(shape, priors)
+    fitter = Fitter(shape, sigma_prior=sigma_prior)
+    return fitter
+    

@@ -5,10 +5,10 @@ import project_dirs
 import config as cfg
 from utils import matlab_cell_array_to_list_of_strings, read_strings_from_file
 
-def load_data(pathway='serotonin',dataset='kang2011', remove_prenatal=True):
+def load_data(dataset='kang2011', pathway=None, remove_prenatal=True, scaler=None):
     """This function is mostly for backward compatibility / syntactic sugar.
     """
-    return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal)
+    return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal).scale_ages(scaler)
 
 class OneGeneRegion(object):
     def __init__(self, expression, ages, gene_name, region_name):
@@ -82,6 +82,8 @@ class GeneData(object):
         return self
         
     def scale_ages(self, scaler):
+        if scaler is None: # support NOP
+            return self
         assert self.age_scaler is None, 'More than one scaling is not supported'
         self.ages = scaler.scale(self.ages)
         self.age_scaler = scaler
