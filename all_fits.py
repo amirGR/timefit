@@ -1,6 +1,6 @@
 import pickle
 import os
-from os.path import dirname, join
+from os.path import dirname, join, isfile
 from glob import glob
 from itertools import product
 import numpy as np
@@ -17,12 +17,19 @@ def _cache_file(data, fitter):
     return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
 
 def _read_one_cache_file(filename):
+    if not isfile(filename):
+        if cfg.verbosity > 0:
+            print 'No cache file {}'.format(filename)
+        return {}
     try:
         if cfg.verbosity > 0:
             print 'Reading fits from {}'.format(filename)
         with open(filename) as f:
             fits = pickle.load(f)
+            if cfg.verbosity > 0:
+                print 'Found {} fits in {}'.format(len(fits),filename)
     except:
+        print 'Failed to read fits from {}'.format(filename)
         fits = {}
     return fits
     
