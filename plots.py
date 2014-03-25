@@ -4,7 +4,7 @@ import config as cfg
 from all_fits import get_all_fits
 from fit_score import loo_score
 import utils
-from os.path import join
+from os.path import join, isfile
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils import ensure_dir
 
@@ -72,10 +72,13 @@ def plot_and_save_all_genes(data, fitter, dirname):
     fits = get_all_fits(data, fitter)
     with utils.interactive(False):
         for g in data.gene_names:
-            print 'Saving figure for gene {}'.format(g)
-            fig = plot_gene(data,g,fits)
             filename = join(dirname, '{}.png'.format(g))
-            save_figure(fig, filename, b_close=True)
+            if isfile(filename):
+                print 'Figure already exists for gene {}. skipping...'.format(g)
+            else:
+                print 'Saving figure for gene {}'.format(g)
+                fig = plot_gene(data,g,fits)
+                save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, dirname):
     ensure_dir(dirname)
@@ -83,12 +86,15 @@ def plot_and_save_all_series(data, fitter, dirname):
     with utils.interactive(False):
         for g in data.gene_names:
             for r in data.region_names:
-                print 'Saving figure for {}@{}'.format(g,r)
-                series = data.get_one_series(g,r)
-                fit = fits[(g,r)]
-                fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
                 filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
-                save_figure(fig, filename, b_close=True)
+                if isfile(filename):
+                    print 'Figure already exists for {}@{}. skipping...'.format(g,r)
+                else:
+                    print 'Saving figure for {}@{}'.format(g,r)
+                    series = data.get_one_series(g,r)
+                    fit = fits[(g,r)]
+                    fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
+                    save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
     n_failed = len([1 for fit in fits.itervalues() if fit.LOO_score is None])
