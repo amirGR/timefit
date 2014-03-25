@@ -9,13 +9,16 @@ from all_fits import *
 import config as cfg
 from fitter import Fitter
 from shapes.sigmoid import Sigmoid
+from shapes.spline import Spline
+from scalers import LogScaler
 
-# load some data
-data = load_data()   
-series = data.get_one_series('HTR2B','VFC')
+cfg.verbosity = 1
+data = load_data(pathway='serotonin', scaler=LogScaler(cfg.kang_log_scale_x0))   
+series = data.get_one_series('HTR1A','MD')
 x = series.ages
 y = series.expression
-fitter = Fitter(Sigmoid(),False,False)
-#fits = get_all_fits(data,fitter)
-
-#plot_gene(data,0)
+fitter = Fitter(Spline())
+theta, sigma, LOO_predictions = fitter.fit(x,y)
+spline = theta[0]
+preds = spline(x)
+print preds

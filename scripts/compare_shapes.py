@@ -35,13 +35,14 @@ if __name__ == '__main__':
     parser = get_common_parser()
     parser.add_argument('--shape2', required=True, help='The shape to compare against', choices=allowed_shape_names())
     parser.add_argument('--scaling2', help='The scaling used when fitting shape2. Default: none', choices=allowed_scaler_names())
+    parser.add_argument('--sigma_prior2', help='Prior to use for 1/sigma when fitting shape2. Default: None', choices=get_allowed_priors(is_sigma=True))
     parser.add_argument('--priors2', help='The priors used for theta when fitting shape2. Default: None', choices=get_allowed_priors())
     parser.add_argument('--filename', help='Where to save the figure. Default: results/comparison.png')
     parser.add_argument('--show', help='Show figure and wait before exiting', action='store_true')
     args = parser.parse_args()
     data1, fitter1 = process_common_inputs(args)    
     data2 = get_data_from_args(args.dataset, args.pathway, args.postnatal, args.scaling2)
-    fitter2 = get_fitter_from_args(args.shape2, args.priors2, args.sigma_prior)
+    fitter2 = get_fitter_from_args(args.shape2, args.priors2, args.sigma_prior2)
 
     fig = plot_comparison_scatter(data1,fitter1,data2,fitter2)
 

@@ -8,6 +8,8 @@ from shapes.priors import get_prior
 class Fitter(object):
     def __init__(self, shape, sigma_prior=None):
         self.shape = shape
+        if shape.has_special_fitting() and sigma_prior is not None:
+            raise Exception("Sigma prior can't be used with a shape that has special fitting")
         self.inv_sigma_prior_name = sigma_prior
         self.inv_sigma_prior = get_prior(sigma_prior,is_sigma=True)
         if cfg.verbosity > 0:
@@ -73,6 +75,15 @@ class Fitter(object):
     ##########################################################
 
     def _fit(self,x,y,single_init_P0=None):
+        if self.shape.has_special_fitting():
+            theta = self.shape.fit(x,y)
+            y_fit = self.shape.f(theta,x)
+            sigma = np.std(y - y_fit)
+            return theta + [1.0/sigma]
+        else:
+            return self._gradient_fit(x,y,single_init_P0)
+            
+    def _gradient_fit(self,x,y,single_init_P0=None):
         n_restarts = cfg.n_optimization_restarts
         if single_init_P0 is not None:
             n_restarts = n_restarts + 1
@@ -107,7 +118,6 @@ class Fitter(object):
     def _unpack_P(self, P):
         if P is None:
             return None,None
-        assert not np.isnan(P).any()
         theta = P[:-1]
         sigma = 1/P[-1]
         return theta,sigma

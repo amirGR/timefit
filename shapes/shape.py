@@ -7,10 +7,12 @@ class Shape(object):
        Derived classes should implement:
            lst = param_names()
            str = cache_name()
-           str = format_params(theta, latex=False)
-           y = f(theta,x)           
+           y = f(theta,x)
+       A class that works with Fitter should implement:
            d_theta = f_grad(theta,x)
            theta0 = get_theta_guess(x,y)
+       A class that does its own special fitting should implement:
+           theta = fit(x,y)
     """
     def __init__(self, priors):
         """Prior function for each parameter should be passed by the derived class.
@@ -40,6 +42,9 @@ class Shape(object):
     def format_params(self, theta, latex=False):
         names = self.param_names(latex)
         return ', '.join('{}={:.2g}'.format(name,val) for name,val in zip(names,theta))
+
+    def has_special_fitting(self):
+        return hasattr(self,'fit')
 
     def bounds(self):
         return [pr.bounds() for pr in self.priors]
@@ -76,7 +81,7 @@ class Shape(object):
 # Building shape from command line input
 #####################################################
 def allowed_shape_names():
-    return ['sigmoid', 'poly0', 'poly1', 'poly2', 'poly3']
+    return ['sigmoid', 'poly0', 'poly1', 'poly2', 'poly3', 'spline']
 
 def get_shape_by_name(shape_name, priors):
     import re
@@ -89,5 +94,8 @@ def get_shape_by_name(shape_name, priors):
         degree = int(m.group(1))
         from poly import Poly
         return Poly(degree,priors)
+    elif shape_name == 'spline':
+        from spline import Spline
+        return Spline()
     else:
         raise Exception('Unknown shape: {}'.format(shape_name))

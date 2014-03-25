@@ -5,7 +5,7 @@ import project_dirs
 import config as cfg
 from utils import matlab_cell_array_to_list_of_strings, read_strings_from_file
 
-def load_data(dataset='kang2011', pathway=None, remove_prenatal=True, scaler=None):
+def load_data(dataset='kang2011', pathway=None, remove_prenatal=False, scaler=None):
     """This function is mostly for backward compatibility / syntactic sugar.
     """
     return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal).scale_ages(scaler)

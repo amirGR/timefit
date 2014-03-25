@@ -46,7 +46,8 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
 
     if shape is not None and theta is not None:
         more_ttl = shape.format_params(theta,latex=True)
-        ttl = '\n'.join([ttl, more_ttl])
+        if more_ttl:
+            ttl = '\n'.join([ttl, more_ttl])
         
         score = cfg.score(y,shape.f(theta,x))
         x_smooth,y_smooth = shape.high_res_preds(theta,x)        
