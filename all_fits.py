@@ -57,15 +57,18 @@ def _read_all_cache_files(basefile, gene_regions, b_consolidate):
 
     return fits
 
-def get_all_fits(data, fitter, k_of_n=None):
-    filename = _cache_file(data, fitter)
-    ensure_dir(dirname(filename))
-
+def _get_shard(data, k_of_n):
     gene_regions = list(product(data.gene_names,data.region_names))
     if k_of_n is not None:
         k,n = k_of_n
         gene_regions = [gr for i,gr in enumerate(gene_regions) if i%n == k-1] # k is one-based
+    return gene_regions
+    
+def get_all_fits(data, fitter, k_of_n=None):
+    filename = _cache_file(data, fitter)
+    ensure_dir(dirname(filename))
 
+    gene_regions = _get_shard(data, k_of_n)
     fits = _read_all_cache_files(filename, gene_regions, b_consolidate = (k_of_n is None))
 
     missing_fits = set(gr for gr in gene_regions if gr not in fits)

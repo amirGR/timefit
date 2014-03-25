@@ -80,21 +80,20 @@ def plot_and_save_all_genes(data, fitter, dirname):
                 fig = plot_gene(data,g,fits)
                 save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, dirname):
+def plot_and_save_all_series(data, fitter, dirname, k_of_n=None):
     ensure_dir(dirname)
-    fits = get_all_fits(data,fitter)
+    fits = get_all_fits(data,fitter,k_of_n)
     with utils.interactive(False):
-        for g in data.gene_names:
-            for r in data.region_names:
-                filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
-                if isfile(filename):
-                    print 'Figure already exists for {}@{}. skipping...'.format(g,r)
-                else:
-                    print 'Saving figure for {}@{}'.format(g,r)
-                    series = data.get_one_series(g,r)
-                    fit = fits[(g,r)]
-                    fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
-                    save_figure(fig, filename, b_close=True)
+        for g,r in fits.iterkeys():
+            filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
+            if isfile(filename):
+                print 'Figure already exists for {}@{}. skipping...'.format(g,r)
+            else:
+                print 'Saving figure for {}@{}'.format(g,r)
+                series = data.get_one_series(g,r)
+                fit = fits[(g,r)]
+                fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
+                save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
     n_failed = len([1 for fit in fits.itervalues() if fit.LOO_score is None])
@@ -174,21 +173,21 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
     
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True):
+def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None):
     if basedir is None:
         basedir = join(results_dir(), fit_results_relative_path(data,fitter))
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
-    if do_genes:
+    if do_genes and k_of_n is None:
         plot_and_save_all_genes(data, fitter, join(basedir,gene_dir))
     if do_series:
-        plot_and_save_all_series(data, fitter, join(basedir,series_dir))
-    if do_hist:
+        plot_and_save_all_series(data, fitter, join(basedir,series_dir),k_of_n)
+    if do_hist and k_of_n is None:
         with utils.interactive(False):
             fits = get_all_fits(data,fitter)
             fig = plot_score_distribution(fits)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
-    if do_html:
+    if do_html and k_of_n is None:
         create_html(data, fitter, basedir, gene_dir, series_dir)

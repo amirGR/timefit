@@ -20,7 +20,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(fits, html_dir):
+def create_html(fits, html_dir, k_of_n):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -28,7 +28,7 @@ def create_html(fits, html_dir):
 ==============================================================================================
 ==============================================================================================
 """
-    save_fits_and_create_html(data, fitter, html_dir)
+    save_fits_and_create_html(data, fitter, html_dir, k_of_n=k_of_n)
 
 def save_mat_file(fits,filename):
     if filename is None:
@@ -60,13 +60,13 @@ if __name__ == '__main__':
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
     parser.add_argument('--mat', nargs='?', metavar='FILENAME', default=NOT_USED, help='Save the fits also as matlab .mat file. Optionally override output filename.')
     args = parser.parse_args()
-    if args.part is not None and (args.html != NOT_USED or args.mat != NOT_USED):
-        print '--html and --mat cannot be used with --part'
+    if args.part is not None and args.mat != NOT_USED:
+        print '--mat cannot be used with --part'
         sys.exit(-1)
     k_of_n = parse_k_of_n(args.part)
     data, fitter = process_common_inputs(args)
     fits = do_fits(data, fitter, k_of_n)
     if args.html != NOT_USED:
-        create_html(fits, args.html)
+        create_html(fits, args.html, k_of_n)
     if args.mat != NOT_USED:
         save_mat_file(fits,args.mat)
