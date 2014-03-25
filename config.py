@@ -26,8 +26,6 @@ all_fits_verbose = 70 #0
 n_folds = 30 # 0 is LOO
 
 log_scale_x0 = -45.0/52
-kang_log_scale_x0 = log_scale_x0
-colantuoni_log_scale_x0 = log_scale_x0
 
 # these two settings must change together
 from sklearn.metrics import r2_score as score

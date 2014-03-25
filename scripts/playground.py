@@ -13,7 +13,7 @@ from shapes.spline import Spline
 from scalers import LogScaler
 
 cfg.verbosity = 1
-data = load_data(pathway='serotonin', scaler=LogScaler(cfg.kang_log_scale_x0))   
+data = load_data(pathway='serotonin', scaler=LogScaler())
 series = data.get_one_series('HTR1A','MD')
 x = series.ages
 y = series.expression

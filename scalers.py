@@ -2,7 +2,9 @@ import numpy as np
 import config as cfg
 
 class LogScaler(object):
-    def __init__(self, x0=0):
+    def __init__(self, x0=None):
+        if x0 is None:
+            x0 = cfg.log_scale_x0
         self.x0 = x0
         
     def cache_name(self):
@@ -44,13 +46,6 @@ def build_scaler(name, data):
     if name == 'linear':
         return LinearScaler.fromData(data.ages)
     elif name == 'log':
-        if data.dataset == 'kang2011':
-            x0 = cfg.kang_log_scale_x0
-        elif data.dataset == 'colantuoni2011':
-            x0 = cfg.colantuoni_log_scale_x0
-        else:
-            x0 = cfg.log_scale_x0
-            print "Don't know where x0 is for this dataset. Using default: x0={}".format(x0)
-        return LogScaler(x0)
+        return LogScaler()
     else:
         raise Exception('Unknown scaler: {}'.format(name))
