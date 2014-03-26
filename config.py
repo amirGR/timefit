@@ -20,8 +20,8 @@ if b_minimal_restarts:
 else:
     n_optimization_restarts = 10
 all_fits_batch_size = 16
-all_fits_n_jobs = -2 #1
-all_fits_verbose = 70 #0
+parallel_n_jobs = -2 #1
+parallel_verbosity = 70 #0
 
 n_folds = 30 # 0 is LOO
 

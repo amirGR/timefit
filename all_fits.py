@@ -6,13 +6,12 @@ from itertools import product
 import numpy as np
 from scipy.io import savemat
 from sklearn.datasets.base import Bunch
-from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
 from project_dirs import cache_dir, fit_results_relative_path
 from utils.misc import ensure_dir, init_array
 from utils.formats import list_of_strings_to_matlab_cell_array
-import utils.parallel
+from utils.parallel import Parallel, batches
 
 def _cache_file(data, fitter):
     return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
@@ -77,29 +76,21 @@ def get_all_fits(data, fitter, k_of_n=None):
         print 'Still need to compute {}/{} fits'.format(len(missing_fits),len(gene_regions))
 
     # compute the fits that are missing
-    gr_batches = utils.parallel.batches(missing_fits, cfg.all_fits_batch_size)
-    pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
-    df = delayed(_compute_fit_job)
-    cfg_vars = utils.parallel.get_vars_in_module(cfg)
+    gr_batches = batches(missing_fits, cfg.all_fits_batch_size)
+    pool = Parallel(_compute_fit_job)
     for i,gr_batch in enumerate(gr_batches):
         if cfg.verbosity > 0:
             print 'Fitting batch {}/{} ({} fits per batch)'.format(i,len(gr_batches),cfg.all_fits_batch_size)
-        changes = pool(df(data,g,r,fitter,cfg_vars) for g,r in gr_batch)
-        
-        # apply changes and save checkpoint after each gene
+        changes = pool(pool.delay(data,g,r,fitter) for g,r in gr_batch)
         for g2,r2,f in changes:
             fits[(g2,r2)] = f
         _save_fits(fits, filename, k_of_n)
     return compute_scores(data, fits)  
 
-def _compute_fit_job(data, g, r, fitter, cfg_vars):
-    import utils.misc
-    import utils.parallel
-    utils.misc.disable_all_warnings()
-    utils.parallel.set_vars_in_module(cfg, cfg_vars)
+def _compute_fit_job(data, g, r, fitter):
     series = data.get_one_series(g,r)
     f = compute_fit(series,fitter)
-    return g,r,f    
+    return g,r,f
     
 def compute_scores(data,fits):
     for (g,r),fit in fits.iteritems():
