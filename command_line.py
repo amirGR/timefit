@@ -8,6 +8,8 @@ from fitter import Fitter
 
 class MyParser(argparse.ArgumentParser):  
     def convert_arg_line_to_args(self, arg_line):
+        if arg_line.startswith('#'): # support comments
+            return
         for arg in arg_line.split():
             if not arg.strip():
                 continue
