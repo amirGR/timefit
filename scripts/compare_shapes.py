@@ -11,6 +11,27 @@ from shapes.priors import get_allowed_priors
 from scalers import allowed_scaler_names
 from plots import save_figure
 
+def print_diff_points(data1, fitter1, data2, fitter2, n):
+    fits1 = get_all_fits(data1,fitter1)
+    fits2 = get_all_fits(data2,fitter2)
+
+    diffs = [(fits1[k].LOO_score-fits2[k].LOO_score, k) for k in fits1.iterkeys()]
+    diffs.sort()
+    
+    print 'Top {} fits where {} > {}:'.format(n, fitter1.shape, fitter2.shape)
+    for diff,k in diffs[-n:]:
+        g,r = k
+        score1 = fits1[k].LOO_score
+        score2 = fits2[k].LOO_score
+        print '\t{}@{}: diff={:.2g}, {}={:.2g}, {}={:.2g}'.format(g,r,diff,fitter1.shape,score1,fitter2.shape,score2)
+
+    print 'Top {} fits where {} < {}:'.format(n, fitter1.shape, fitter2.shape)
+    for diff,k in diffs[:n]:
+        g,r = k
+        score1 = fits1[k].LOO_score
+        score2 = fits2[k].LOO_score
+        print '\t{}@{}: diff={:.2g}, {}={:.2g}, {}={:.2g}'.format(g,r,diff,fitter1.shape,score1,fitter2.shape,score2)
+
 def plot_comparison_scatter(data1, fitter1, data2, fitter2):
     fits1 = get_all_fits(data1,fitter1)
     fits2 = get_all_fits(data2,fitter2)
@@ -39,10 +60,13 @@ if __name__ == '__main__':
     parser.add_argument('--priors2', help='The priors used for theta when fitting shape2. Default: None', choices=get_allowed_priors())
     parser.add_argument('--filename', help='Where to save the figure. Default: results/comparison.png')
     parser.add_argument('--show', help='Show figure and wait before exiting', action='store_true')
+    parser.add_argument('--ndiffs', type=int, default=5, help='Number of top diffs to show. Default=5.')
     args = parser.parse_args()
     data1, fitter1 = process_common_inputs(args)    
     data2 = get_data_from_args(args.dataset, args.pathway, args.postnatal, args.scaling2)
     fitter2 = get_fitter_from_args(args.shape2, args.priors2, args.sigma_prior2)
+
+    print_diff_points(data1,fitter1,data2,fitter2,args.ndiffs)
 
     fig = plot_comparison_scatter(data1,fitter1,data2,fitter2)
 
