@@ -6,6 +6,7 @@ from fit_score import loo_score
 from os.path import join, isfile
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils.misc import ensure_dir, interactive
+from utils.parallel import Parallel
 
 def save_figure(fig, filename, b_close=False):
     fig.set_size_inches(cfg.default_figure_size_x, cfg.default_figure_size_y)
@@ -69,30 +70,40 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
 def plot_and_save_all_genes(data, fitter, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data, fitter)
+    to_plot = []
+    for g in data.gene_names:
+        filename = join(dirname, '{}.png'.format(g))
+        if isfile(filename):
+            print 'Figure already exists for gene {}. skipping...'.format(g)
+        else:
+            to_plot.append((g,filename))    
+    pool = Parallel(_plot_genes_job)
+    pool(pool.delay(data,fits,g,filename) for g,filename in to_plot)
+
+def _plot_genes_job(data,fits,gene,filename):
     with interactive(False):
-        for g in data.gene_names:
-            filename = join(dirname, '{}.png'.format(g))
-            if isfile(filename):
-                print 'Figure already exists for gene {}. skipping...'.format(g)
-            else:
-                print 'Saving figure for gene {}'.format(g)
-                fig = plot_gene(data,g,fits)
-                save_figure(fig, filename, b_close=True)
+        print 'Saving figure for gene {}'.format(gene)
+        fig = plot_gene(data,gene,fits)
+        save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, dirname, k_of_n=None):
     ensure_dir(dirname)
     fits = get_all_fits(data,fitter,k_of_n)
+    to_plot = []
+    for g,r in fits.iterkeys():
+        filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
+        if isfile(filename):
+            print 'Figure already exists for {}@{}. skipping...'.format(g,r)
+        else:
+            to_plot.append((g,r,filename))
+    pool = Parallel(_plot_series_job)
+    pool(pool.delay(data.get_one_series(g,r),fits[(g,r)],filename) for g,r,filename in to_plot)
+
+def _plot_series_job(series,fit,filename):
     with interactive(False):
-        for g,r in fits.iterkeys():
-            filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
-            if isfile(filename):
-                print 'Figure already exists for {}@{}. skipping...'.format(g,r)
-            else:
-                print 'Saving figure for {}@{}'.format(g,r)
-                series = data.get_one_series(g,r)
-                fit = fits[(g,r)]
-                fig = plot_one_series(series, fitter.shape, fit.theta, fit.LOO_predictions)
-                save_figure(fig, filename, b_close=True)
+        print 'Saving figure for {}@{}'.format(series.gene_name, series.region_name)
+        fig = plot_one_series(series, fit.fitter.shape, fit.theta, fit.LOO_predictions)
+        save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
     n_failed = len([1 for fit in fits.itervalues() if fit.LOO_score is None])
