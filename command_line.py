@@ -6,8 +6,15 @@ from shapes.shape import get_shape_by_name, allowed_shape_names
 from shapes.priors import get_allowed_priors
 from fitter import Fitter
 
+class MyParser(argparse.ArgumentParser):  
+    def convert_arg_line_to_args(self, arg_line):
+        for arg in arg_line.split():
+            if not arg.strip():
+                continue
+            yield arg
+
 def get_common_parser(include_pathway=True):
-    parser = argparse.ArgumentParser()
+    parser = MyParser(fromfile_prefix_chars='@')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose", action="count", default=0, help="increase output verbosity")    
     group.add_argument("-q", "--quiet", action="count", default=0, help="decrease output verbosity")    
