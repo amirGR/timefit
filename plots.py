@@ -16,7 +16,7 @@ def save_figure(fig, filename, b_close=False):
 
 def plot_gene(data, g, fits=None):
     fig = plt.figure()
-    for iRegion,r in enumerate(data.region_names):
+    for iRegion,r in enumerate(cfg.sorted_regions[data.dataset]):
         series = data.get_one_series(g,r)
         ax = fig.add_subplot(4,4,iRegion+1)
         ax.plot(series.ages,series.expression,'ro')
