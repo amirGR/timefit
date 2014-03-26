@@ -3,10 +3,9 @@ import matplotlib.pyplot as plt
 import config as cfg
 from all_fits import get_all_fits
 from fit_score import loo_score
-import utils
 from os.path import join, isfile
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
-from utils import ensure_dir
+from utils.misc import ensure_dir, interactive
 
 def save_figure(fig, filename, b_close=False):
     fig.set_size_inches(cfg.default_figure_size_x, cfg.default_figure_size_y)
@@ -70,7 +69,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
 def plot_and_save_all_genes(data, fitter, dirname):
     ensure_dir(dirname)
     fits = get_all_fits(data, fitter)
-    with utils.interactive(False):
+    with interactive(False):
         for g in data.gene_names:
             filename = join(dirname, '{}.png'.format(g))
             if isfile(filename):
@@ -83,7 +82,7 @@ def plot_and_save_all_genes(data, fitter, dirname):
 def plot_and_save_all_series(data, fitter, dirname, k_of_n=None):
     ensure_dir(dirname)
     fits = get_all_fits(data,fitter,k_of_n)
-    with utils.interactive(False):
+    with interactive(False):
         for g,r in fits.iterkeys():
             filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
             if isfile(filename):
@@ -185,7 +184,7 @@ def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_seri
     if do_series:
         plot_and_save_all_series(data, fitter, join(basedir,series_dir),k_of_n)
     if do_hist and k_of_n is None:
-        with utils.interactive(False):
+        with interactive(False):
             fits = get_all_fits(data,fitter)
             fig = plot_score_distribution(fits)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)

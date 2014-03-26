@@ -3,7 +3,7 @@ import re
 import sys
 from os.path import join
 import config as cfg
-import utils
+from utils.misc import disable_all_warnings
 from all_fits import get_all_fits, save_as_mat_file
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
@@ -53,7 +53,7 @@ def parse_k_of_n(s):
     return tuple(int(x) for x in m.groups())
 
 if __name__ == '__main__':
-    utils.disable_all_warnings()
+    disable_all_warnings()
     NOT_USED = (None,)
     parser = get_common_parser()
     parser.add_argument('--part', help='Compute only part of the genes. format: <k>/<n> e.g. 1/4. (k=1..n)')

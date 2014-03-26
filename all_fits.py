@@ -10,8 +10,9 @@ from sklearn.externals.joblib import Parallel, delayed
 from fit_score import loo_score
 import config as cfg
 from project_dirs import cache_dir, fit_results_relative_path
-from utils import ensure_dir, list_of_strings_to_matlab_cell_array, init_array
-import utils
+from utils.misc import ensure_dir, init_array
+from utils.formats import list_of_strings_to_matlab_cell_array
+import utils.parallel
 
 def _cache_file(data, fitter):
     return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
@@ -76,10 +77,10 @@ def get_all_fits(data, fitter, k_of_n=None):
         print 'Still need to compute {}/{} fits'.format(len(missing_fits),len(gene_regions))
 
     # compute the fits that are missing
-    gr_batches = utils.batches(missing_fits, cfg.all_fits_batch_size)
+    gr_batches = utils.parallel.batches(missing_fits, cfg.all_fits_batch_size)
     pool = Parallel(n_jobs=cfg.all_fits_n_jobs, verbose=cfg.all_fits_verbose)
     df = delayed(_compute_fit_job)
-    cfg_vars = utils.get_vars_in_module(cfg)
+    cfg_vars = utils.parallel.get_vars_in_module(cfg)
     for i,gr_batch in enumerate(gr_batches):
         if cfg.verbosity > 0:
             print 'Fitting batch {}/{} ({} fits per batch)'.format(i,len(gr_batches),cfg.all_fits_batch_size)
@@ -92,9 +93,10 @@ def get_all_fits(data, fitter, k_of_n=None):
     return compute_scores(data, fits)  
 
 def _compute_fit_job(data, g, r, fitter, cfg_vars):
-    import utils
-    utils.disable_all_warnings()
-    utils.set_vars_in_module(cfg, cfg_vars)
+    import utils.misc
+    import utils.parallel
+    utils.misc.disable_all_warnings()
+    utils.parallel.set_vars_in_module(cfg, cfg_vars)
     series = data.get_one_series(g,r)
     f = compute_fit(series,fitter)
     return g,r,f    

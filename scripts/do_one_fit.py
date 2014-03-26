@@ -2,7 +2,7 @@ import setup
 from os.path import join
 import matplotlib.pyplot as plt
 from project_dirs import results_dir
-import utils
+from utils.misc import ensure_dir, disable_all_warnings
 from command_line import get_common_parser, process_common_inputs
 from plots import plot_one_series, save_figure
 
@@ -13,7 +13,7 @@ def do_one_fit(series, fitter, loo, filename, b_show):
     else:
         fig = plot_one_series(series)
     if filename is None:
-        utils.ensure_dir(results_dir())
+        ensure_dir(results_dir())
         filename = join(results_dir(), 'fit.png')
     print 'Saving figure to {}'.format(filename)
     save_figure(fig, filename)
@@ -21,7 +21,7 @@ def do_one_fit(series, fitter, loo, filename, b_show):
         plt.show(block=True)
 
 if __name__ == '__main__':
-    utils.disable_all_warnings()   
+    disable_all_warnings()   
     parser = get_common_parser(include_pathway=False)
     parser.add_argument('-g', '--gene', default='HTR1E')
     parser.add_argument('-r', '--region', default='VFC')

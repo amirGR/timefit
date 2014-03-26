@@ -2,7 +2,7 @@ import setup
 from os.path import join
 import matplotlib.pyplot as plt
 import config as cfg
-import utils
+from utils.misc import disable_all_warnings, ensure_dir
 from project_dirs import results_dir
 from all_fits import get_all_fits
 from command_line import get_common_parser, process_common_inputs, get_data_from_args, get_fitter_from_args
@@ -31,7 +31,7 @@ def plot_comparison_scatter(data1, fitter1, data2, fitter2):
     return fig
 
 if __name__ == '__main__':
-    utils.disable_all_warnings()
+    disable_all_warnings()
     parser = get_common_parser()
     parser.add_argument('--shape2', required=True, help='The shape to compare against', choices=allowed_shape_names())
     parser.add_argument('--scaling2', help='The scaling used when fitting shape2. Default: none', choices=allowed_scaler_names())
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     filename = args.filename    
     if filename is None:
-        utils.ensure_dir(results_dir())
+        ensure_dir(results_dir())
         filename = join(results_dir(), 'shape_comparison.png')
     print 'Saving figure to {}'.format(filename)
     save_figure(fig, filename)    

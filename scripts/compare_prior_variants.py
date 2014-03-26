@@ -11,8 +11,8 @@ from shapes.sigmoid import Sigmoid
 from shapes.poly import Poly
 from bootstrap import bootstrap
 
-import utils
-utils.disable_all_warnings()
+from utils.misc import disable_all_warnings
+disable_all_warnings()
 
 def sign(b):
     return '+' if b else '-'

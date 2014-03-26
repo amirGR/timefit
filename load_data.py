@@ -3,7 +3,7 @@ import numpy as np
 from scipy.io import loadmat
 import project_dirs
 import config as cfg
-from utils import matlab_cell_array_to_list_of_strings, read_strings_from_file
+from utils.formats import matlab_cell_array_to_list_of_strings, read_strings_from_file
 
 def load_data(dataset='kang2011', pathway=None, remove_prenatal=False, scaler=None):
     """This function is mostly for backward compatibility / syntactic sugar.
@@ -152,7 +152,7 @@ class GeneData(object):
         """gene_list can already be a sequence of strings or it could be a path to
            a file that contains a list of strings. 
            The path can be relative to the data directory or an absolute path.
-           The file can be any format supported by utils.read_strings_from_file()
+           The file can be any format supported by read_strings_from_file()
         """
         # if it's not something that could be a filename assume it's a sequence of strings
         if not isinstance(gene_list, basestring):

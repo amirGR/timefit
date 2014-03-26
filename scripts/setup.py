@@ -5,5 +5,5 @@ script_dir = dirname(__file__)
 code_dir = abspath(join(script_dir,'..'))
 sys.path.append(code_dir)
 
-import utils
-utils.disable_all_warnings()
+from utils.misc import disable_all_warnings
+disable_all_warnings()
