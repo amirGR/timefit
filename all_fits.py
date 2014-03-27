@@ -129,30 +129,37 @@ def compute_fit(series, fitter):
         LOO_predictions = LOO_predictions,
     )
 
-def save_as_mat_file(fits, filename):
+def save_as_mat_file(data, fitter, fits, filename):
     print 'Saving mat file to {}'.format(filename)
-    gene_names = sorted(list(set(g for g,r in fits.iterkeys())))
-    n_genes = len(gene_names)
-    gene_idx = {g:i for i,g in enumerate(gene_names)}
+    shape = fitter.shape
 
-    region_names = sorted(list(set(r for g,r in fits.iterkeys())))
+    gene_names = data.gene_names
+    gene_idx = {g:i for i,g in enumerate(gene_names)}
+    n_genes = len(gene_names)
+    region_names = data.region_names
     region_idx = {r:i for i,r in enumerate(region_names)}
     n_regions = len(region_names)
     
-    st_n_theta = set(len(fit.theta) for fit in fits.itervalues() if fit.theta is not None)
-    assert len(st_n_theta) == 1, "Can't determine number of parameters. candidates={}".format(list(st_n_theta))
-    n_theta = st_n_theta.pop()
+    write_theta = shape.can_export_params_to_matlab()
+    if write_theta:
+        theta = init_array(np.NaN, shape.n_params(), n_genes,n_regions)
+    else:
+        theta = np.NaN
     
     fit_scores = init_array(np.NaN, n_genes,n_regions)
     LOO_scores = init_array(np.NaN, n_genes,n_regions)
-    theta = init_array(np.NaN, n_theta,n_genes,n_regions)
+    fit_predictions = init_array(np.NaN, *data.expression.shape)
+    LOO_predictions = init_array(np.NaN, *data.expression.shape)
     for (g,r),fit in fits.iteritems():
         ig = gene_idx[g]
         ir = region_idx[r]
         fit_scores[ig,ir] = fit.fit_score
         LOO_scores[ig,ir] = fit.LOO_score
-        if fit.theta is not None:
+        if write_theta and fit.theta is not None:
             theta[:,ig,ir] = fit.theta
+        original_inds = data.get_one_series(g,r).original_inds
+        fit_predictions[original_inds,ig,ir] = fit.fit_predictions
+        LOO_predictions[original_inds,ig,ir] = fit.LOO_predictions
     
     mdict = {
         'gene_names' : list_of_strings_to_matlab_cell_array(gene_names),
@@ -160,6 +167,8 @@ def save_as_mat_file(fits, filename):
         'theta' : theta,
         'fit_scores' : fit_scores,
         'LOO_scores' : LOO_scores,
+        'fit_predictions' : fit_predictions,
+        'LOO_predictions': LOO_predictions,
     }
     savemat(filename, mdict, oned_as='column')
     

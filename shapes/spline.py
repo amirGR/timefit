@@ -12,6 +12,9 @@ class Spline(Shape):
         
     def format_params(self, theta, latex=False):
         return ''
+
+    def can_export_params_to_matlab(self):
+        return False
                 
     def cache_name(self):
         return 'spline'

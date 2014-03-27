@@ -24,6 +24,15 @@ class ScaledX(Shape):
     
     def get_theta_guess(self,x,y):
         return self.shape.get_theta_guess(self._sx(x),y)
+
+    def has_special_fitting(self):
+        return self.shape.has_special_fitting()
+
+    def can_export_params_to_matlab(self):
+        return self.shape.can_export_params_to_matlab()
+
+    def fit(self,x,y):
+        return self.shape.fit(self._sx(x),y)
     
     def _sx(self, x):
         return self.scaler.scale(x)

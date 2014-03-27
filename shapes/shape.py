@@ -46,6 +46,9 @@ class Shape(object):
     def has_special_fitting(self):
         return hasattr(self,'fit')
 
+    def can_export_params_to_matlab(self):
+        return True #override where not possible
+
     def bounds(self):
         return [pr.bounds() for pr in self.priors]
 

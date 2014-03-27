@@ -30,7 +30,7 @@ def create_html(fits, html_dir, k_of_n):
 """
     save_fits_and_create_html(data, fitter, html_dir, k_of_n=k_of_n)
 
-def save_mat_file(fits,filename):
+def save_mat_file(data, fitter, fits, filename):
     if filename is None:
         filename = join(cache_dir(), fit_results_relative_path(data,fitter) + '.mat')
     print """
@@ -40,7 +40,7 @@ def save_mat_file(fits,filename):
 ==============================================================================================
 ==============================================================================================
 """
-    save_as_mat_file(fits, filename)
+    save_as_mat_file(data, fitter, fits, filename)
 
 def parse_k_of_n(s):
     """Parse a string that looks like "3/5" and return tuple (3,5)"""
@@ -69,4 +69,4 @@ if __name__ == '__main__':
     if args.html != NOT_USED:
         create_html(fits, args.html, k_of_n)
     if args.mat != NOT_USED:
-        save_mat_file(fits,args.mat)
+        save_mat_file(data,fitter,fits,args.mat)
