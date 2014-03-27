@@ -53,12 +53,12 @@ def plot_bar(variations, q=None):
     ttl = ''
     if q is None:
         ttl = 'Mean R2 dependence on priors'
-        ylabel = 'Mean R2'
+        ylabel = 'mean R2'
     else:
         ttl = '{} percentile R2 dependence on priors'.format(q)
         ylabel = '{} percentile R2'.format(q)
     plt.title(ttl, fontsize=cfg.fontsize)
-    plt.xlabel('Which Priors', fontsize=cfg.fontsize)
+    plt.xlabel('which priors', fontsize=cfg.fontsize)
     plt.ylabel(ylabel, fontsize=cfg.fontsize)
     plt.xticks(index + bar_width/2, [latex_label(v.theta,v.sigma) for v in variations], fontsize=cfg.fontsize)
 
@@ -68,7 +68,7 @@ def plot_pctiles(variations, min_q):
     for v in variations:
         pctiles = np.percentile(v.LOO_scores, q)    
         plt.plot(q,pctiles, linewidth=2, alpha=0.8, label=latex_label(v.theta,v.sigma))
-    plt.xlabel('Percentile', fontsize=cfg.fontsize)
+    plt.xlabel('percentile', fontsize=cfg.fontsize)
     plt.ylabel('R2 score', fontsize=cfg.fontsize)
     plt.title('Dependence of R2 percentiles on priors', fontsize=cfg.fontsize)
     plt.legend(fontsize=cfg.fontsize, loc='upper left')

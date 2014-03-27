@@ -27,9 +27,9 @@ def plot_gene(data, g, fits=None):
                 ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(r))
         if iRegion % 4 == 0:
-            ax.set_ylabel('Expression Level')
+            ax.set_ylabel('expression level')
         if iRegion / 4 >= 3:
-            ax.set_xlabel('Age')
+            ax.set_xlabel('age')
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(g))
     return fig
@@ -40,8 +40,8 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot(series.ages,series.expression,'ro')
-    ax.set_ylabel('Expression Level', fontsize=cfg.fontsize)
-    ax.set_xlabel('Age', fontsize=cfg.fontsize)
+    ax.set_ylabel('expression level', fontsize=cfg.fontsize)
+    ax.set_xlabel('age', fontsize=cfg.fontsize)
     ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
 
     if shape is not None and theta is not None:
@@ -61,7 +61,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
                     continue
                 label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0 else None
                 ax.plot([xi, xi], [yi, y_loo], 'g-', linewidth=2, label=label)
-                ax.plot(xi, y_loo, 'gx')
+                ax.plot(xi, y_loo, 'gx', markeredgewidth=2)
         ax.legend()
         
     ax.set_title(ttl, fontsize=cfg.fontsize)
@@ -118,7 +118,7 @@ def plot_score_distribution(fits):
         ttl = ttl + '\n(another {} failed fits and {} scores below {})'.format(n_failed, n_low,low)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_xlabel('R2', fontsize=cfg.fontsize)
-    ax.set_ylabel('Count', fontsize=cfg.fontsize)    
+    ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
 def create_html(data, fitter, basedir, gene_dir, series_dir):
