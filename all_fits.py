@@ -11,22 +11,21 @@ from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
 
 def get_all_fits(data, fitter, k_of_n=None):
+    def arg_mapper(gr,f_proxy):
+        g,r = gr
+        series = data.get_one_series(g,r)
+        return f_proxy(series,fitter)
+        
     fits = job_splitting.compute(
         name = 'fits',
-        f = _compute_fit_job,
+        f = compute_fit,
+        arg_mapper = arg_mapper,
         all_keys = list(product(data.gene_names,data.region_names)),
         k_of_n = k_of_n,
         base_filename = fit_results_relative_path(data,fitter),
-        args = (data,fitter),
     )
     return compute_scores(data, fits)  
 
-def _compute_fit_job(gr, data, fitter):
-    # this must be a top-level function so the parallelization can pickle it
-    g,r = gr
-    series = data.get_one_series(g,r)
-    return compute_fit(series,fitter)
-    
 def compute_scores(data,fits):
     for (g,r),fit in fits.iteritems():
         series = data.get_one_series(g,r)

@@ -17,11 +17,22 @@ from project_dirs import cache_dir
 from utils.misc import ensure_dir
 from utils import parallel
 
-def compute(name, f, all_keys, k_of_n, base_filename, args=None, kwargs=None, batch_size=None):
-    if args is None:
-        args = ()
-    if kwargs is None:
-        kwargs = {}
+def proxy(*a,**kw):
+    return a,kw
+
+def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=None):
+    """ name - appears in print messages if verbosity > 0
+        f - pickleable function that is called to do the actual computation on each sub-process
+        arg_mapper(key,f_proxy):
+            Translates key to arguments for the call to f.
+            For convenience, this is done by calling f_proxy with the correct arguments and returning the result.
+        k_of_n - None for complete computation. Otherwise (k,n) pair - n = number of parts, k = part number in [1..n]
+        base_filename - base file name to use for caching the results
+        batch_size - how many iterations to do before saving a checkpoint
+    """
+    if arg_mapper is None:
+        def arg_mapper(key,f_proxy):
+            return f_proxy(key)
     if batch_size is None:
         batch_size = cfg.job_batch_size
         
@@ -41,7 +52,7 @@ def compute(name, f, all_keys, k_of_n, base_filename, args=None, kwargs=None, ba
     for i,batch in enumerate(batches):
         if cfg.verbosity > 0:
             print 'Computing {}: batch {}/{} ({} jobs per batch)'.format(name,i+1,len(batches),batch_size)
-        updates = pool(pool.delay(f,key,args,kwargs) for key in batch)
+        updates = pool(pool.delay(f,key,*arg_mapper(key,proxy)) for key in batch)
         updates = dict(updates) # convert key,value pairs to dictionary
         res.update(updates)
         _save_results(res, filename, k_of_n)
@@ -49,7 +60,7 @@ def compute(name, f, all_keys, k_of_n, base_filename, args=None, kwargs=None, ba
 
 def _job_wrapper(f,key,a,kw):
     # this must be a top-level function so the parallelization can pickle it
-    val = f(key,*a,**kw)
+    val = f(*a,**kw)
     return key,val
 
 def _get_shard(all_keys, k_of_n):
