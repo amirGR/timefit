@@ -1,96 +1,31 @@
 import pickle
-import os
-from os.path import dirname, join, isfile
-from glob import glob
 from itertools import product
 import numpy as np
 from scipy.io import savemat
 from sklearn.datasets.base import Bunch
 from fit_score import loo_score
 import config as cfg
-from project_dirs import cache_dir, fit_results_relative_path
-from utils.misc import ensure_dir, init_array
+from project_dirs import fit_results_relative_path
+from utils.misc import init_array
 from utils.formats import list_of_strings_to_matlab_cell_array
-from utils.parallel import Parallel, batches
+from utils import job_splitting
 
-def _cache_file(data, fitter):
-    return join(cache_dir(), fit_results_relative_path(data,fitter) + '.pkl')
-
-def _read_one_cache_file(filename):
-    if not isfile(filename):
-        if cfg.verbosity > 0:
-            print 'No cache file {}'.format(filename)
-        return {}
-    try:
-        if cfg.verbosity > 0:
-            print 'Reading fits from {}'.format(filename)
-        with open(filename) as f:
-            fits = pickle.load(f)
-            if cfg.verbosity > 0:
-                print 'Found {} fits in {}'.format(len(fits),filename)
-    except:
-        print 'Failed to read fits from {}'.format(filename)
-        fits = {}
-    return fits
-    
-def _save_fits(fits, filename, k_of_n):
-    if k_of_n is not None:
-        k,n = k_of_n
-        filename = '{}.{}-of-{}'.format(filename,k,n)
-    with open(filename,'w') as f:
-        pickle.dump(fits,f)
-
-def _read_all_cache_files(basefile, gene_regions, b_consolidate):
-    # collect fits from basefile and all shard files
-    fits = _read_one_cache_file(basefile)
-    partial_files = set(glob(basefile + '*')) - {basefile}
-    for filename in partial_files:
-        fits.update(_read_one_cache_file(filename))
-
-    # reduce to the set we need (especially if we're working on a shard)
-    fits = {gr:v for gr,v in fits.iteritems() if gr in set(gene_regions)}
-        
-    if b_consolidate:
-        _save_fits(fits,basefile,None)
-        for filename in partial_files:
-            os.remove(filename)
-
-    return fits
-
-def _get_shard(data, k_of_n):
-    gene_regions = list(product(data.gene_names,data.region_names))
-    if k_of_n is not None:
-        k,n = k_of_n
-        gene_regions = [gr for i,gr in enumerate(gene_regions) if i%n == k-1] # k is one-based
-    return gene_regions
-    
 def get_all_fits(data, fitter, k_of_n=None):
-    filename = _cache_file(data, fitter)
-    ensure_dir(dirname(filename))
-
-    gene_regions = _get_shard(data, k_of_n)
-    fits = _read_all_cache_files(filename, gene_regions, b_consolidate = (k_of_n is None))
-
-    missing_fits = set(gr for gr in gene_regions if gr not in fits)
-    if cfg.verbosity > 0:
-        print 'Still need to compute {}/{} fits'.format(len(missing_fits),len(gene_regions))
-
-    # compute the fits that are missing
-    gr_batches = batches(missing_fits, cfg.all_fits_batch_size)
-    pool = Parallel(_compute_fit_job)
-    for i,gr_batch in enumerate(gr_batches):
-        if cfg.verbosity > 0:
-            print 'Fitting batch {}/{} ({} fits per batch)'.format(i,len(gr_batches),cfg.all_fits_batch_size)
-        changes = pool(pool.delay(data,g,r,fitter) for g,r in gr_batch)
-        for g2,r2,f in changes:
-            fits[(g2,r2)] = f
-        _save_fits(fits, filename, k_of_n)
+    fits = job_splitting.compute(
+        name = 'fits',
+        f = _compute_fit_job,
+        all_keys = list(product(data.gene_names,data.region_names)),
+        k_of_n = k_of_n,
+        base_filename = fit_results_relative_path(data,fitter),
+        args = (data,fitter),
+    )
     return compute_scores(data, fits)  
 
-def _compute_fit_job(data, g, r, fitter):
+def _compute_fit_job(gr, data, fitter):
+    # this must be a top-level function so the parallelization can pickle it
+    g,r = gr
     series = data.get_one_series(g,r)
-    f = compute_fit(series,fitter)
-    return g,r,f
+    return compute_fit(series,fitter)
     
 def compute_scores(data,fits):
     for (g,r),fit in fits.iteritems():
