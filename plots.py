@@ -39,12 +39,16 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     y = series.expression    
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.plot(series.ages,series.expression,'ro')
+    ax.plot(series.ages,series.expression, 'ks', markersize=8)
     ax.set_ylabel('expression level', fontsize=cfg.fontsize)
     ax.set_xlabel('age', fontsize=cfg.fontsize)
-    ttl = 'Gene: {}, Region: {}'.format(series.gene_name, series.region_name)
+    ttl = '{}@{}'.format(series.gene_name, series.region_name)
+    
+    ymin, ymax = ax.get_ylim()
+    ax.plot([0, 0], [ymin, ymax], '--', color='0.85')
 
     if shape is not None and theta is not None:
+        ttl = '{}, {} fit'.format(ttl, shape)
         more_ttl = shape.format_params(theta,latex=True)
         if more_ttl:
             ttl = '\n'.join([ttl, more_ttl])
@@ -52,7 +56,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
         score = cfg.score(y,shape.f(theta,x))
         x_smooth,y_smooth = shape.high_res_preds(theta,x)        
         label = 'fit ({}={:.3g})'.format(cfg.score_type, score)
-        ax.plot(x_smooth, y_smooth, 'b-', linewidth=2, label=label)
+        ax.plot(x_smooth, y_smooth, 'b-', linewidth=3, label=label)
 
         if LOO_predictions is not None:
             score = loo_score(y,LOO_predictions)
@@ -60,9 +64,9 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
                 if y_loo is None or np.isnan(y_loo):
                     continue
                 label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0 else None
-                ax.plot([xi, xi], [yi, y_loo], 'g-', linewidth=2, label=label)
-                ax.plot(xi, y_loo, 'gx', markeredgewidth=2)
-        ax.legend()
+                ax.plot([xi, xi], [yi, y_loo], '-', color='0.5', label=label)
+                ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
+        ax.legend(fontsize=cfg.fontsize, frameon=False)
         
     ax.set_title(ttl, fontsize=cfg.fontsize)
     return fig
