@@ -10,6 +10,7 @@ from a set of keys to the result of the computation on them.
 
 import pickle
 import os
+import shutil
 from os.path import dirname, join, isfile
 from glob import glob
 import config as cfg
@@ -34,15 +35,14 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         def arg_mapper(key,f_proxy):
             return f_proxy(key)
     if batch_size is None:
-        batch_size = cfg.job_batch_size
-        
-    filename = join(cache_dir(), base_filename + '.pkl')
-    ensure_dir(dirname(filename))
-
+        batch_size = cfg.job_batch_size if len(all_keys) < cfg.job_big_key_size else cfg.job_big_batch_size
+     
     keys = _get_shard(all_keys, k_of_n)
-    res = _read_all_cache_files(filename, keys, b_consolidate = (k_of_n is None)) #YYY
+    dct_res, needs_consolidation = _read_all_cache_files(base_filename, k_of_n, keys)
+    if needs_consolidation:
+        _consolidate(dct_res, base_filename, k_of_n)
 
-    missing_keys = set(k for k in keys if k not in res)
+    missing_keys = set(k for k in keys if k not in dct_res)
     if cfg.verbosity > 0:
         print 'Still need to compute {}/{} {}'.format(len(missing_keys),len(keys),name)
 
@@ -53,10 +53,13 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         if cfg.verbosity > 0:
             print 'Computing {}: batch {}/{} ({} jobs per batch)'.format(name,i+1,len(batches),batch_size)
         updates = pool(pool.delay(f,key,*arg_mapper(key,proxy)) for key in batch)
-        updates = dict(updates) # convert key,value pairs to dictionary
-        res.update(updates)
-        _save_results(res, filename, k_of_n)
-    return res
+        dct_updates = dict(updates) # convert key,value pairs to dictionary
+        _save_batch(dct_updates, base_filename, k_of_n, i)
+        dct_res.update(dct_updates)
+
+    if missing_keys:        
+        _consolidate(dct_res, base_filename, k_of_n)
+    return dct_res
 
 def _job_wrapper(f,key,a,kw):
     # this must be a top-level function so the parallelization can pickle it
@@ -69,43 +72,109 @@ def _get_shard(all_keys, k_of_n):
     k,n = k_of_n
     return all_keys[k-1::n] # k is one-based, so subtract one
 
-def _save_results(res, filename, k_of_n):
+def _save_batch(dct_updates, base_filename, k_of_n, i):
+    filename = _batch_base_filename(base_filename, k_of_n) + str(i)
+    ensure_dir(dirname(filename))    
+
+    # if there's already a file by that name, merge its contents
+    if isfile(filename):
+        dct_existing = _read_one_cache_file(filename, st_keys=None, is_batch=True)
+        dct_updates.update(dct_existing)
+
+    with open(filename,'w') as f:
+        pickle.dump(dct_updates,f)
+
+def _read_all_cache_files(base_filename, k_of_n, keys):
+    st_keys = set(keys)
+
+    # collect results from our file
+    main_filename = _cache_filename(base_filename, k_of_n)
+    dct_res = _read_one_cache_file(main_filename, st_keys)
+    st_keys_in_main_file = set(dct_res.iterkeys())
+    
+    # collect results from main file
+    global_filename = _cache_filename(base_filename, k_of_n=None)
+    if k_of_n is not None: # otherwise we just read this file
+        dct_global = _read_one_cache_file(global_filename, st_keys)
+        dct_res.update(dct_global)
+    
+    # collect from all shard files
+    shard_files = set(glob(global_filename + '*')) - {global_filename, main_filename}
     if k_of_n is not None:
         k,n = k_of_n
-        filename = '{}.{}-of-{}'.format(filename,k,n)
-    with open(filename,'w') as f:
-        pickle.dump(res,f)
+        # we know they keys for k/n are mutually exclusive with any other shard with same n
+        # the reason to go over other shards at all is if we change n in the middle so there's an overlap
+        shard_files = {f for f in shard_files if str(n) not in f}
+    for filename in shard_files:
+        dct_shard = _read_one_cache_file(filename, st_keys)
+        dct_res.update(dct_shard)
 
-def _read_all_cache_files(basefile, keys, b_consolidate):
-    # collect results from basefile and all shard files
-    res = _read_one_cache_file(basefile)
-    partial_files = set(glob(basefile + '*')) - {basefile}
-    for filename in partial_files:
-        res.update(_read_one_cache_file(filename))
+    # collect from all batch files
+    batchdir = _batch_dir(base_filename)
+    batch_files = glob(join(batchdir,'*'))
+    for filename in batch_files:
+        dct_batch = _read_one_cache_file(filename, st_keys, is_batch=True)
+        dct_res.update(dct_batch)
 
-    # reduce to the set we need (especially if we're working on a shard)
-    res = {k:v for k,v in res.iteritems() if k in set(keys)}
-        
-    if b_consolidate:
-        _save_results(res,basefile,None)
-        for filename in partial_files:
-            os.remove(filename)
+    st_all_keys_found = set(dct_res.iterkeys())
+    needs_consolidation = st_all_keys_found > st_keys_in_main_file
+    return dct_res, needs_consolidation
 
-    return res
-
-def _read_one_cache_file(filename):
+def _read_one_cache_file(filename, st_keys, is_batch=False):
+    verbosity_threshold = 2 if is_batch else 1
     if not isfile(filename):
-        if cfg.verbosity > 0:
+        if cfg.verbosity >= verbosity_threshold:
             print 'No cache file {}'.format(filename)
         return {}
     try:
-        if cfg.verbosity > 0:
+        if cfg.verbosity >= verbosity_threshold:
             print 'Reading cached results from {}'.format(filename)
         with open(filename) as f:
-            res = pickle.load(f)
-            if cfg.verbosity > 0:
-                print 'Found {} cached results in {}'.format(len(res),filename)
+            dct_res = pickle.load(f)
+            if cfg.verbosity >= verbosity_threshold:
+                print 'Found {} cached results in {}'.format(len(dct_res),filename)
     except:
         print 'Failed to read cached results from {}'.format(filename)
-        res = {}
-    return res
+        dct_res = {}
+        
+    if st_keys is not None:
+        dct_res = {k:v for k,v in dct_res.iteritems() if k in st_keys}
+    return dct_res
+
+def _consolidate(dct_res, base_filename, k_of_n):
+    filename = _cache_filename(base_filename, k_of_n)
+    ensure_dir(dirname(filename))    
+    with open(filename,'w') as f:
+        pickle.dump(dct_res,f)
+        
+    batchdir = _batch_dir(base_filename)
+    if k_of_n is None:
+        # it's the main file - delete all k_of_n files and the batches dir
+        shutil.rmtree(batchdir)
+        partial_files = set(glob(filename + '*')) - {filename}
+        for filename in partial_files:
+            os.remove(filename)
+    else:
+        # it's a shard - delete just the batches for that file
+        base = _batch_base_filename(base_filename,k_of_n)
+        batch_filenames = glob(base + '*')
+        for filename in batch_filenames:
+            os.remove(filename)
+
+def _batch_dir(base_filename):
+    return join(cache_dir(),base_filename + '-batches')
+
+def _batch_base_filename(base_filename, k_of_n):
+    if k_of_n is None:
+        prefix = 'main'
+    else:
+        k,n = k_of_n
+        prefix = '{}-of-{}'.format(k,n)
+    return join(_batch_dir(base_filename), prefix + '-batch-')
+
+def _cache_filename(base_filename, k_of_n):
+    filename = join(cache_dir(), base_filename + '.pkl')
+    if k_of_n is not None:
+        k,n = k_of_n
+        filename = '{}.{}-of-{}'.format(filename,k,n)
+    return filename
