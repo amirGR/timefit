@@ -20,8 +20,9 @@ if b_minimal_restarts:
 else:
     n_optimization_restarts = 10
 job_batch_size = 16
+job_big_key_size = 10000
+job_big_batch_size = 128
 parallel_n_jobs = -2 #1
-parallel_verbosity = 70 #0
 
 n_folds = 30 # 0 is LOO
 
