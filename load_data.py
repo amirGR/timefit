@@ -11,12 +11,13 @@ def load_data(dataset='kang2011', pathway=None, remove_prenatal=False, scaler=No
     return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal).scale_ages(scaler)
 
 class OneGeneRegion(object):
-    def __init__(self, expression, ages, gene_name, region_name, original_inds):
+    def __init__(self, expression, ages, gene_name, region_name, original_inds, age_scaler):
         self.expression = expression
         self.ages = ages
         self.gene_name = gene_name
         self.region_name = region_name
         self.original_inds = original_inds
+        self.age_scaler = age_scaler
 
 class GeneData(object):
     def __init__(self, expression, gene_names, region_names, genders, ages, dataset):
@@ -105,6 +106,7 @@ class GeneData(object):
             gene_name = self.gene_names[iGene],
             region_name = self.region_names[iRegion],
             original_inds = valid.nonzero(),
+            age_scaler = self.age_scaler,
         )
         
     #####################################################################

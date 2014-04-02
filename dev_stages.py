@@ -35,8 +35,18 @@ class DevStage(object):
         self.to_age = float(to_age)
         
     @property
-    def age_point(self):
+    def central_age(self):
         return (self.from_age + self.to_age) / 2
+        
+    def scaled(self, scaler):
+        import scalers
+        scaler = scalers.unify(scaler) # handle None
+        return DevStage(
+            name = self.name,
+            short_name = self.short_name,
+            from_age = scaler.scale(self.from_age),
+            to_age = scaler.scale(self.to_age),
+        )
 
 dev_stages = [
     DevStage('Embryonic', 'E1', PCW(4), PCW(8)),

@@ -1,6 +1,16 @@
 import numpy as np
 import config as cfg
 
+def unify(scaler):
+    if scaler is None:
+        return NopScaler()
+    else:
+        return scaler
+
+class NopScaler(object):
+    def scale(self, x): return x
+    def unscale(self, sx): return sx
+
 class LogScaler(object):
     def __init__(self, x0=None):
         if x0 is None:
