@@ -86,9 +86,8 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     ax.set_title(ttl, fontsize=cfg.fontsize)
     return fig
 
-def plot_and_save_all_genes(data, fitter, dirname):
+def plot_and_save_all_genes(data, fitter, fits, dirname):
     ensure_dir(dirname)
-    fits = get_all_fits(data, fitter)
     to_plot = []
     for g in data.gene_names:
         filename = join(dirname, '{}.png'.format(g))
@@ -105,9 +104,8 @@ def _plot_genes_job(data,fits,gene,filename):
         fig = plot_gene(data,gene,fits)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, dirname, k_of_n=None):
+def plot_and_save_all_series(data, fitter, fits, dirname, k_of_n=None):
     ensure_dir(dirname)
-    fits = get_all_fits(data,fitter,k_of_n)
     to_plot = []
     for g,r in fits.iterkeys():
         filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
@@ -140,11 +138,10 @@ def plot_score_distribution(fits):
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
-def create_html(data, fitter, basedir, gene_dir, series_dir):
+def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
     from jinja2 import Template
     import shutil
 
-    fits = get_all_fits(data,fitter)
     n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
     for fit in fits.itervalues():
         if fit.LOO_score is None or fit.LOO_score < 0:
@@ -202,7 +199,9 @@ def create_html(data, fitter, basedir, gene_dir, series_dir):
     
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
-def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None):
+def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None):
+    if fits is None:
+        fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
         basedir = join(results_dir(), fit_results_relative_path(data,fitter))
     print 'Writing HTML under {}'.format(basedir)
@@ -210,13 +209,12 @@ def save_fits_and_create_html(data, fitter, basedir=None, do_genes=True, do_seri
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
     if do_genes and k_of_n is None:
-        plot_and_save_all_genes(data, fitter, join(basedir,gene_dir))
+        plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series:
-        plot_and_save_all_series(data, fitter, join(basedir,series_dir),k_of_n)
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir),k_of_n)
     if do_hist and k_of_n is None:
         with interactive(False):
-            fits = get_all_fits(data,fitter)
             fig = plot_score_distribution(fits)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
     if do_html and k_of_n is None:
-        create_html(data, fitter, basedir, gene_dir, series_dir)
+        create_html(data, fitter, fits, basedir, gene_dir, series_dir)

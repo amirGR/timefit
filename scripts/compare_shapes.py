@@ -11,10 +11,7 @@ from shapes.priors import get_allowed_priors
 from scalers import allowed_scaler_names
 from plots import save_figure
 
-def print_diff_points(data1, fitter1, data2, fitter2, n):
-    fits1 = get_all_fits(data1,fitter1)
-    fits2 = get_all_fits(data2,fitter2)
-
+def print_diff_points(data1, fitter1, fits1, data2, fitter2, fits2, n):
     diffs = [(fits1[k].LOO_score-fits2[k].LOO_score, k) for k in fits1.iterkeys()]
     diffs.sort()
     
@@ -32,10 +29,7 @@ def print_diff_points(data1, fitter1, data2, fitter2, n):
         score2 = fits2[k].LOO_score
         print '\t{}@{}: diff={:.2g}, {}={:.2g}, {}={:.2g}'.format(g,r,diff,fitter1.shape,score1,fitter2.shape,score2)
 
-def plot_comparison_scatter(data1, fitter1, data2, fitter2):
-    fits1 = get_all_fits(data1,fitter1)
-    fits2 = get_all_fits(data2,fitter2)
-
+def plot_comparison_scatter(data1, fitter1, fits1, data2, fitter2, fits2):
     pairs = [(fits1[k].LOO_score, fits2[k].LOO_score) for k in fits1.iterkeys()]
     scores1,scores2 = zip(*pairs)
     
@@ -66,9 +60,12 @@ if __name__ == '__main__':
     data2 = get_data_from_args(args.dataset, args.pathway, args.postnatal, args.scaling2)
     fitter2 = get_fitter_from_args(args.shape2, args.priors2, args.sigma_prior2)
 
-    print_diff_points(data1,fitter1,data2,fitter2,args.ndiffs)
+    fits1 = get_all_fits(data1,fitter1)
+    fits2 = get_all_fits(data2,fitter2)
 
-    fig = plot_comparison_scatter(data1,fitter1,data2,fitter2)
+    print_diff_points(data1,fitter1,fits1, data2,fitter2,fits2, args.ndiffs)
+
+    fig = plot_comparison_scatter(data1,fitter1,fits1, data2,fitter2,fits2)
 
     filename = args.filename    
     if filename is None:

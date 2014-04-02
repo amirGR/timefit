@@ -20,7 +20,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(fits, html_dir, k_of_n):
+def create_html(data, fitter, fits, html_dir, k_of_n):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -67,6 +67,6 @@ if __name__ == '__main__':
     data, fitter = process_common_inputs(args)
     fits = do_fits(data, fitter, k_of_n)
     if args.html != NOT_USED:
-        create_html(fits, args.html, k_of_n)
+        create_html(data, fitter, fits, args.html, k_of_n)
     if args.mat != NOT_USED:
         save_mat_file(data,fitter,fits,args.mat)
