@@ -50,8 +50,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     
     # set the development stages as x labels
     stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
-    #ax.set_xticks([stage.central_age for stage in stages])
-    ax.set_xticks([stage.from_age for stage in stages])
+    ax.set_xticks([stage.central_age for stage in stages])
     ax.set_xticklabels([stage.short_name for stage in stages], fontsize=cfg.xtick_fontsize, fontstretch='condensed', rotation=90)    
     
     # mark birth time with a vertical line
