@@ -18,14 +18,13 @@ class Parallel(object):
          * passes the config settings from the parent process in case they changed 
            from their defaults.
     """
-    def __init__(self, f, n_jobs=None):
+    def __init__(self, f, n_jobs=None, verbosity=None):
         if n_jobs is None:
             n_jobs = cfg.parallel_n_jobs
-        if cfg.verbosity >= 1:
-            verbosity = 70
-        else:
-            verbosity = 0
-        self.pool = joblib.Parallel(n_jobs=n_jobs, verbose=verbosity)
+        if verbosity is None:
+            verbosity = cfg.verbosity
+        job_verbosity = 70 if verbosity >= 1 else 0
+        self.pool = joblib.Parallel(n_jobs=n_jobs, verbose=job_verbosity)
         self.f = f
         self.cfg_vars = _get_vars_in_module(cfg)
         
