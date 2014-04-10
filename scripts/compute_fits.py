@@ -1,13 +1,10 @@
 import setup
 import re
 import sys
-from os.path import join
-import config as cfg
 from utils.misc import disable_all_warnings
-from all_fits import get_all_fits, save_as_mat_file
+from all_fits import get_all_fits, save_as_mat_files
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
-from project_dirs import cache_dir, fit_results_relative_path
 
 def do_fits(data, fitter, k_of_n):
     print """
@@ -30,17 +27,15 @@ def create_html(data, fitter, fits, html_dir, k_of_n):
 """
     save_fits_and_create_html(data, fitter, html_dir, k_of_n=k_of_n)
 
-def save_mat_file(data, fitter, fits, filename):
-    if filename is None:
-        filename = join(cache_dir(), fit_results_relative_path(data,fitter) + '.mat')
+def save_mat_file(data, fitter, fits):
     print """
 ==============================================================================================
 ==============================================================================================
-==== Saving matlab file
+==== Saving matlab file(s)
 ==============================================================================================
 ==============================================================================================
 """
-    save_as_mat_file(data, fitter, fits, filename)
+    save_as_mat_files(data, fitter, fits)
 
 def parse_k_of_n(s):
     """Parse a string that looks like "3/5" and return tuple (3,5)"""
@@ -58,9 +53,9 @@ if __name__ == '__main__':
     parser = get_common_parser()
     parser.add_argument('--part', help='Compute only part of the genes. format: <k>/<n> e.g. 1/4. (k=1..n)')
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
-    parser.add_argument('--mat', nargs='?', metavar='FILENAME', default=NOT_USED, help='Save the fits also as matlab .mat file. Optionally override output filename.')
+    parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     args = parser.parse_args()
-    if args.part is not None and args.mat != NOT_USED:
+    if args.part is not None and args.mat:
         print '--mat cannot be used with --part'
         sys.exit(-1)
     k_of_n = parse_k_of_n(args.part)
@@ -68,5 +63,5 @@ if __name__ == '__main__':
     fits = do_fits(data, fitter, k_of_n)
     if args.html != NOT_USED:
         create_html(data, fitter, fits, args.html, k_of_n)
-    if args.mat != NOT_USED:
-        save_mat_file(data,fitter,fits,args.mat)
+    if args.mat:
+        save_mat_file(data,fitter,fits)

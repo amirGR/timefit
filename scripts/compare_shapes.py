@@ -39,7 +39,7 @@ def plot_comparison_scatter(data1, fitter1, fits1, data2, fitter2, fits2):
     plt.xlim(-1,1)
     plt.ylim(-1,1)
     ttl1 = r'Comparison of scores using {} vs. {}'.format(fitter1.shape,fitter2.shape)
-    ttl2 = r'{}, {}'.format(data1.dataset, data1.pathway)
+    ttl2 = r'{}, {}'.format(data1.name, data1.pathway)
     plt.title('\n'.join([ttl1, ttl2]), fontsize=cfg.fontsize)
     plt.xlabel('R2 for {}'.format(fitter1.shape), fontsize=cfg.fontsize)
     plt.ylabel('R2 for {}'.format(fitter2.shape), fontsize=cfg.fontsize)    

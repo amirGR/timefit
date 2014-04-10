@@ -39,8 +39,7 @@ class Fitter(object):
             return r'{}, sigma={:.2f}'.format(shape_params, sigma)
 
     def fit(self, x, y, loo=False):
-        P0 = self._fit(x,y)
-        t0,s0 = self._unpack_P(P0)
+        t0,s0 = self._fit(x,y)
         if loo:            
             n = len(y)
             test_preds = np.empty(n)
@@ -57,11 +56,10 @@ class Fitter(object):
             for i,(train,test) in enumerate(train_test_split):
                 if cfg.verbosity >= 2:
                     print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i,n_batches)
-                P = self._fit(x[train],y[train],single_init_P0=P0)
-                if P is None:
+                theta,sigma = self._fit(x[train],y[train])
+                if theta is None:
                     test_preds[test] = np.nan
                 else:
-                    theta,sigma = self._unpack_P(P)
                     test_preds[test] = self.predict(theta,x[test])
         else:
             test_preds = None
@@ -74,54 +72,59 @@ class Fitter(object):
     # Private methods for fitting
     ##########################################################
 
-    def _fit(self,x,y,single_init_P0=None):
+    def _fit(self,x,y):
         if self.shape.has_special_fitting():
             theta = self.shape.fit(x,y)
             y_fit = self.shape.f(theta,x)
             sigma = np.std(y - y_fit)
-            return theta + [1.0/sigma]
+            return theta,sigma
         else:
-            return self._gradient_fit(x,y,single_init_P0)
+            return self._gradient_fit(x,y)
             
-    def _gradient_fit(self,x,y,single_init_P0=None):
+    def _gradient_fit(self,x,y):
+        x,sx = self._scale(x)
+        y,sy = self._scale(y)
         n_restarts = cfg.n_optimization_restarts
-        if single_init_P0 is not None:
-            n_restarts = n_restarts + 1
         rng = np.random.RandomState(cfg.random_seed)
         np.random.seed(cfg.random_seed) # for prior.generate() which doesn't have a way to control rng
         P0_base = np.array(self.shape.get_theta_guess(x,y) + [1])
         def get_P0(i):
-            if single_init_P0 is not None and i==0:
-                return single_init_P0
-            else:
-                # if we're using priors, draw from the prior distribution
-                P0 = P0_base + rng.normal(0,1,size=P0_base.shape)
-                if self.shape.priors is not None:
-                    P0[:-1] = np.array([pr.generate() for pr in self.shape.priors])
-                if self.inv_sigma_prior is not None:
-                    P0[-1] = self.inv_sigma_prior.generate()
-                return P0
+            # if we're using priors, draw from the prior distribution
+            P0 = P0_base + rng.normal(0,0.1,size=P0_base.shape)
+            if self.shape.priors is not None:
+                P0[:-1] = np.array([pr.generate() for pr in self.shape.priors])
+            if self.inv_sigma_prior is not None:
+                P0[-1] = self.inv_sigma_prior.generate()
+            return P0
         f = partial(self._Err, x=x, y=y)
         f_grad = partial(self._Err_grad, x=x, y=y)
-        if self.shape.priors is not None:
-            theta_bounds = self.shape.bounds()
-        else:
-            theta_bounds = self.shape.n_params() * [(None,None)]
+        theta_bounds = self.shape.bounds()
         if self.inv_sigma_prior is not None:
             p_bounds = self.inv_sigma_prior.bounds()
         else:
             p_bounds = (None,None)
         bounds = theta_bounds + [p_bounds]
         P = minimize_with_restarts(f, f_grad, get_P0, bounds, n_restarts)
-        return P
-        
-    def _unpack_P(self, P):
         if P is None:
             return None,None
         theta = P[:-1]
         sigma = 1/P[-1]
+
+        # adjust theta and sigma to compensate for the scaling
+        sigma = sigma / sy[0]
+        theta = self.shape.adjust_for_scaling(theta,sx,sy)
         return theta,sigma
- 
+
+    @staticmethod
+    def _scale(vals):
+        vLow,vHigh = np.percentile(vals, cfg.fitter_scaling_percentiles)
+        vRange = vHigh - vLow
+        vCenter = 0.5 * (vHigh + vLow)
+        b = vCenter
+        a = 2.0/vRange
+        scaledVals = a*(vals-b) # translate the range [vLow,vHigh] to [-1,1]
+        return scaledVals,(a,b)
+      
     def _Err(self,P,x,y):
         theta,p = P[:-1],P[-1]
         diffs = self.shape.f(theta,x) - y
@@ -145,4 +148,3 @@ class Fitter(object):
         if self.inv_sigma_prior is not None:
             d_p = d_p - self.inv_sigma_prior.d_log_prob(p)
         return np.r_[d_theta, d_p]
-

@@ -29,6 +29,8 @@ n_folds = 30 # 0 is LOO
 
 log_scale_x0 = -45.0/52
 
+fitter_scaling_percentiles = (10,90)
+
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'
@@ -44,7 +46,7 @@ sorted_regions = {
 }
 
 pathways = {
-    'test' : ['HTR2A', 'HTR2B'],
+    'test' : ['HTR2A', 'HTR1E'],
     'serotonin': [
         'HTR2A', 'HTR2B', 'HTR2C', 
         'HTR1A', 'HTR1B', 'HTR1D', 'HTR1E', 'HTR1F', 

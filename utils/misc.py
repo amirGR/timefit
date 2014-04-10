@@ -1,4 +1,5 @@
 import warnings
+from math import ceil, sqrt
 from contextlib import contextmanager
 from functools import wraps
 from os import makedirs
@@ -50,3 +51,16 @@ def retry(n_max):
         return _wrapped
     return deco
     
+def get_unique(seq):
+    s = set(seq)
+    if not s:
+        raise Exception('get_unique: no items')
+    if len(s) > 1:
+        raise Exception('get_unique: items are not unique')
+    res = s.pop()
+    return res
+
+def rect_subplot(nPlots):
+    nRows = ceil(sqrt(nPlots))
+    nCols = ceil(float(nPlots)/nRows)
+    return nRows,nCols

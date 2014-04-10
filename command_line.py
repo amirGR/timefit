@@ -1,6 +1,6 @@
 import argparse
 import config as cfg
-from load_data import load_data
+from load_data import GeneData
 from scalers import allowed_scaler_names, build_scaler
 from shapes.shape import get_shape_by_name, allowed_shape_names
 from shapes.priors import get_allowed_priors
@@ -20,7 +20,7 @@ def get_common_parser(include_pathway=True):
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose", action="count", default=0, help="increase output verbosity")    
     group.add_argument("-q", "--quiet", action="count", default=0, help="decrease output verbosity")    
-    parser.add_argument('--dataset', default='kang2011', help='Default: kang2011', choices=['kang2011', 'colantuoni2011'])  
+    parser.add_argument('--dataset', default='both', help='Default: both', choices=['kang2011', 'colantuoni2011', 'both'])  
     if include_pathway:
         parser.add_argument('--pathway', default='serotonin', help='Default: serotonin', choices=['all'] + cfg.pathways.keys())
     parser.add_argument('--postnatal', help='Use only postnatal data points', action='store_true')
@@ -38,7 +38,12 @@ def process_common_inputs(args):
     return data,fitter
 
 def get_data_from_args(dataset, pathway, postnatal, scaling):
-    data = load_data(dataset, pathway, postnatal)
+    if dataset == 'both':
+        name = dataset
+        dataset = ['kang2011', 'colantuoni2011']
+    else:
+        name = None
+    data = GeneData.load(dataset,name).restrict_pathway(pathway).restrict_postnatal(postnatal)
     if scaling is not None:
         scaler = build_scaler(scaling,data)
         data.scale_ages(scaler)

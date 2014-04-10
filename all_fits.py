@@ -1,3 +1,4 @@
+from os.path import join
 import pickle
 from itertools import product
 import numpy as np
@@ -5,30 +6,36 @@ from scipy.io import savemat
 from sklearn.datasets.base import Bunch
 from fit_score import loo_score
 import config as cfg
-from project_dirs import fit_results_relative_path
+from project_dirs import cache_dir, fit_results_relative_path
 from utils.misc import init_array
 from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
 
 def get_all_fits(data, fitter, k_of_n=None):
+    """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
+    """
+    return {ds.name : _get_dataset_fits(ds,fitter,k_of_n) for ds in data.datasets}
+
+def _get_dataset_fits(dataset, fitter, k_of_n=None):
     def arg_mapper(gr,f_proxy):
         g,r = gr
-        series = data.get_one_series(g,r)
+        series = dataset.get_one_series(g,r)
         return f_proxy(series,fitter)
         
-    fits = job_splitting.compute(
+    dataset_fits = job_splitting.compute(
         name = 'fits',
-        f = compute_fit,
+        f = _compute_fit,
         arg_mapper = arg_mapper,
-        all_keys = list(product(data.gene_names,data.region_names)),
+        all_keys = list(product(dataset.gene_names,dataset.region_names)),
         k_of_n = k_of_n,
-        base_filename = fit_results_relative_path(data,fitter),
+        base_filename = fit_results_relative_path(dataset,fitter),
     )
-    return compute_scores(data, fits)  
+    _add_scores(dataset, dataset_fits)  
+    return dataset_fits
 
-def compute_scores(data,fits):
-    for (g,r),fit in fits.iteritems():
-        series = data.get_one_series(g,r)
+def _add_scores(dataset,dataset_fits):
+    for (g,r),fit in dataset_fits.iteritems():
+        series = dataset.get_one_series(g,r)
         try:
             if fit.fit_predictions is None:
                 fit.fit_score = None
@@ -40,9 +47,9 @@ def compute_scores(data,fits):
             fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
         except:
             fit.LOO_score = None
-    return fits
+    return dataset_fits
    
-def compute_fit(series, fitter):
+def _compute_fit(series, fitter):
     if cfg.verbosity > 0:
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
@@ -63,61 +70,65 @@ def compute_fit(series, fitter):
         LOO_predictions = LOO_predictions,
     )
 
-def save_as_mat_file(data, fitter, fits, filename):
-    print 'Saving mat file to {}'.format(filename)
-    shape = fitter.shape
-
-    gene_names = data.gene_names
-    gene_idx = {g:i for i,g in enumerate(gene_names)}
-    n_genes = len(gene_names)
-    region_names = data.region_names
-    region_idx = {r:i for i,r in enumerate(region_names)}
-    n_regions = len(region_names)
+def save_as_mat_files(data, fitter, fits):
+    for dataset in data.datasets:
+        filename = join(cache_dir(), fit_results_relative_path(dataset,fitter) + '.mat')
+        dataset_fits = fits[dataset.name]
     
-    write_theta = shape.can_export_params_to_matlab()
-    if write_theta:
-        theta = init_array(np.NaN, shape.n_params(), n_genes,n_regions)
-    else:
-        theta = np.NaN
-    
-    fit_scores = init_array(np.NaN, n_genes,n_regions)
-    LOO_scores = init_array(np.NaN, n_genes,n_regions)
-    fit_predictions = init_array(np.NaN, *data.expression.shape)
-    LOO_predictions = init_array(np.NaN, *data.expression.shape)
-    for (g,r),fit in fits.iteritems():
-        ig = gene_idx[g]
-        ir = region_idx[r]
-        fit_scores[ig,ir] = fit.fit_score
-        LOO_scores[ig,ir] = fit.LOO_score
-        if write_theta and fit.theta is not None:
-            theta[:,ig,ir] = fit.theta
-        original_inds = data.get_one_series(g,r).original_inds
-        fit_predictions[original_inds,ig,ir] = fit.fit_predictions
-        LOO_predictions[original_inds,ig,ir] = fit.LOO_predictions
-    
-    mdict = {
-        'gene_names' : list_of_strings_to_matlab_cell_array(gene_names),
-        'region_names' : list_of_strings_to_matlab_cell_array(region_names),
-        'theta' : theta,
-        'fit_scores' : fit_scores,
-        'LOO_scores' : LOO_scores,
-        'fit_predictions' : fit_predictions,
-        'LOO_predictions': LOO_predictions,
-    }
-    savemat(filename, mdict, oned_as='column')
+        print 'Saving mat file to {}'.format(filename)
+        shape = fitter.shape
+        
+        gene_names = dataset.gene_names
+        gene_idx = {g:i for i,g in enumerate(gene_names)}
+        n_genes = len(gene_names)
+        region_names = dataset.region_names
+        region_idx = {r:i for i,r in enumerate(region_names)}
+        n_regions = len(region_names)
+        
+        write_theta = shape.can_export_params_to_matlab()
+        if write_theta:
+            theta = init_array(np.NaN, shape.n_params(), n_genes,n_regions)
+        else:
+            theta = np.NaN
+        
+        fit_scores = init_array(np.NaN, n_genes,n_regions)
+        LOO_scores = init_array(np.NaN, n_genes,n_regions)
+        fit_predictions = init_array(np.NaN, *dataset.expression.shape)
+        LOO_predictions = init_array(np.NaN, *dataset.expression.shape)
+        for (g,r),fit in dataset_fits.iteritems():
+            ig = gene_idx[g]
+            ir = region_idx[r]
+            fit_scores[ig,ir] = fit.fit_score
+            LOO_scores[ig,ir] = fit.LOO_score
+            if write_theta and fit.theta is not None:
+                theta[:,ig,ir] = fit.theta
+            original_inds = dataset.get_one_series(g,r).original_inds
+            fit_predictions[original_inds,ig,ir] = fit.fit_predictions
+            LOO_predictions[original_inds,ig,ir] = fit.LOO_predictions
+        
+        mdict = {
+            'gene_names' : list_of_strings_to_matlab_cell_array(gene_names),
+            'region_names' : list_of_strings_to_matlab_cell_array(region_names),
+            'theta' : theta,
+            'fit_scores' : fit_scores,
+            'LOO_scores' : LOO_scores,
+            'fit_predictions' : fit_predictions,
+            'LOO_predictions': LOO_predictions,
+        }
+        savemat(filename, mdict, oned_as='column')
     
 def convert_format(filename, f_convert):
     """Utility function for converting the format of cached fits.
        See e.g. scripts/convert_fit_format.py
     """
     with open(filename) as f:
-        fits = pickle.load(f)        
-    print 'Found cache file with {} fits'.format(len(fits))
+        dataset_fits = pickle.load(f)        
+    print 'Found cache file with {} fits'.format(len(dataset_fits))
     
     print 'Converting...'
-    new_fits = {k:f_convert(v) for k,v in fits.iteritems()}
+    new_dataset_fits = {k:f_convert(v) for k,v in dataset_fits.iteritems()}
     
     print 'Saving converted fits to {}'.format(filename)
     with open(filename,'w') as f:
-        pickle.dump(new_fits,f)
+        pickle.dump(new_dataset_fits,f)
 

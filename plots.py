@@ -5,7 +5,7 @@ from all_fits import get_all_fits
 from fit_score import loo_score
 from os.path import join, isfile
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
-from utils.misc import ensure_dir, interactive
+from utils.misc import ensure_dir, interactive, rect_subplot
 from utils.parallel import Parallel
 from dev_stages import dev_stages
 import scalers
@@ -18,19 +18,28 @@ def save_figure(fig, filename, b_close=False):
 
 def plot_gene(data, g, fits=None):
     fig = plt.figure()
-    for iRegion,r in enumerate(cfg.sorted_regions[data.dataset]):
-        series = data.get_one_series(g,r)
-        ax = fig.add_subplot(4,4,iRegion+1)
+    region_series = []
+    for r in data.region_names:
+        series = data.get_one_series(g,r,allow_missing=True)
+        if series is not None:
+            region_series.append( (r,series) )
+    if not region_series:
+        raise Exception('Gene not found in the data')
+    dct_dataset = data.region_to_dataset()
+    nRows, nCols = rect_subplot(len(region_series))
+    for iRegion,(r,series) in enumerate(region_series):
+        ax = fig.add_subplot(nRows,nCols,iRegion+1)
         ax.plot(series.ages,series.expression,'ro')
         if fits is not None:
-            fit = fits[(g,r)]
+            dsname = dct_dataset[r]
+            fit = fits[dsname][(g,r)]
             if fit.theta is not None:
                 x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
                 ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(r))
-        if iRegion % 4 == 0:
+        if iRegion % nCols == 0:
             ax.set_ylabel('expression level')
-        if iRegion / 4 >= 3:
+        if iRegion / nRows == nRows-1:
             ax.set_xlabel('age')
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(g))
@@ -106,14 +115,16 @@ def _plot_genes_job(data,fits,gene,filename):
 def plot_and_save_all_series(data, fitter, fits, dirname, k_of_n=None):
     ensure_dir(dirname)
     to_plot = []
-    for g,r in fits.iterkeys():
-        filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
-        if isfile(filename):
-            print 'Figure already exists for {}@{}. skipping...'.format(g,r)
-        else:
-            to_plot.append((g,r,filename))
+    for dsfits in fits.itervalues():
+        for (g,r),fit in dsfits.iteritems():
+            filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
+            if isfile(filename):
+                print 'Figure already exists for {}@{}. skipping...'.format(g,r)
+                continue
+            series = data.get_one_series(g,r)
+            to_plot.append((series,fit,filename))
     pool = Parallel(_plot_series_job)
-    pool(pool.delay(data.get_one_series(g,r),fits[(g,r)],filename) for g,r,filename in to_plot)
+    pool(pool.delay(*args) for args in to_plot)
 
 def _plot_series_job(series,fit,filename):
     with interactive(False):
@@ -122,8 +133,10 @@ def _plot_series_job(series,fit,filename):
         save_figure(fig, filename, b_close=True)
 
 def plot_score_distribution(fits):
-    n_failed = len([1 for fit in fits.itervalues() if fit.LOO_score is None])
-    LOO_R2 = np.array([fit.LOO_score for fit in fits.itervalues() if fit.LOO_score is not None])
+    def flat_values(fits):
+        return (fit for dsfits in fits.itervalues() for fit in dsfits.itervalues())
+    n_failed = len([1 for fit in flat_values(fits) if fit.LOO_score is None])
+    LOO_R2 = np.array([fit.LOO_score for fit in flat_values(fits) if fit.LOO_score is not None])
     low,high = -1, 1
     n_low = np.count_nonzero(LOO_R2 < low)
     fig = plt.figure()
@@ -142,14 +155,15 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
     import shutil
 
     n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
-    for fit in fits.itervalues():
-        if fit.LOO_score is None or fit.LOO_score < 0:
-            fit.rank = 0
-        else:
-            fit.rank = int(np.ceil(n_ranks * fit.LOO_score))
+    flat_fits = {} # (gene,region) -> fit (may be None)
+    for g in data.gene_names:
+        for r in data.region_names:
+            flat_fits[(g,r)] = None
+    for dsfits in fits.itervalues():
+        for (g,r),fit in dsfits.iteritems():
+            fit.rank = int(np.ceil(n_ranks * fit.LOO_score)) if fit.LOO_score > 0 else 0
+            flat_fits[(g,r)] = fit     
             
-    sorted_regions = cfg.sorted_regions[data.dataset]
-    
     html = Template("""
 <html>
 <head>
@@ -161,7 +175,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
 <a href="R2-hist.png">Distribution of LOO R2 scores</a>
 <table>
     <th>
-        {% for region_name in sorted_regions %}
+        {% for region_name in data.region_names %}
         <td class="tableHeading">
             <b>{{region_name}}</b>
         </td>
@@ -172,17 +186,19 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
         <td>
             <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
         </td>
-        {% for region_name in sorted_regions %}
+        {% for region_name in data.region_names %}
         <td>
-            <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-            {% if fits[(gene_name,region_name)].LOO_score %}
-                <div class="score rank{{fits[(gene_name,region_name)].rank}}">
-               {{fits[(gene_name,region_name)].LOO_score | round(2)}}
-               </div>
-            {% else %}
-               None
+            {% if flat_fits[(gene_name,region_name)] %}
+                <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                {% if flat_fits[(gene_name,region_name)].LOO_score %}
+                    <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                   {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                   </div>
+                {% else %}
+                   No Score
+                {% endif %}
+                </a>
             {% endif %}
-            </a>
         </td>
         {% endfor %}
     </tr>

@@ -22,11 +22,11 @@ def results_dir():
 def priors_dir():
     return join(code_dir(), 'priors')
 
-def fit_results_relative_path(data,fitter):
-    s = data.pathway
-    if data.age_scaler is not None:
-        s = '{}-{}'.format(data.age_scaler.cache_name(),s)
-    if data.postnatal_only:
+def fit_results_relative_path(d,fitter): # d can be data or dataset
+    s = d.pathway
+    if d.age_scaler is not None:
+        s = '{}-{}'.format(d.age_scaler.cache_name(),s)
+    if d.postnatal_only:
         s = 'postnatal-{}'.format(s)
     fitname = 'fits-{}-{}'.format(s, fitter.cache_name())
-    return join(data.dataset, fitname)
+    return join(d.name, fitname)

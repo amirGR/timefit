@@ -11,6 +11,7 @@ class Shape(object):
        A class that works with Fitter should implement:
            d_theta = f_grad(theta,x)
            theta0 = get_theta_guess(x,y)
+           theta = adjust_for_scaling(theta,sx,sy)
        A class that does its own special fitting should implement:
            theta = fit(x,y)
     """
@@ -50,6 +51,8 @@ class Shape(object):
         return True #override where not possible
 
     def bounds(self):
+        if self.priors is None:
+            return self.n_params() * [(None,None)]        
         return [pr.bounds() for pr in self.priors]
 
     def log_prob_theta(self, theta):

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from project_dirs import results_dir
 from utils.misc import ensure_dir, disable_all_warnings
 from command_line import get_common_parser, process_common_inputs
-from plots import plot_one_series, save_figure
+from plots import plot_one_series, plot_gene, save_figure
 
 def do_one_fit(series, fitter, loo, filename, b_show):
     if fitter is not None:
@@ -12,6 +12,16 @@ def do_one_fit(series, fitter, loo, filename, b_show):
         fig = plot_one_series(series, fitter.shape, theta, LOO_predictions)
     else:
         fig = plot_one_series(series)
+    if filename is None:
+        ensure_dir(results_dir())
+        filename = join(results_dir(), 'fit.png')
+    print 'Saving figure to {}'.format(filename)
+    save_figure(fig, filename)
+    if b_show:
+        plt.show(block=True)
+
+def do_gene_fits(data, gene, fitter, filename, b_show):
+    fig = plot_gene(data,gene)
     if filename is None:
         ensure_dir(results_dir())
         filename = join(results_dir(), 'fit.png')
@@ -34,5 +44,8 @@ if __name__ == '__main__':
     data, fitter = process_common_inputs(args)
     if args.nofit:
         fitter = None
-    series = data.get_one_series(args.gene,args.region)
-    do_one_fit(series, fitter, args.loo, args.filename, args.show)
+    if args.region == 'all':
+        do_gene_fits(data, args.gene, fitter,args.filename,args.show)
+    else:
+        series = data.get_one_series(args.gene,args.region)
+        do_one_fit(series, fitter, args.loo, args.filename, args.show)

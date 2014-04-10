@@ -36,5 +36,13 @@ class Sigmoid(Shape):
             (x.max() - x.min()) / 2, # w
         ]
     
+    def adjust_for_scaling(self, theta, sx, sy):
+        a,h,mu,w = theta
+        a = a/sy[0] + sy[1]
+        h = h / sy[0]
+        mu = mu/sx[0] + sx[1]
+        w = w / sx[0]
+        return a,h,mu,w
+
 if __name__ == '__main__':
     Sigmoid().TEST_check_grad()

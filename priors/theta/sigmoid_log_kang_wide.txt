@@ -1,6 +1,0 @@
-{
-  'baseline': NormalPrior(mu=8, sigma=10),
-  'height' : NormalPrior(mu=8, sigma=8),
-  'onset' : NormalPrior(mu=1, sigma=2.5),
-  'width' : NormalPrior(mu=0, sigma=3),
-}
