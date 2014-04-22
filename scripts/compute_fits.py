@@ -25,7 +25,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n):
 ==============================================================================================
 ==============================================================================================
 """
-    save_fits_and_create_html(data, fitter, html_dir, k_of_n=k_of_n)
+    save_fits_and_create_html(data, fitter, fits=fits, basedir=html_dir, k_of_n=k_of_n)
 
 def save_mat_file(data, fitter, fits):
     print """
