@@ -130,17 +130,19 @@ class OneDataset(object):
             genders = np.array(matlab_cell_array_to_list_of_strings(mat['genders'])),
             ages = ages,
             name = dataset
-        )
+        ).restrict_pathway('all')
 
     def restrict_pathway(self, pathway, ad_hoc_genes=None, allow_missing_genes=True):
         pathway, pathway_genes = _translate_pathway(pathway, ad_hoc_genes)
-        if pathway is None:
-            return self
-        inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
-        missing = [g for g,i in zip(pathway_genes,inds) if i is None]
-        if missing and cfg.verbosity > 0:
-            print 'Dataset {} is missing {} genes from pathway {}: {}'.format(self.name, len(missing), pathway, missing)
-        inds = [x for x in inds if x is not None]
+        if pathway_genes is None:
+            # we still need to get rid of gene_names that are None
+            inds = [i for i,g in enumerate(self.gene_names) if g is not None]
+        else:
+            inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
+            missing = [g for g,i in zip(pathway_genes,inds) if i is None]
+            if missing and cfg.verbosity > 0:
+                print 'Dataset {} is missing {} genes from pathway {}: {}'.format(self.name, len(missing), pathway, missing)
+            inds = [x for x in inds if x is not None]
         self.expression = self.expression[:,inds,:]
         self.gene_names = self.gene_names[inds]
         self.pathway = pathway
@@ -217,7 +219,7 @@ class OneDataset(object):
 
 def _translate_pathway(pathway, ad_hoc_genes):
     if pathway is None or pathway == 'all':
-        return None,None
+        return 'all',None
     if pathway in cfg.pathways:
         assert ad_hoc_genes is None, 'Specifying ad_hoc_genes for a known pathway is not allowed. Pathway: {}'.format(pathway)
         _, pathway_genes = _translate_gene_list(cfg.pathways[pathway])
