@@ -11,7 +11,7 @@ from a set of keys to the result of the computation on them.
 import pickle
 import os
 import shutil
-from os.path import dirname, join, isfile
+from os.path import dirname, join, isfile, isdir
 from glob import glob
 import config as cfg
 from project_dirs import cache_dir
@@ -38,9 +38,8 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         batch_size = cfg.job_batch_size if len(all_keys) < cfg.job_big_key_size else cfg.job_big_batch_size
      
     keys = _get_shard(all_keys, k_of_n, f_sharding_key, all_sharding_keys)
-    dct_res, needs_consolidation = _read_all_cache_files(base_filename, k_of_n, keys)
-    if needs_consolidation:
-        _consolidate(dct_res, base_filename, k_of_n)
+    dct_res, found_keys_not_in_main_file = _read_all_cache_files(base_filename, k_of_n, keys)
+    _consolidate(dct_res, base_filename, k_of_n, found_keys_not_in_main_file)
 
     missing_keys = set(k for k in keys if k not in dct_res)
     if cfg.verbosity > 0:
@@ -57,8 +56,7 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         _save_batch(dct_updates, base_filename, k_of_n, i)
         dct_res.update(dct_updates)
 
-    if missing_keys:        
-        _consolidate(dct_res, base_filename, k_of_n)
+    _consolidate(dct_res, base_filename, k_of_n, bool(missing_keys))
     return dct_res
 
 def _job_wrapper(f,key,a,kw):
@@ -123,8 +121,8 @@ def _read_all_cache_files(base_filename, k_of_n, keys):
         dct_res.update(dct_batch)
 
     st_all_keys_found = set(dct_res.iterkeys())
-    needs_consolidation = st_all_keys_found > st_keys_in_main_file
-    return dct_res, needs_consolidation
+    found_keys_not_in_main_file = st_all_keys_found > st_keys_in_main_file
+    return dct_res, found_keys_not_in_main_file
 
 def _read_one_cache_file(filename, st_keys, is_batch=False):
     verbosity_threshold = 2 if is_batch else 1
@@ -147,16 +145,20 @@ def _read_one_cache_file(filename, st_keys, is_batch=False):
         dct_res = {k:v for k,v in dct_res.iteritems() if k in st_keys}
     return dct_res
 
-def _consolidate(dct_res, base_filename, k_of_n):
+def _consolidate(dct_res, base_filename, k_of_n, found_keys_not_in_main_file):
     filename = _cache_filename(base_filename, k_of_n)
-    ensure_dir(dirname(filename))    
-    with open(filename,'w') as f:
-        pickle.dump(dct_res,f)
-        
-    batchdir = _batch_dir(base_filename)
+
+    # write the updated main file    
+    if found_keys_not_in_main_file:
+        ensure_dir(dirname(filename))
+        with open(filename,'w') as f:
+            pickle.dump(dct_res,f)
+    
     if k_of_n is None:
         # it's the main file - delete all k_of_n files and the batches dir
-        shutil.rmtree(batchdir)
+        batchdir = _batch_dir(base_filename)
+        if isdir(batchdir):
+            shutil.rmtree(batchdir)
         partial_files = set(glob(filename + '*')) - {filename}
         for filename in partial_files:
             os.remove(filename)
