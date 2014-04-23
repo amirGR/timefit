@@ -21,7 +21,7 @@ from utils import parallel
 def proxy(*a,**kw):
     return a,kw
 
-def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=None):
+def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=None, f_sharding_key=None, all_sharding_keys=None):
     """ name - appears in print messages if verbosity > 0
         f - pickleable function that is called to do the actual computation on each sub-process
         arg_mapper(key,f_proxy):
@@ -37,7 +37,7 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
     if batch_size is None:
         batch_size = cfg.job_batch_size if len(all_keys) < cfg.job_big_key_size else cfg.job_big_batch_size
      
-    keys = _get_shard(all_keys, k_of_n)
+    keys = _get_shard(all_keys, k_of_n, f_sharding_key, all_sharding_keys)
     dct_res, needs_consolidation = _read_all_cache_files(base_filename, k_of_n, keys)
     if needs_consolidation:
         _consolidate(dct_res, base_filename, k_of_n)
@@ -66,11 +66,17 @@ def _job_wrapper(f,key,a,kw):
     val = f(*a,**kw)
     return key,val
 
-def _get_shard(all_keys, k_of_n):
+def _get_shard(all_keys, k_of_n, f_sharding_key, all_sharding_keys):
     if k_of_n is None:
         return all_keys
     k,n = k_of_n
-    return all_keys[k-1::n] # k is one-based, so subtract one
+    if f_sharding_key is None:
+        return all_keys[k-1::n] # k is one-based, so subtract one
+    else:
+        if all_sharding_keys is None:
+            all_sharding_keys = sorted(set(f_sharding_key(key) for key in all_keys))
+        chosen_skeys = set(all_sharding_keys[k-1::n])
+        return [key for key in all_keys if f_sharding_key(key) in chosen_skeys]
 
 def _save_batch(dct_updates, base_filename, k_of_n, i):
     filename = _batch_base_filename(base_filename, k_of_n) + str(i)

@@ -14,19 +14,25 @@ from utils import job_splitting
 def get_all_fits(data, fitter, k_of_n=None):
     """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
     """
-    return {ds.name : _get_dataset_fits(ds,fitter,k_of_n) for ds in data.datasets}
+    return {ds.name : _get_dataset_fits(data,ds,fitter,k_of_n) for ds in data.datasets}
 
-def _get_dataset_fits(dataset, fitter, k_of_n=None):
+def _get_dataset_fits(data, dataset, fitter, k_of_n=None):
     def arg_mapper(gr,f_proxy):
         g,r = gr
         series = dataset.get_one_series(g,r)
         return f_proxy(series,fitter)
         
+    # sharding is done by gene, so plots.plot_and_save_all_genes can work on a shard
+    # this also requires that the list of all genes be taken from the whole data
+    # and not from each dataset. Otherwise we can get a mismatch between the genes 
+    # in the shard for different datasets.
     dataset_fits = job_splitting.compute(
         name = 'fits',
         f = _compute_fit,
         arg_mapper = arg_mapper,
         all_keys = list(product(dataset.gene_names,dataset.region_names)),
+        all_sharding_keys = data.gene_names,
+        f_sharding_key = lambda gr: gr[0],
         k_of_n = k_of_n,
         base_filename = fit_results_relative_path(dataset,fitter),
     )

@@ -107,7 +107,11 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
 def plot_and_save_all_genes(data, fitter, fits, dirname):
     ensure_dir(dirname)
     to_plot = []
-    for g in data.gene_names:
+    genes = set() # use the genes from the fits and not from 'data' to support sharding (k_of_n)
+    for ds_fits in fits.itervalues():
+        for g,r in ds_fits.iterkeys():
+            genes.add(g)
+    for g in sorted(genes):
         filename = join(dirname, '{}.png'.format(g))
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
@@ -123,7 +127,7 @@ def _plot_genes_job(gene,region_series_fits,filename):
         fig = _plot_gene_inner(gene,region_series_fits)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, fits, dirname, k_of_n=None):
+def plot_and_save_all_series(data, fitter, fits, dirname):
     ensure_dir(dirname)
     to_plot = []
     for dsfits in fits.itervalues():
@@ -234,10 +238,10 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
-    if do_genes and k_of_n is None:
+    if do_genes: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series:
-        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir),k_of_n)
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir))
     if do_hist and k_of_n is None:
         with interactive(False):
             fig = plot_score_distribution(fits)
