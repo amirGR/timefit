@@ -17,25 +17,35 @@ def save_figure(fig, filename, b_close=False):
         plt.close(fig)
 
 def plot_gene(data, g, fits=None):
-    fig = plt.figure()
-    region_series = []
+    region_series_fits = _extract_gene_data(data,g,fits)
+    return _plot_gene_inner(g,region_series_fits)
+
+def _extract_gene_data(data, g, fits=None):
+    dct_dataset = data.region_to_dataset()
+    region_series_fits = []
     for r in data.region_names:
         series = data.get_one_series(g,r,allow_missing=True)
-        if series is not None:
-            region_series.append( (r,series) )
-    if not region_series:
-        raise Exception('Gene not found in the data')
-    dct_dataset = data.region_to_dataset()
-    nRows, nCols = rect_subplot(len(region_series))
-    for iRegion,(r,series) in enumerate(region_series):
-        ax = fig.add_subplot(nRows,nCols,iRegion+1)
-        ax.plot(series.ages,series.expression,'ro')
+        if series is None:
+            continue
         if fits is not None:
             dsname = dct_dataset[r]
             fit = fits[dsname][(g,r)]
-            if fit.theta is not None:
-                x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
-                ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
+        else:
+            fit = None
+        region_series_fits.append( (r,series,fit) )
+    if not region_series_fits:
+        raise Exception('Gene not found in the data')
+    return region_series_fits
+
+def _plot_gene_inner(g,region_series_fits):
+    fig = plt.figure()
+    nRows, nCols = rect_subplot(len(region_series_fits))
+    for iRegion,(r,series,fit) in enumerate(region_series_fits):
+        ax = fig.add_subplot(nRows,nCols,iRegion+1)
+        ax.plot(series.ages,series.expression,'ro')
+        if fit is not None and fit.theta is not None:
+            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
+            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
         ax.set_title('Region {}'.format(r))
         if iRegion % nCols == 0:
             ax.set_ylabel('expression level')
@@ -101,15 +111,16 @@ def plot_and_save_all_genes(data, fitter, fits, dirname):
         filename = join(dirname, '{}.png'.format(g))
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
-        else:
-            to_plot.append((g,filename))    
+            continue
+        region_series_fits = _extract_gene_data(data,g,fits)            
+        to_plot.append((g,region_series_fits,filename))
     pool = Parallel(_plot_genes_job)
-    pool(pool.delay(data,fits,g,filename) for g,filename in to_plot)
+    pool(pool.delay(*args) for args in to_plot)
 
-def _plot_genes_job(data,fits,gene,filename):
+def _plot_genes_job(gene,region_series_fits,filename):
     with interactive(False):
         print 'Saving figure for gene {}'.format(gene)
-        fig = plot_gene(data,gene,fits)
+        fig = _plot_gene_inner(gene,region_series_fits)
         save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, fits, dirname, k_of_n=None):
