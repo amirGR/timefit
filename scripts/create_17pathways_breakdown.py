@@ -74,3 +74,10 @@ for pathway,entrez_genes in dct_pathways_entrez.iteritems():
 outfile = join(project_dirs.data_dir(),'17pathways-breakdown.pkl')
 with open(outfile,'w') as f:
     pickle.dump(dct_pathways,f)
+    
+all_genes = set(g for pwy in dct_pathways.itervalues() for g in pwy)
+outfile = join(project_dirs.data_dir(),'17pathways-full.txt')
+with open(outfile,'w') as f:
+    for g in sorted(all_genes):
+        f.write(g + '\n')
+

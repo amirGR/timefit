@@ -123,6 +123,15 @@ def save_as_mat_files(data, fitter, fits):
         }
         savemat(filename, mdict, oned_as='column')
     
+def restrict_genes(fits, genes):
+    if genes is None:
+        return fits
+    genes = set(genes)
+    new_fits = {}
+    for ds_key,ds_fits in fits.iteritems():
+        new_fits[ds_key] = {(g,r):fit for (g,r),fit in ds_fits.iteritems() if g in genes}
+    return new_fits
+    
 def convert_format(filename, f_convert):
     """Utility function for converting the format of cached fits.
        See e.g. scripts/convert_fit_format.py

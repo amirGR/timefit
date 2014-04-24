@@ -1,13 +1,16 @@
 import setup
-import numpy as np
+from os.path import join
 import matplotlib.pyplot as plt
 import config as cfg
-from load_data import GeneData
+from load_data import GeneData, load_17_pathways_breakdown
 from shapes.sigmoid import Sigmoid
 from fitter import Fitter
-from all_fits import get_all_fits
+from all_fits import get_all_fits, restrict_genes
 from scalers import LogScaler
 from dev_stages import dev_stages
+from plots import save_figure
+import project_dirs
+from utils.misc import ensure_dir
 
 cfg.verbosity = 1
 age_scaler = LogScaler()
@@ -29,7 +32,7 @@ def get_fit_param(fits, getter, R2_threshold=None):
                     lst.append(val)
     return lst
 
-def plot_onset_times(onset_times, R2_threshold):
+def plot_onset_times(onset_times, pathway_name, R2_threshold):
     stages = [stage.scaled(age_scaler) for stage in dev_stages]
     low = min(stage.from_age for stage in stages)
     high = max(stage.to_age for stage in stages)
@@ -37,7 +40,7 @@ def plot_onset_times(onset_times, R2_threshold):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.hist(onset_times, 50, range=(low,high))
-    ttl = 'Histogram of onset times for 17 pathways (R2 threshold={})'.format(R2_threshold)
+    ttl = 'Histogram of onset times for {} (R2 threshold={})'.format(pathway_name, R2_threshold)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_xlabel('onset time', fontsize=cfg.fontsize)
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
@@ -52,13 +55,49 @@ def plot_onset_times(onset_times, R2_threshold):
     birth_age = age_scaler.scale(0)
     ax.plot([birth_age, birth_age], [ymin, ymax], '--', color='0.85')
 
-if __name__ == '__main__':
+    # save the figure
+    dirname = join(project_dirs.results_dir(), 'onset-times')
+    if 'unique' in pathway_name:
+        dirname = join(dirname,'unique')
+    elif '17' not in pathway_name:
+        dirname = join(dirname,'overlapping')
+    ensure_dir(dirname)
+    filename = join(dirname, pathway_name + '.png')
+    print 'Saving figure to {}'.format(filename)
+    save_figure(fig, filename, b_close=True)
+
+def unique_genes_only(dct_pathways):
+    res = {}
+    def count(dct,g):
+        return sum(1 for pathway_genes in dct.itervalues() if g in pathway_genes)
+    for pathway_name,genes in dct_pathways.iteritems():
+        dct_counts = {g:count(dct_pathways,g) for g in genes}
+        unique_genes = {g for g,c in dct_counts.iteritems() if c == 1}
+        res[pathway_name] = unique_genes
+    return res
+
+def main():
     R2_threshold = 0.5
+    dct_pathways = load_17_pathways_breakdown()
+    dct_unique = unique_genes_only (dct_pathways)
+    for pathway_name, genes in dct_unique.iteritems():
+        dct_pathways[pathway_name + ' (unique)'] = genes
+        
     fits = get_fits()
     def get_onset_time(fit):
         if fit.theta is None:
             return None
         a,h,mu,w = fit.theta
         return mu
-    onset_times = get_fit_param(fits, get_onset_time, R2_threshold=R2_threshold)
-    plot_onset_times(onset_times,R2_threshold=R2_threshold)
+    dct_pathways['17 pathways'] = None
+    for pathway_name, genes in dct_pathways.iteritems():
+        print 'Doing {}...'.format(pathway_name)
+        pathway_fits = restrict_genes(fits,genes)
+        onset_times = get_fit_param(pathway_fits, get_onset_time, R2_threshold=R2_threshold)
+        if not onset_times:
+            print 'Skipping {}. No fits left'.format(pathway_name)
+            continue
+        plot_onset_times(onset_times, pathway_name, R2_threshold)
+
+if __name__ == '__main__':
+    main()
