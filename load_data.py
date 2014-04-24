@@ -6,6 +6,13 @@ import config as cfg
 from utils.formats import matlab_cell_array_to_list_of_strings, read_strings_from_file
 from utils.misc import get_unique
 
+def load_17_pathways_breakdown():
+    import pickle
+    filename = join(project_dirs.data_dir(),'17pathways-breakdown.pkl')
+    with open(filename) as f:
+        dct_pathways = pickle.load(f)
+    return dct_pathways
+
 def load_data(dataset='both', pathway=None, remove_prenatal=False, scaler=None):
     """This function is mostly for backward compatibility / syntactic sugar.
     """
