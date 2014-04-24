@@ -38,12 +38,7 @@ def process_common_inputs(args):
     return data,fitter
 
 def get_data_from_args(dataset, pathway, postnatal, scaling):
-    if dataset == 'both':
-        name = dataset
-        dataset = ['kang2011', 'colantuoni2011']
-    else:
-        name = None
-    data = GeneData.load(dataset,name).restrict_pathway(pathway).restrict_postnatal(postnatal)
+    data = GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(postnatal)
     if scaling is not None:
         scaler = build_scaler(scaling,data)
         data.scale_ages(scaler)

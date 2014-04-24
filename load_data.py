@@ -6,7 +6,7 @@ import config as cfg
 from utils.formats import matlab_cell_array_to_list_of_strings, read_strings_from_file
 from utils.misc import get_unique
 
-def load_data(dataset='kang2011', pathway=None, remove_prenatal=False, scaler=None):
+def load_data(dataset='both', pathway=None, remove_prenatal=False, scaler=None):
     """This function is mostly for backward compatibility / syntactic sugar.
     """
     return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal).scale_ages(scaler)
@@ -26,13 +26,12 @@ class GeneData(object):
         self.name = name
         
     @staticmethod
-    def load(dataset_names, name=None):
-        """dataset can be a single dataset name (e.g. kang2011), or a list of such names"""
-        if isinstance(dataset_names, basestring):
-            dataset_names = [dataset_names]
-        if name is None:
-            assert len(dataset_names) == 1
-            name = dataset_names[0]
+    def load(dataset):
+        name = dataset
+        if dataset == 'both':
+            dataset_names = ['kang2011', 'colantuoni2011']
+        else:
+            dataset_names = [dataset]
         datasets = [OneDataset.load(dataset_name) for dataset_name in dataset_names]
         return GeneData(datasets, name)
 
