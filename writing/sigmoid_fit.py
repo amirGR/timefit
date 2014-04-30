@@ -13,7 +13,8 @@ from project_dirs import results_dir
 from utils.misc import ensure_dir
 
 fontsize = 24
-xtick_fontsize = 18
+equation_fontsize = 36
+xtick_fontsize = 24
 default_figure_size_x = 18.5
 default_figure_size_y = 10.5
 default_figure_facecolor = 0.85 * np.ones(3)
@@ -51,7 +52,7 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
     ax.set_title(ttl, fontsize=fontsize)
 
     # remove y ticks
-    ax.set_yticks([])    
+    #ax.set_yticks([])    
     
     # set the development stages as x labels
     stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
@@ -82,7 +83,7 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
         score = loo_score(y,test_preds)
         latex_r2 = r"1 - \frac{\sum_{i=1}^n{(y_i - \hat y_i)^2}}{\sum_{i=1}^n{(y_i-\bar y)^2} }"
         txt = "$R^2 = {} = {:.2g}$".format(latex_r2,score)
-        ax.text(0.02,0.8,txt,fontsize=fontsize,transform=ax.transAxes)
+        ax.text(0.02,0.8,txt,fontsize=equation_fontsize,transform=ax.transAxes)
 
     if b_annotate:        
         # annotate sigmoid parameters
@@ -98,10 +99,14 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
         ax.plot([xmin,xmax],[a, a],'g--',linewidth=2)
         ax.text(mu+1.5,a+0.05,'baseline', fontsize=fontsize, verticalalignment='bottom')
         
+        # slope
+        ax.text(mu-0.5,y_onset+1,'slope', fontsize=fontsize, horizontalalignment='right')
+        ax.arrow(mu-0.45,y_onset+0.95,0.65,-0.65, length_includes_head=True, width=0.005, facecolor=arrow_color)
+        
         # width
-        ax.text(mu,a+h+0.1,'width', fontsize=fontsize, horizontalalignment='center')
-        ax.arrow(mu,a+h,w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
-        ax.arrow(mu,a+h,-w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
+#        ax.text(mu,a+h+0.1,'width', fontsize=fontsize, horizontalalignment='center')
+#        ax.arrow(mu,a+h,w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
+#        ax.arrow(mu,a+h,-w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
         
         #height
         xpos = mu + 4*w
@@ -125,25 +130,35 @@ y = series.expression
 shape = Sigmoid(priors='sigmoid_wide')
 fitter = Fitter(shape, sigma_prior='normal')
 
-theta,_,test_preds = fitter.fit(x,y,loo=True)
+def basic_fit():
+    print 'Drawing basic fit...'
+    theta,_,_ = fitter.fit(x,y)
+    fig = plot_one_series(series,shape,theta)
+    save_figure(fig,'methods-1-basic-fit.png')
 
-# the basic fit
-fig = plot_one_series(series,shape,theta)
-save_figure(fig,'methods-1-basic-fit.png')
+def annotate_parameters():
+    print 'Drawing fit with parameters...'
+    theta,_,_ = fitter.fit(x,y)
+    fig = plot_one_series(series,shape,theta, b_annotate=True)
+    save_figure(fig,'methods-2-sigmoid-params.png')
 
-# annotate sigmoid parameters
-fig = plot_one_series(series,shape,theta, b_annotate=True)
-save_figure(fig,'methods-2-sigmoid-params.png')
+def show_loo_prediction():
+    print 'Drawing LOO prediction and error...'
+    iLOO = 18
+    train_mask = np.arange(len(x)) != iLOO
+    x_train = x[train_mask]
+    y_train = y[train_mask]
+    theta,_,_ = fitter.fit(x_train,y_train)
+    fig = plot_one_series(series,shape,theta,train_mask=train_mask)
+    save_figure(fig,'methods-3-LOO-prediction.png')
+  
+def show_loo_score():
+    print 'Drawing LOO prediction for all points and R2 score...'
+    theta,_,test_preds = fitter.fit(x,y,loo=True)
+    fig = plot_one_series(series,shape,theta=None,test_preds=test_preds)
+    save_figure(fig,'methods-4-R2-score.png')
 
-# show LOO prediction and error for one point
-iLOO = 18
-train_mask = np.arange(len(x)) != iLOO
-x_train = x[train_mask]
-y_train = y[train_mask]
-theta,_,_ = fitter.fit(x_train,y_train)
-fig = plot_one_series(series,shape,theta,train_mask=train_mask)
-save_figure(fig,'methods-3-LOO-prediction.png')
-
-# show LOO predictions and errors for all points
-fig = plot_one_series(series,shape,theta=None,test_preds=test_preds)
-save_figure(fig,'methods-4-R2-score.png')
+basic_fit()
+annotate_parameters()
+show_loo_prediction()
+show_loo_score()
