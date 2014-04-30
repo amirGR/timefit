@@ -132,6 +132,15 @@ def restrict_genes(fits, genes):
         new_fits[ds_key] = {(g,r):fit for (g,r),fit in ds_fits.iteritems() if g in genes}
     return new_fits
     
+def iterate_fits(fits, R2_threshold=None, allow_no_theta=False):
+    for dsname,dsfits in fits.iteritems():
+        for (g,r),fit in dsfits.iteritems():
+            if R2_threshold is not None and fit.LOO_score < R2_threshold:
+                continue
+            if not allow_no_theta and fit.theta is None:
+                continue
+            yield dsname,g,r,fit
+    
 def convert_format(filename, f_convert):
     """Utility function for converting the format of cached fits.
        See e.g. scripts/convert_fit_format.py
