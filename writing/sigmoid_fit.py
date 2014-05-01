@@ -12,9 +12,10 @@ from fit_score import loo_score
 from project_dirs import results_dir
 from utils.misc import ensure_dir
 
-fontsize = 24
+fontsize = 30
+xtick_fontsize = 30
+ytick_fontsize = 30
 equation_fontsize = 36
-xtick_fontsize = 24
 default_figure_size_x = 18.5
 default_figure_size_y = 10.5
 default_figure_facecolor = 0.85 * np.ones(3)
@@ -34,30 +35,18 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
     x = series.ages
     y = series.expression    
     xmin, xmax = min(x), max(x)
+    xmin = max(xmin,-2)
     ymin, ymax = min(y), max(y)
 
     if train_mask is None:
         train_mask = ~np.isnan(x)
     
     fig = plt.figure()
-    ax = fig.add_axes([0.1,0.15,0.8,0.75])
+    ax = fig.add_axes([0.1,0.2,0.8,0.7])
 
     # plot the data points
     if not b_annotate:
         ax.plot(x[train_mask],y[train_mask], 'ks', markersize=8)
-
-    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
-    ax.set_xlabel('age', fontsize=fontsize)
-    ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
-    ax.set_title(ttl, fontsize=fontsize)
-
-    # remove y ticks
-    #ax.set_yticks([])    
-    
-    # set the development stages as x labels
-    stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
-    ax.set_xticks([stage.central_age for stage in stages])
-    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
 
     if not b_annotate:
         # mark birth time with a vertical line
@@ -81,8 +70,7 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
             ax.plot([xi, xi], [yi, y_loo], '-', color='0.5')
             ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
         score = loo_score(y,test_preds)
-        latex_r2 = r"1 - \frac{\sum_{i=1}^n{(y_i - \hat y_i)^2}}{\sum_{i=1}^n{(y_i-\bar y)^2} }"
-        txt = "$R^2 = {} = {:.2g}$".format(latex_r2,score)
+        txt = "$R^2 = {:.2g}$".format(score)
         ax.text(0.02,0.8,txt,fontsize=equation_fontsize,transform=ax.transAxes)
 
     if b_annotate:        
@@ -100,23 +88,38 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
         ax.text(mu+1.5,a+0.05,'baseline', fontsize=fontsize, verticalalignment='bottom')
         
         # slope
+        dx = 0.5
+        dy = dx*h/(4*w) # that's df/dx at x=mu
+        ax.plot([mu-dx,mu+dx],[y_onset-dy+0.05, y_onset+dy+0.05],'g--',linewidth=2)
         ax.text(mu-0.5,y_onset+1,'slope', fontsize=fontsize, horizontalalignment='right')
         ax.arrow(mu-0.45,y_onset+0.95,0.65,-0.65, length_includes_head=True, width=0.005, facecolor=arrow_color)
-        
-        # width
-#        ax.text(mu,a+h+0.1,'width', fontsize=fontsize, horizontalalignment='center')
-#        ax.arrow(mu,a+h,w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
-#        ax.arrow(mu,a+h,-w/2,0, length_includes_head=True, width=0.005, facecolor=arrow_color)
         
         #height
         xpos = mu + 4*w
         ax.text(xpos+0.05,y_onset,'height', fontsize=fontsize, verticalalignment='center')
         ax.arrow(xpos,y_onset,0,h*0.45, length_includes_head=True, width=0.005, facecolor=arrow_color)
         ax.arrow(xpos,y_onset,0,-h*0.45, length_includes_head=True, width=0.005, facecolor=arrow_color)
-        
+
     ax.set_xlim(xmin,xmax)
     ax.set_ylim(ymin,ymax)
     
+    # title
+    ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
+    ax.set_title(ttl, fontsize=fontsize)
+
+    # set the development stages as x labels
+    ax.set_xlabel('age', fontsize=fontsize)
+    stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
+    ax.set_xticks([stage.central_age for stage in stages])
+    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
+
+    # set y ticks (first and last only)
+    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
+    ticks = ax.get_yticks()
+    ticks = np.array([ticks[0], ticks[-1]])
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
+            
     return fig
 
 cfg.verbosity = 1
@@ -158,7 +161,7 @@ def show_loo_score():
     fig = plot_one_series(series,shape,theta=None,test_preds=test_preds)
     save_figure(fig,'methods-4-R2-score.png')
 
-basic_fit()
+#basic_fit()
 annotate_parameters()
-show_loo_prediction()
-show_loo_score()
+#show_loo_prediction()
+#show_loo_score()

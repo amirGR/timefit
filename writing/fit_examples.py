@@ -13,12 +13,15 @@ from dev_stages import dev_stages
 from project_dirs import results_dir
 from utils.misc import ensure_dir
 
-fontsize = 24
-xtick_fontsize = 24
+fontsize = 30
+xtick_fontsize = 30
+ytick_fontsize = 30
+equation_fontsize = 36
 default_figure_size_x = 18.5
 default_figure_size_y = 10.5
 default_figure_facecolor = 0.85 * np.ones(3)
 default_figure_dpi = 100
+
 
 def save_figure(fig, filename, b_close=False):
     dirname = join(results_dir(),'RP')
@@ -34,23 +37,14 @@ def plot_one_series(series, shapes, thetas):
     x = series.ages
     y = series.expression    
     xmin, xmax = min(x), max(x)
+    xmin = max(xmin,-2)
     ymin, ymax = min(y), max(y)
 
     fig = plt.figure()
-    ax = fig.add_axes([0.1,0.15,0.8,0.75])
+    ax = fig.add_axes([0.1,0.2,0.8,0.7])
 
     # plot the data points
     ax.plot(x,y, 'ks', markersize=8)
-
-    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
-    ax.set_xlabel('age', fontsize=fontsize)
-    ttl = '{}@{}'.format(series.gene_name, series.region_name)
-    ax.set_title(ttl, fontsize=fontsize)
-
-    # set the development stages as x labels
-    stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
-    ax.set_xticks([stage.central_age for stage in stages])
-    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
 
     # mark birth time with a vertical line
     birth_age = series.age_scaler.scale(0)
@@ -64,6 +58,23 @@ def plot_one_series(series, shapes, thetas):
         
     ax.set_xlim(xmin,xmax)
     ax.set_ylim(ymin,ymax)
+
+    # title
+    ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
+    ax.set_title(ttl, fontsize=fontsize)
+
+    # set the development stages as x labels
+    ax.set_xlabel('age', fontsize=fontsize)
+    stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
+    ax.set_xticks([stage.central_age for stage in stages])
+    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
+
+    # set y ticks (first and last only)
+    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
+    ticks = ax.get_yticks()
+    ticks = np.array([ticks[0], ticks[-1]])
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
     
     return fig
 
@@ -75,8 +86,6 @@ data = GeneData.load('both').scale_ages(age_scaler)
 shapes = [Sigmoid('sigmoid_wide'), Poly(1,'poly1'), Poly(3,'poly3'), Spline()]
 GRs = [
     ('ADRB1','A1C'), 
-    ('ADRB2','S1C'), 
-    ('CREBBP','PFC'), 
     ('GLRA2','STC'), 
     ('TUBA1A','V1C'),
 ]
