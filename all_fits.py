@@ -11,12 +11,12 @@ from utils.misc import init_array
 from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
 
-def get_all_fits(data, fitter, k_of_n=None):
+def get_all_fits(data, fitter, k_of_n=None, allow_new_computation=True):
     """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
     """
-    return {ds.name : _get_dataset_fits(data,ds,fitter,k_of_n) for ds in data.datasets}
+    return {ds.name : _get_dataset_fits(data,ds,fitter,k_of_n,allow_new_computation) for ds in data.datasets}
 
-def _get_dataset_fits(data, dataset, fitter, k_of_n=None):
+def _get_dataset_fits(data, dataset, fitter, k_of_n=None, allow_new_computation=True):
     def arg_mapper(gr,f_proxy):
         g,r = gr
         series = dataset.get_one_series(g,r)
@@ -35,6 +35,7 @@ def _get_dataset_fits(data, dataset, fitter, k_of_n=None):
         f_sharding_key = lambda gr: gr[0],
         k_of_n = k_of_n,
         base_filename = fit_results_relative_path(dataset,fitter),
+        allow_new_computation = allow_new_computation,
     )
     _add_scores(dataset, dataset_fits)  
     return dataset_fits

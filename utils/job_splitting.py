@@ -21,7 +21,7 @@ from utils import parallel
 def proxy(*a,**kw):
     return a,kw
 
-def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=None, f_sharding_key=None, all_sharding_keys=None):
+def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=None, f_sharding_key=None, all_sharding_keys=None, allow_new_computation=True):
     """ name - appears in print messages if verbosity > 0
         f - pickleable function that is called to do the actual computation on each sub-process
         arg_mapper(key,f_proxy):
@@ -44,6 +44,8 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
     missing_keys = set(k for k in keys if k not in dct_res)
     if cfg.verbosity > 0:
         print 'Still need to compute {}/{} {}'.format(len(missing_keys),len(keys),name)
+    if missing_keys and not allow_new_computation:
+        raise Exception('Cache does not contain all results')
 
     # compute the keys that are missing
     batches = parallel.batches(missing_keys, batch_size)
