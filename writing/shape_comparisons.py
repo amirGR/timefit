@@ -88,25 +88,26 @@ def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
     ax.set_xticklabels([str(s) for s in shapes], fontsize=fontsize)
     return fig
 
-def plot_comparison_over_R2_score(data, shapes, all_fits):
-    nShapes = len(shapes)
-    thresholds = np.arange(0,1,0.01)
-    scores = [ [f.LOO_score for dsname,g,r,f in iterate_fits(fits)] for fits in all_fits ]
-    
-    proportions = np.empty((len(thresholds),nShapes))
-    for i,t in enumerate(thresholds):
-        counts = np.empty(nShapes)
-        for iShape in xrange(nShapes):
-            counts[iShape] = np.count_nonzero(scores[iShape] > t)
-        proportions[i,:] = counts / sum(counts)
-        
+def plot_comparison_over_R2_score(data, shapes, all_fits, zoom=None, nbins=50):
+    if zoom is None:
+        zoom = (-1,1)
     fig = plt.figure()
     ax = fig.add_axes([0.2,0.2,0.7,0.7])
-    for iShape,shape in enumerate(shapes):
-        ax.plot(thresholds, proportions[:,iShape], linewidth=3, label=str(shape))
+    zoom_max = 0
+    for shape,fits in zip(shapes,all_fits):
+        scores = np.array([f.LOO_score for dsname,g,r,f in iterate_fits(fits)])
+        scores[scores < -0.999] = -0.999
+        h,bins = np.histogram(scores,bins=nbins,density=True)
+        xpos = (bins[:-1] + bins[1:])/2
+        zoom_data = h[(xpos>=zoom[0]) & (xpos<=zoom[1])]
+        zoom_max = max(max(zoom_data),zoom_max)
+        ax.plot(xpos,h, linewidth=3, label=str(shape))        
+    ax.set_xlim(*zoom)
+    ax.set_ylim(0,zoom_max*1.1)
     ax.legend(loc='best',fontsize=fontsize)
-    ax.set_xlabel('$R^2$ score', fontsize=fontsize)
-    ax.set_ylabel("proportion of fits above score", fontsize=fontsize)
+    ax.set_xlabel('test $R^2$ score', fontsize=fontsize)
+    ax.set_ylabel("probability density", fontsize=fontsize)
+    ax.tick_params(axis='both', labelsize=fontsize)
     return fig
 
 cfg.verbosity = 1
@@ -132,6 +133,9 @@ save_figure(fig,'shape-comparison-bar-{}-top-half.png'.format(data.pathway), b_s
 
 fig = plot_comparison_over_R2_score(data, shapes, fits)
 save_figure(fig,'shape-comparison-vs-R2-{}.png'.format(data.pathway))
+
+fig = plot_comparison_over_R2_score(data, shapes, fits, zoom=(0.3,1))
+save_figure(fig,'shape-comparison-vs-R2-{}-zoom.png'.format(data.pathway))
 
 for i in xrange(1,len(shapes)):
     fig = plot_comparison_scatter(data,shapes[0],fits[0],shapes[i],fits[i])
