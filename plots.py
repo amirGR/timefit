@@ -10,7 +10,13 @@ from utils.parallel import Parallel
 from dev_stages import dev_stages
 import scalers
 
-def save_figure(fig, filename, b_close=False, b_square=False, show_frame=True):
+def save_figure(fig, filename, b_close=False, b_square=False, show_frame=True, under_results=False):
+    if under_results:
+        dirname = join(results_dir(),'RP')
+        ensure_dir(dirname)
+        filename = join(dirname,filename)
+    if cfg.verbosity >= 1:
+        print 'Saving figure to {}'.format(filename)
     figure_size_x = cfg.default_figure_size_x_square if b_square else cfg.default_figure_size_x
     fig.set_size_inches(figure_size_x, cfg.default_figure_size_y)
     if show_frame:

@@ -6,6 +6,7 @@ from os import makedirs
 import os.path
 import numpy as np
 import matplotlib.pyplot as plt
+import config as cfg
 
 def disable_all_warnings():
     warnings.filterwarnings(action='ignore', category=DeprecationWarning)
@@ -19,6 +20,11 @@ def interactive(b):
         yield
     finally:
         plt.interactive(b_prev)
+
+def add_main_axes(fig):
+    ax = fig.add_axes([0.1,0.15,0.8,0.75])
+    ax.tick_params(axis='both', labelsize=cfg.fontsize)    
+    return ax
 
 def ensure_dir(d):
     if not os.path.exists(d):
