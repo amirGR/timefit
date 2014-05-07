@@ -24,7 +24,7 @@ def main():
         if h*w > 0:
             return False
         return abs(w) < 0.5
-    return [(g,r) for dsname,g,r,fit in iterate_fits(fits,R2_threshold=0.5) if cond(fit)]
+    return [(g,r) for dsname,g,r,fit in iterate_fits(fits,R2_threshold=0.5,return_keys=True) if cond(fit)]
 
 if __name__ == '__main__':
     res = main()

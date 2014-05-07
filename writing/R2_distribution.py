@@ -37,7 +37,7 @@ def save_figure(fig, filename, b_square=False, b_close=False, show_frame=True):
         plt.close(fig)
 
 def plot_score_distribution(fits):
-    LOO_R2 = np.array([fit.LOO_score for dsname,g,r,fit in iterate_fits(fits)])
+    LOO_R2 = np.array([fit.LOO_score for fit in iterate_fits(fits)])
     low,high = -1, 1
     fig = plt.figure()
     ax = fig.add_subplot(111)

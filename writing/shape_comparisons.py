@@ -36,7 +36,7 @@ def save_figure(fig, filename, b_square=False, b_close=False):
         plt.close(fig)
 
 def plot_comparison_scatter(data, shape1, fits1, shape2, fits2):
-    pairs = [(f1.LOO_score, f2.LOO_score) for dsname,g,r,f1,f2 in iterate_fits(fits1,fits2)]
+    pairs = [(f1.LOO_score, f2.LOO_score) for f1,f2 in iterate_fits(fits1,fits2)]
     scores1,scores2 = zip(*pairs)
     
     fig = plt.figure()
@@ -60,7 +60,7 @@ def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
     mu = np.empty(nShapes)
     se = np.empty(nShapes)
     for i,fits in enumerate(all_fits):
-        scores = np.array([f.LOO_score for dsname,g,r,f in iterate_fits(fits, R2_threshold=-1)])
+        scores = np.array([f.LOO_score for f in iterate_fits(fits, R2_threshold=-1)])
         if threshold_percentile is not None:
             threshold_score = np.percentile(scores, 50)
             scores = scores[scores > threshold_score]
@@ -95,7 +95,7 @@ def plot_comparison_over_R2_score(data, shapes, all_fits, zoom=None, nbins=50):
     ax = fig.add_axes([0.2,0.2,0.7,0.7])
     zoom_max = 0
     for shape,fits in zip(shapes,all_fits):
-        scores = np.array([f.LOO_score for dsname,g,r,f in iterate_fits(fits)])
+        scores = np.array([f.LOO_score for f in iterate_fits(fits)])
         scores[scores < -0.999] = -0.999
         h,bins = np.histogram(scores,bins=nbins,density=True)
         xpos = (bins[:-1] + bins[1:])/2

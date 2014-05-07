@@ -3,14 +3,17 @@ import numpy as np
 verbosity = 0
 random_seed = 0 # None means initialize using time or /dev/urandom
 
-fontsize = 24
-xtick_fontsize = 18
-n_curve_points_to_plot = 200
-
+fontsize = 30
+xtick_fontsize = 30
+ytick_fontsize = 30
+equation_fontsize = 36
 default_figure_size_x = 18.5
+default_figure_size_x_square = 12.5
 default_figure_size_y = 10.5
 default_figure_facecolor = 0.85 * np.ones(3)
 default_figure_dpi = 100
+
+n_curve_points_to_plot = 200
 
 b_verbose_optmization = False
 b_allow_less_restarts = True
