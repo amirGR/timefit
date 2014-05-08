@@ -1,5 +1,4 @@
 import setup
-from os.path import join
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
@@ -26,18 +25,15 @@ def unique_genes_only(dct_pathways):
     return res
     
 def compute_change_distribution(shape, thetas, from_age, to_age, n_bins=50, b_normalize=True):
+    assert shape.cache_name() == 'sigmoid' # we use parameter h explicitly
     bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
     change_vals = np.zeros(n_bins)
     for g,r,t in thetas:
+        a,h,mu,w = t
         edge_vals = shape.f(t,bin_edges)
-        changes = edge_vals[1:] - edge_vals[:-1]
-        yrange = edge_vals[-1] - edge_vals[0] 
+        changes = np.abs(edge_vals[1:] - edge_vals[:-1])
         # ignore change magnitude per gene - take only distribution of change times
-        if yrange < 0.1:
-            if cfg.verbosity >= 2:
-                print 'Ignoring {}@{}. Changes are too small'.format(g,r)
-            continue
-        change_vals += changes / yrange
+        change_vals += changes / abs(h)
     if b_normalize:
         change_vals /= sum(change_vals)
     return bin_edges, change_vals
@@ -61,11 +57,12 @@ def plot_onset_times(shape, fits, dct_pathways, R2_threshold, b_unique):
         bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
         linestyles = ['-', '--', '-.']
         style = linestyles[int(i/7)]
-        ax.plot(bin_centers, change_vals, style, linewidth=3, label=pathway_name)
+        label = '{} ({} fits)'.format(pathway_name,len(thetas))
+        ax.plot(bin_centers, change_vals, style, linewidth=3, label=label)
     ax.legend(loc='best', fontsize=18, frameon=False)
 
     str_unique = ' (unique genes)' if b_unique else ''
-    ttl = 'Distribution of expression changes{}\n(R2 threshold={})'.format(str_unique, R2_threshold)
+    ttl = 'Distribution of expression changes{}\n($R^2$ threshold={})'.format(str_unique, R2_threshold)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     ax.set_ylabel('expression change magnitude', fontsize=cfg.fontsize)
 
