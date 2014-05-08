@@ -10,6 +10,7 @@ from project_dirs import cache_dir, fit_results_relative_path
 from utils.misc import init_array
 from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
+import scalers
 
 def get_all_fits(data, fitter, k_of_n=None, allow_new_computation=True):
     """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
@@ -102,16 +103,20 @@ def save_as_mat_files(data, fitter, fits):
         LOO_scores = init_array(np.NaN, n_genes,n_regions)
         fit_predictions = init_array(np.NaN, *dataset.expression.shape)
         LOO_predictions = init_array(np.NaN, *dataset.expression.shape)
+        high_res_predictions = init_array(np.NaN, cfg.n_curve_points_to_plot, n_genes, n_regions)
+        scaled_high_res_ages = np.linspace(dataset.ages.min(), dataset.ages.max(), cfg.n_curve_points_to_plot)
+        original_high_res_ages = scalers.unify(dataset.age_scaler).unscale(scaled_high_res_ages)
         for (g,r),fit in dataset_fits.iteritems():
+            series = dataset.get_one_series(g,r)
             ig = gene_idx[g]
             ir = region_idx[r]
             fit_scores[ig,ir] = fit.fit_score
             LOO_scores[ig,ir] = fit.LOO_score
             if write_theta and fit.theta is not None:
                 theta[:,ig,ir] = fit.theta
-            original_inds = dataset.get_one_series(g,r).original_inds
-            fit_predictions[original_inds,ig,ir] = fit.fit_predictions
-            LOO_predictions[original_inds,ig,ir] = fit.LOO_predictions
+            fit_predictions[series.original_inds,ig,ir] = fit.fit_predictions
+            LOO_predictions[series.original_inds,ig,ir] = fit.LOO_predictions
+            high_res_predictions[:,ig,ir] = shape.f(fit.theta, scaled_high_res_ages)
         
         mdict = {
             'gene_names' : list_of_strings_to_matlab_cell_array(gene_names),
@@ -120,7 +125,9 @@ def save_as_mat_files(data, fitter, fits):
             'fit_scores' : fit_scores,
             'LOO_scores' : LOO_scores,
             'fit_predictions' : fit_predictions,
-            'LOO_predictions': LOO_predictions,
+            'LOO_predictions' : LOO_predictions,
+            'high_res_predictions' : high_res_predictions,
+            'high_res_ages' : original_high_res_ages,
         }
         savemat(filename, mdict, oned_as='column')
     
