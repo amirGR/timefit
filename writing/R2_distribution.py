@@ -36,15 +36,25 @@ def save_figure(fig, filename, b_square=False, b_close=False, show_frame=True):
     if b_close:
         plt.close(fig)
 
-def plot_score_distribution(fits):
-    LOO_R2 = np.array([fit.LOO_score for fit in iterate_fits(fits)])
+def plot_score_distribution(fits_original, fits_shuffled):
     low,high = -1, 1
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    counts,bin_edges = np.histogram(LOO_R2,50,range=(low,high))
-    probs = counts / float(sum(counts))
-    width = bin_edges[1] - bin_edges[0]
-    ax.bar(bin_edges[:-1], probs, width=width)
+    
+    def do_hist(fits):
+        LOO_R2 = np.array([fit.LOO_score for fit in iterate_fits(fits)])
+        counts,bin_edges = np.histogram(LOO_R2,50,range=(low,high))
+        probs = counts / float(sum(counts))
+        width = bin_edges[1] - bin_edges[0]
+        return bin_edges[:-1],probs,width
+    
+    pos, probs, width = do_hist(fits_original)
+    ax.bar(pos, probs, width=width, color='b', label='Original')
+
+    pos, probs, width = do_hist(fits_shuffled)
+    ax.bar(pos, probs, width=width, color='g', alpha=0.5, label='Shuffled')
+
+    ax.legend(loc='best', fontsize=fontsize, frameon=False)
     ax.set_xlabel('test set $R^2$', fontsize=fontsize)
     ax.set_ylabel('probability', fontsize=fontsize)   
     ax.tick_params(axis='both', labelsize=fontsize)
@@ -54,9 +64,11 @@ cfg.verbosity = 1
 age_scaler = LogScaler()
 pathway = '17pathways'
 data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
+data_shuffled = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler).shuffle()
 
 fitter = Fitter(Spline())
 fits = get_all_fits(data,fitter)
+fits_shuffled = get_all_fits(data_shuffled,fitter)
 
-fig = plot_score_distribution(fits)
+fig = plot_score_distribution(fits,fits_shuffled)
 save_figure(fig,'R2-distribution-{}.png'.format(data.pathway), b_square=True, show_frame=False)
