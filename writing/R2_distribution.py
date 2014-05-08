@@ -41,9 +41,12 @@ def plot_score_distribution(fits):
     low,high = -1, 1
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.hist(LOO_R2, 50, range=(low,high), normed=True)
+    counts,bin_edges = np.histogram(LOO_R2,50,range=(low,high))
+    probs = counts / float(sum(counts))
+    width = bin_edges[1] - bin_edges[0]
+    ax.bar(bin_edges[:-1], probs, width=width)
     ax.set_xlabel('test set $R^2$', fontsize=fontsize)
-    ax.set_ylabel('probability density', fontsize=fontsize)   
+    ax.set_ylabel('probability', fontsize=fontsize)   
     ax.tick_params(axis='both', labelsize=fontsize)
     return fig
 
@@ -56,4 +59,4 @@ fitter = Fitter(Spline())
 fits = get_all_fits(data,fitter)
 
 fig = plot_score_distribution(fits)
-save_figure(fig,'R2-distribution-{}.png'.format(data.pathway), show_frame=False)
+save_figure(fig,'R2-distribution-{}.png'.format(data.pathway), b_square=True, show_frame=False)
