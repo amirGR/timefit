@@ -28,5 +28,7 @@ def fit_results_relative_path(d,fitter): # d can be data or dataset
         s = '{}-{}'.format(d.age_scaler.cache_name(),s)
     if d.postnatal_only:
         s = 'postnatal-{}'.format(s)
+    if d.is_shuffled:
+        s = 'shuffled-{}'.format(s)
     fitname = 'fits-{}-{}'.format(s, fitter.cache_name())
     return join(d.name, fitname)

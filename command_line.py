@@ -25,6 +25,7 @@ def get_common_parser(include_pathway=True):
         parser.add_argument('--pathway', default='serotonin', help='Default: serotonin', choices=['all'] + cfg.pathways.keys())
     parser.add_argument('--postnatal', help='Use only postnatal data points', action='store_true')
     parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', choices=allowed_scaler_names())
+    parser.add_argument('--shuffle', help='Shuffle the y-values of the data', action='store_true')
     parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigmoid', default='sigmoid', choices=allowed_shape_names())
     parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: None', choices=get_allowed_priors(is_sigma=True))
     parser.add_argument('--priors', help='Priors to use for theta when fitting. Default: None', choices=get_allowed_priors())
@@ -33,15 +34,17 @@ def get_common_parser(include_pathway=True):
 def process_common_inputs(args):
     cfg.verbosity = args.verbose - args.quiet
     pathway = getattr(args, 'pathway', None)
-    data = get_data_from_args(args.dataset, pathway, args.postnatal, args.scaling)
+    data = get_data_from_args(args.dataset, pathway, args.postnatal, args.scaling, args.shuffle)
     fitter = get_fitter_from_args(args.shape, args.priors, args.sigma_prior)
     return data,fitter
 
-def get_data_from_args(dataset, pathway, postnatal, scaling):
+def get_data_from_args(dataset, pathway, postnatal, scaling, shuffle):
     data = GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(postnatal)
     if scaling is not None:
         scaler = build_scaler(scaling,data)
         data.scale_ages(scaler)
+    if shuffle:
+        data.shuffle()
     return data
 
 def get_fitter_from_args(shape, priors, sigma_prior):

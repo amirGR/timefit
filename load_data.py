@@ -55,6 +55,10 @@ class GeneData(object):
         return get_unique(ds.age_scaler for ds in self.datasets)
 
     @property
+    def is_shuffled(self):
+        return get_unique(ds.is_shuffled for ds in self.datasets)
+
+    @property
     def gene_names(self):
         s = set()
         for ds in self.datasets:
@@ -94,6 +98,11 @@ class GeneData(object):
         for ds in self.datasets:
             ds.scale_ages(scaler)
         return self
+        
+    def shuffle(self):
+        for ds in self.datasets:
+            ds.shuffle()
+        return self
     
     def get_one_series(self, iGene, iRegion, allow_missing=False):
         for ds in self.datasets:
@@ -115,6 +124,7 @@ class OneDataset(object):
         self.pathway = 'all'
         self.postnatal_only = False
         self.age_scaler = None
+        self.is_shuffled = False
         
     @staticmethod
     def load(dataset):
@@ -178,6 +188,15 @@ class OneDataset(object):
         self.age_scaler = scaler
         return self
     
+    def shuffle(self):
+        nPoints, nGenes, nRegions = self.expression.shape
+        for ig,g in enumerate(self.gene_names):
+            for ir,r in enumerate(self.region_names):
+                seed = abs(hash(g) ^ hash(r))
+                rng = np.random.RandomState(seed)
+                self.expression[:,ig,ir] = rng.permutation(self.expression[:,ig,ir])
+        self.is_shuffled = True
+
     def get_one_series(self, iGene, iRegion, allow_missing=False):
         if isinstance(iGene, basestring):
             iGene = self._find_gene_index(iGene, allow_missing=allow_missing)
