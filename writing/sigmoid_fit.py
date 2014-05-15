@@ -1,5 +1,4 @@
 import setup
-from os.path import join
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
@@ -9,44 +8,32 @@ from fitter import Fitter
 from scalers import LogScaler
 from dev_stages import dev_stages
 from fit_score import loo_score
-from project_dirs import results_dir
-from utils.misc import ensure_dir
+from plots import save_figure
 
 fontsize = 30
 xtick_fontsize = 30
 ytick_fontsize = 30
 equation_fontsize = 36
-default_figure_size_x = 18.5
-default_figure_size_y = 10.5
-default_figure_facecolor = 0.85 * np.ones(3)
-default_figure_dpi = 100
 
-def save_figure(fig, filename, b_close=False):
-    dirname = join(results_dir(),'RP')
-    ensure_dir(dirname)
-    filename = join(dirname,filename)
-    print 'Saving figure to {}'.format(filename)
-    fig.set_size_inches(default_figure_size_x, default_figure_size_y)
-    fig.savefig(filename, facecolor=default_figure_facecolor, dpi=default_figure_dpi)
-    if b_close:
-        plt.close(fig)
-
-def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, test_preds=None):
+def plot_one_series(series, shape, theta, yrange=None, b_annotate=False, train_mask=None, test_preds=None, show_title=False):
     x = series.ages
     y = series.expression    
     xmin, xmax = min(x), max(x)
     xmin = max(xmin,-2)
-    ymin, ymax = min(y), max(y)
 
     if train_mask is None:
         train_mask = ~np.isnan(x)
     
     fig = plt.figure()
-    ax = fig.add_axes([0.1,0.2,0.8,0.7])
+    ax = fig.add_axes([0.08,0.15,0.85,0.8])
 
     # plot the data points
     if not b_annotate:
         ax.plot(x[train_mask],y[train_mask], 'ks', markersize=8)
+    if yrange is None:
+        ymin, ymax = ax.get_ylim()
+    else:
+        ymin, ymax = yrange
 
     if not b_annotate:
         # mark birth time with a vertical line
@@ -104,8 +91,9 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
     ax.set_ylim(ymin,ymax)
     
     # title
-    ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
-    ax.set_title(ttl, fontsize=fontsize)
+    if show_title:
+        ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
+        ax.set_title(ttl, fontsize=fontsize)
 
     # set the development stages as x labels
     ax.set_xlabel('age', fontsize=fontsize)
@@ -114,11 +102,11 @@ def plot_one_series(series, shape, theta, b_annotate=False, train_mask=None, tes
     ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
 
     # set y ticks (first and last only)
-    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
+    ax.set_ylabel('expression level', fontsize=fontsize)
     ticks = ax.get_yticks()
     ticks = np.array([ticks[0], ticks[-1]])
     ax.set_yticks(ticks)
-    ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
+    ax.set_yticklabels(['{:g}'.format(t) for t in ticks], fontsize=fontsize)
             
     return fig
 
@@ -129,6 +117,7 @@ data = GeneData.load('both').scale_ages(age_scaler)
 series = data.get_one_series('HTR1D','STR')
 x = series.ages
 y = series.expression
+yrange = (3,8)
 
 shape = Sigmoid(priors='sigmoid_wide')
 fitter = Fitter(shape, sigma_prior='normal')
@@ -136,14 +125,14 @@ fitter = Fitter(shape, sigma_prior='normal')
 def basic_fit():
     print 'Drawing basic fit...'
     theta,_,_ = fitter.fit(x,y)
-    fig = plot_one_series(series,shape,theta)
-    save_figure(fig,'methods-1-basic-fit.png')
+    fig = plot_one_series(series,shape,theta,yrange)
+    save_figure(fig,'RP/methods-1-basic-fit.png', under_results=True)
 
 def annotate_parameters():
     print 'Drawing fit with parameters...'
     theta,_,_ = fitter.fit(x,y)
-    fig = plot_one_series(series,shape,theta, b_annotate=True)
-    save_figure(fig,'methods-2-sigmoid-params.png')
+    fig = plot_one_series(series,shape,theta, yrange, b_annotate=True)
+    save_figure(fig,'RP/methods-2-sigmoid-params.png', under_results=True)
 
 def show_loo_prediction():
     print 'Drawing LOO prediction and error...'
@@ -152,16 +141,16 @@ def show_loo_prediction():
     x_train = x[train_mask]
     y_train = y[train_mask]
     theta,_,_ = fitter.fit(x_train,y_train)
-    fig = plot_one_series(series,shape,theta,train_mask=train_mask)
-    save_figure(fig,'methods-3-LOO-prediction.png')
+    fig = plot_one_series(series,shape,theta,yrange,train_mask=train_mask)
+    save_figure(fig,'RP/methods-3-LOO-prediction.png', under_results=True)
   
 def show_loo_score():
     print 'Drawing LOO prediction for all points and R2 score...'
     theta,_,test_preds = fitter.fit(x,y,loo=True)
-    fig = plot_one_series(series,shape,theta=None,test_preds=test_preds)
-    save_figure(fig,'methods-4-R2-score.png')
+    fig = plot_one_series(series,shape,theta=None,yrange=yrange,test_preds=test_preds)
+    save_figure(fig,'RP/methods-4-R2-score.png', under_results=True)
 
-#basic_fit()
+basic_fit()
 annotate_parameters()
-#show_loo_prediction()
-#show_loo_score()
+show_loo_prediction()
+show_loo_score()

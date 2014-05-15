@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+# Devlopmental stages as defined in Kang
 # Period        Description     Age
 # M, postnatal months; PCW, post-conceptional weeks; Y, postnatal years.
 #
@@ -31,9 +32,13 @@ class DevStage(object):
     def __init__(self, num, name, short_name, from_age, to_age):
         self.num = num
         self.name = name
-        self.short_name = short_name
+        self._short_name = short_name
         self.from_age = float(from_age)
         self.to_age = float(to_age)
+        
+    @property
+    def short_name(self):
+        return self._short_name #+ str(self.num)
         
     @property
     def central_age(self):
@@ -51,21 +56,19 @@ class DevStage(object):
         )
 
 dev_stages = [
-    DevStage(1,'Embryonic', 'E1', PCW(4), PCW(8)),
-    DevStage(2,'Early fetal', 'EF2', PCW(8), PCW(10)),
-    DevStage(3,'Early fetal', 'EF3', PCW(10), PCW(13)),
-    DevStage(4,'Early mid-fetal', 'EMF4', PCW(13), PCW(16)),
-    DevStage(5,'Early mid-fetal', 'EMF5', PCW(16), PCW(19)),
-    DevStage(6,'Late mid-fetal', 'LMF6', PCW(19), PCW(24)),
-    DevStage(7,'Late fetal', 'LF7', PCW(24), PCW(38)),
-    DevStage(8,'Neonatal and early infancy', 'EI8', M(0), M(6)),
-    DevStage(9,'Late infancy', 'LI9', M(6), M(12)),
-    DevStage(10,'Early childhood', 'EC10', 1, 6),
-    DevStage(11,'Middle and late childhood', 'MLC11', 6, 12),
-    DevStage(12,'Adolescence', 'Adol12', 12, 20),
-    DevStage(13,'Young adulthood', 'YA13', 20, 40),
-    DevStage(14,'Middle adulthood', 'MA14', 40, 60),
-    DevStage(15,'Late adulthood', 'LA15', 60, 80),
+    DevStage(1,'Embryonic', 'E', PCW(4), PCW(8)),
+    DevStage(2,'Early fetal', 'EF', PCW(8), PCW(13)), # EF2 + EMF3
+    DevStage(4,'Early mid-fetal', 'EMF', PCW(13), PCW(19)), # EMF4 + EMF5
+    DevStage(6,'Late mid-fetal', 'LMF', PCW(19), PCW(24)),
+    DevStage(7,'Late fetal', 'LF', PCW(24), PCW(38)),
+    DevStage(8,'Neonatal and early infancy', 'EI', M(0), M(6)),
+    DevStage(9,'Late infancy', 'LI', M(6), M(12)),
+    DevStage(10,'Early childhood', 'EC', 1, 6),
+    DevStage(11,'Middle and late childhood', 'MLC', 6, 12),
+    DevStage(12,'Adolescence', 'Adol', 12, 20),
+    DevStage(13,'Young adulthood', 'YA', 20, 40),
+    DevStage(14,'Middle adulthood', 'MA', 40, 60),
+    DevStage(15,'Late adulthood', 'LA', 60, 80),
 ]
 
 def map_age_to_stage(age):

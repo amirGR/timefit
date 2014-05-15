@@ -2,11 +2,13 @@ import setup
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
-from load_data import load_data
+from load_data import GeneData
 from fitter import Fitter
 from shapes.sigmoid import Sigmoid
-from all_fits import get_all_fits
+from all_fits import get_all_fits, iterate_fits
 import config as cfg
+from scalers import LogScaler
+from sklearn.datasets.base import Bunch
 
 params = {
     'a': ('$a$', lambda f: f.theta[0]),
@@ -16,11 +18,11 @@ params = {
     'p': (r'$1/\sigma$', lambda f: 1/f.sigma),
 }
 
-def create_hist(fits, p, low, high, draw=True, bins=20, fit_gamma=False, fit_normal=False):
+def create_hist(flat_fits, p, low, high, draw=True, bins=20, fit_gamma=True, fit_normal=True):
     latex,getter = params[p]
-    vals = np.array([getter(f) for f in fits.itervalues()])
+    vals = np.array([getter(f) for f in flat_fits])
     vals = vals[(vals>low) & (vals<high)]
-    pct_captured = int(100*len(vals)/len(fits))
+    pct_captured = int(100*len(vals)/len(flat_fits))
     if draw:
         plt.figure()
         plt.hist(vals,bins,normed=True,color='b')
@@ -50,8 +52,30 @@ def create_hist(fits, p, low, high, draw=True, bins=20, fit_gamma=False, fit_nor
         plt.title(ttl)
     return vals
 
+cfg.verbosity = 1
+age_scaler = LogScaler()
+pathway = 'serotonin'
+data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
+shape = Sigmoid()
+fitter = Fitter(shape)
+fits = get_all_fits(data,fitter, allow_new_computation=False)
+
+def translate(g,r,fit):
+    series = data.get_one_series(g,r)
+    theta,sigma = fitter.translate_parameters_to_priors_scale(series.ages, series.expression, fit.theta, fit.sigma)
+    a,h,mu,w = theta
+    if h < 0:
+        theta = (a+h,-h,mu,-w) # this is an equivalent sigmoid, with h now positive
+    return Bunch(
+        theta = theta,
+        sigma = sigma,
+    )
+    
+flat_fits = [translate(g,r,fit) for dsname,g,r,fit in iterate_fits(fits, return_keys=True)]
+
 # This script is meant to be run as a setup, then run commands interactively, e.g.:
-#data = load_data()
-#fitter = Fitter(Sigmoid(),False,False)
-#fits = get_all_fits(data,fitter)
-#create_hist(fits, 'a', 0, 10, fit_gamma=True)
+create_hist(flat_fits, 'a', -2, 1)
+create_hist(flat_fits, 'h', -1, 3)
+create_hist(flat_fits, 'w', -0.5, 1)
+create_hist(flat_fits, 'mu', -2, 2)
+create_hist(flat_fits, 'p', 0, 10)

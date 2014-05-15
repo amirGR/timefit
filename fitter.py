@@ -68,6 +68,25 @@ class Fitter(object):
     def predict(self, theta, x):
         return self.shape.f(theta,x)
 
+    def translate_parameters_to_priors_scale(self,x,y,theta,sigma):
+        """Priors for the parameters are specified for data that is already 
+           scaled linearly to [-1,1].
+           The parameters are then adjusted to the original scale of the data.
+           In order to examine the distribution of the parameters, e.g. for applying
+           empirical Bayes, we need to translate the parameters back their values
+           when applied to the scaled data.
+           This method finds the scaling that was used during fitting and applies
+           the reverse adjustment to the parameters to recover their original
+           values before adjustment.
+        """
+        x,sx = self._scale(x)
+        y,sy = self._scale(y)
+        isx = self._inverse_scaling(sx)
+        isy = self._inverse_scaling(sy)
+        sigma = sigma / isy[0]
+        theta = self.shape.adjust_for_scaling(theta,isx,isy)
+        return theta,sigma
+
     ##########################################################
     # Private methods for fitting
     ##########################################################
@@ -124,6 +143,13 @@ class Fitter(object):
         a = 2.0/vRange
         scaledVals = a*(vals-b) # translate the range [vLow,vHigh] to [-1,1]
         return scaledVals,(a,b)
+
+    @staticmethod
+    def _inverse_scaling(s):
+        a,b = s
+        ia = 1/a
+        ib = -a*b
+        return ia,ib
       
     def _Err(self,P,x,y):
         theta,p = P[:-1],P[-1]

@@ -1,5 +1,4 @@
 import setup
-from os.path import join
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
@@ -10,41 +9,28 @@ from shapes.poly import Poly
 from fitter import Fitter
 from scalers import LogScaler
 from dev_stages import dev_stages
-from project_dirs import results_dir
-from utils.misc import ensure_dir
+from plots import save_figure
 
 fontsize = 30
 xtick_fontsize = 30
 ytick_fontsize = 30
 equation_fontsize = 36
-default_figure_size_x = 18.5
-default_figure_size_y = 10.5
-default_figure_facecolor = 0.85 * np.ones(3)
-default_figure_dpi = 100
 
-
-def save_figure(fig, filename, b_close=False):
-    dirname = join(results_dir(),'RP')
-    ensure_dir(dirname)
-    filename = join(dirname,filename)
-    print 'Saving figure to {}'.format(filename)
-    fig.set_size_inches(default_figure_size_x, default_figure_size_y)
-    fig.savefig(filename, facecolor=default_figure_facecolor, dpi=default_figure_dpi)
-    if b_close:
-        plt.close(fig)
-
-def plot_one_series(series, shapes, thetas):
+def plot_one_series(series, shapes, thetas, yrange=None, show_title=False):
     x = series.ages
     y = series.expression    
     xmin, xmax = min(x), max(x)
     xmin = max(xmin,-2)
-    ymin, ymax = min(y), max(y)
 
     fig = plt.figure()
-    ax = fig.add_axes([0.1,0.2,0.8,0.7])
+    ax = fig.add_axes([0.08,0.15,0.85,0.8])
 
     # plot the data points
     ax.plot(x,y, 'ks', markersize=8)
+    if yrange is None:
+        ymin, ymax = ax.get_ylim()
+    else:
+        ymin, ymax = yrange
 
     # mark birth time with a vertical line
     birth_age = series.age_scaler.scale(0)
@@ -60,8 +46,9 @@ def plot_one_series(series, shapes, thetas):
     ax.set_ylim(ymin,ymax)
 
     # title
-    ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
-    ax.set_title(ttl, fontsize=fontsize)
+    if show_title:
+        ttl = '{}@{}, {} fit'.format(series.gene_name, series.region_name, shape)
+        ax.set_title(ttl, fontsize=fontsize)
 
     # set the development stages as x labels
     ax.set_xlabel('age', fontsize=fontsize)
@@ -70,11 +57,11 @@ def plot_one_series(series, shapes, thetas):
     ax.set_xticklabels([stage.short_name for stage in stages], fontsize=xtick_fontsize, fontstretch='condensed', rotation=90)    
 
     # set y ticks (first and last only)
-    ax.set_ylabel('expression level (log scale)', fontsize=fontsize)
+    ax.set_ylabel('expression level', fontsize=fontsize)
     ticks = ax.get_yticks()
     ticks = np.array([ticks[0], ticks[-1]])
     ax.set_yticks(ticks)
-    ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
+    ax.set_yticklabels(['{:g}'.format(t) for t in ticks], fontsize=fontsize)
     
     return fig
 
@@ -85,12 +72,12 @@ data = GeneData.load('both').scale_ages(age_scaler)
 
 shapes = [Sigmoid('sigmoid_wide'), Poly(1,'poly1'), Poly(3,'poly3'), Spline()]
 GRs = [
-    ('ADRB1','A1C'), 
-    ('GLRA2','STC'), 
-    ('TUBA1A','V1C'),
+    ('ADRB1','A1C', (5, 8)), 
+    ('GLRA2','STC', (5, 12)), 
+    ('TUBA1A','V1C', (10, 14)),
 ]
 
-for g,r in GRs:
+for g,r,yrange in GRs:
     print 'Doing {}@{}...'.format(g,r)
     thetas = []
     for shape in shapes:
@@ -99,5 +86,5 @@ for g,r in GRs:
         fitter = Fitter(shape, sigma_prior=sigma_prior)
         theta,_,_ = fitter.fit(series.ages, series.expression)
         thetas.append(theta)
-    fig = plot_one_series(series,shapes,thetas)
-    save_figure(fig,'fit-examples-{}-{}.png'.format(g,r))
+    fig = plot_one_series(series,shapes,thetas,yrange)
+    save_figure(fig,'RP/fit-examples-{}-{}.png'.format(g,r), under_results=True)

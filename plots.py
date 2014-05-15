@@ -10,9 +10,9 @@ from utils.parallel import Parallel
 from dev_stages import dev_stages
 import scalers
 
-def save_figure(fig, filename, b_close=False, b_square=False, show_frame=True, under_results=False):
+def save_figure(fig, filename, b_close=False, b_square=True, show_frame=False, under_results=False):
     if under_results:
-        dirname = join(results_dir(),'RP')
+        dirname = results_dir()
         ensure_dir(dirname)
         filename = join(dirname,filename)
     if cfg.verbosity >= 1:
