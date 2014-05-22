@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
-from load_data import GeneData, load_17_pathways_breakdown
+from load_data import GeneData
 from shapes.sigmoid import Sigmoid
 from fitter import Fitter
 from all_fits import get_all_fits, iterate_fits

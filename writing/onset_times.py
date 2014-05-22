@@ -1,4 +1,6 @@
 import setup
+from os.path import join
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
@@ -9,6 +11,7 @@ from all_fits import get_all_fits, restrict_genes, iterate_fits
 from scalers import LogScaler
 from dev_stages import dev_stages
 from plots import save_figure
+from project_dirs import cache_dir, fit_results_relative_path
 
 fontsize = 30
 
@@ -21,6 +24,14 @@ def unique_genes_only(dct_pathways):
         unique_genes = {g for g,c in dct_counts.iteritems() if c == 1}
         res[pathway_name] = unique_genes
     return res
+
+def get_change_distribution_for_whole_genome(all_data, fitter):
+    # NOTE: the distribution for all genes should be precomputed by running onset_times_whole_genome.py
+    filename = join(cache_dir(),fit_results_relative_path(all_data,fitter) + '.pkl')
+    print 'Loading whole genome onset distribution from {}'.format(filename)
+    with open(filename) as f:
+        bin_edges, change_vals = pickle.load(f)
+    return bin_edges, change_vals
     
 def compute_change_distribution(shape, thetas, from_age, to_age, n_bins=50, b_normalize=True):
     assert shape.cache_name() == 'sigmoid' # we use parameter h explicitly
@@ -36,13 +47,18 @@ def compute_change_distribution(shape, thetas, from_age, to_age, n_bins=50, b_no
         change_vals /= sum(change_vals)
     return bin_edges, change_vals
     
-def plot_onset_times(shape, fits, dct_pathways, R2_threshold, b_unique):
+def plot_onset_times(all_data, data, fitter, fits, dct_pathways, R2_threshold, b_unique):    
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
 
     stages = [stage.scaled(age_scaler) for stage in dev_stages]
     low = min(stage.from_age for stage in stages)
     high = max(stage.to_age for stage in stages) 
+
+    n_fits = sum(len(ds.gene_names) * len(ds.region_names) for ds in all_data.datasets)
+    bin_edges, change_vals = get_change_distribution_for_whole_genome(all_data,fitter)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    ax.plot(bin_centers, change_vals, linewidth=5, label='whole genome ({} fits)'.format(n_fits))
 
     for i,(pathway_name, genes) in enumerate(sorted(dct_pathways.items())):
         pathway_fits = restrict_genes(fits,genes)    
@@ -51,11 +67,11 @@ def plot_onset_times(shape, fits, dct_pathways, R2_threshold, b_unique):
             print 'Skipping {}. No fits left'.format(pathway_name)
             continue
 
-        bin_edges, change_vals = compute_change_distribution(shape, thetas, low, high, n_bins=50)
+        bin_edges, change_vals = compute_change_distribution(fitter.shape, thetas, low, high, n_bins=50)
         bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
         linestyles = ['-', '--', '-.']
         style = linestyles[int(i/7)]
-        label = '{}'.format(pathway_name)
+        label = '{} ({} fits)'.format(pathway_name,len(thetas))
         ax.plot(bin_centers, change_vals, style, linewidth=3, label=label)
     ax.legend(loc='best', fontsize=18, frameon=False)
 
@@ -80,6 +96,7 @@ def plot_onset_times(shape, fits, dct_pathways, R2_threshold, b_unique):
 cfg.verbosity = 1
 age_scaler = LogScaler()
 
+all_data = GeneData.load('both').scale_ages(age_scaler)
 pathway = '17full'
 data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
 shape = Sigmoid(priors='sigmoid_wide')
@@ -92,10 +109,20 @@ for b_unique in [False,True]:
     if b_unique:
         dct_pathways = unique_genes_only(dct_pathways)
     dct_pathways['17 pathways'] = None
-    fig = plot_onset_times(shape, fits, dct_pathways, R2_threshold, b_unique)
-    if b_unique:
-        filename = 'RP/change-distributions (unique).png'
-    else:
-        filename = 'RP/change-distributions.png'
+    for name,genes in dct_pathways.iteritems():
+        fig = plot_onset_times(all_data, data, fitter, fits, {name:genes}, R2_threshold, b_unique)
+        str_dir = 'unique' if b_unique else 'overlapping'
+        str_unique = ' (unique)' if b_unique else ''
+        filename = 'RP/{}/change-distributions-{}{}.png'.format(str_dir,name,str_unique)
+        save_figure(fig, filename, under_results=True)
+
+    # selected plots
+    lst_pathways = ['17 pathways', 'Amphetamine addiction', 'Cholinergic synapse', 'Cocaine addiction', 'Glutamatergic synapse']
+    dct_pathways = {k:dct_pathways[k] for k in lst_pathways}
+    fig = plot_onset_times(all_data, data, fitter, fits, dct_pathways, R2_threshold, b_unique)
+    str_dir = 'unique' if b_unique else 'overlapping'
+    str_unique = ' (unique)' if b_unique else ''
+    filename = 'RP/{}/selected-change-distributions{}.png'.format(str_dir,str_unique)
     save_figure(fig, filename, under_results=True)
+
 plt.close('all')
