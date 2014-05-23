@@ -15,16 +15,6 @@ from project_dirs import cache_dir, fit_results_relative_path
 
 fontsize = 30
 
-def unique_genes_only(dct_pathways):
-    res = {}
-    def count(dct,g):
-        return sum(1 for pathway_genes in dct.itervalues() if g in pathway_genes)
-    for pathway_name,genes in dct_pathways.iteritems():
-        dct_counts = {g:count(dct_pathways,g) for g in genes}
-        unique_genes = {g for g,c in dct_counts.iteritems() if c == 1}
-        res[pathway_name] = unique_genes
-    return res
-
 def get_change_distribution_for_whole_genome(all_data, fitter):
     # NOTE: the distribution for all genes should be precomputed by running onset_times_whole_genome.py
     filename = join(cache_dir(),fit_results_relative_path(all_data,fitter) + '.pkl')
@@ -105,9 +95,7 @@ fits = get_all_fits(data, fitter)
 
 R2_threshold = 0.5
 for b_unique in [False,True]:
-    dct_pathways = load_17_pathways_breakdown()
-    if b_unique:
-        dct_pathways = unique_genes_only(dct_pathways)
+    dct_pathways = load_17_pathways_breakdown(b_unique)
     dct_pathways['17 pathways'] = None
     for name,genes in dct_pathways.iteritems():
         fig = plot_onset_times(all_data, data, fitter, fits, {name:genes}, R2_threshold, b_unique)

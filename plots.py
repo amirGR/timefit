@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
+from load_data import load_17_pathways_breakdown
 from all_fits import get_all_fits
 from fit_score import loo_score
 from os.path import join, isfile
@@ -176,9 +177,13 @@ def plot_score_distribution(fits):
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
-def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
+def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways):
     from jinja2 import Template
     import shutil
+    
+    if b_pathways:
+        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique=True)
+        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique=False)
 
     n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
     flat_fits = {} # (gene,region) -> fit (may be None)
@@ -199,6 +204,14 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
 <H1>Fits for every Gene and Region</H1>
 <P>
 <a href="R2-hist.png">Distribution of LOO R2 scores</a>
+</P>
+{% if b_pathways %}
+<P>
+<a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
+<a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
+</P>
+{% endif %}
+<P>
 <table>
     <th>
         {% for region_name in data.region_names %}
@@ -240,7 +253,76 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir):
     
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
+def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique):
+    from jinja2 import Template
+    import shutil
+
+    dct_pathways = load_17_pathways_breakdown(b_unique)
+
+    n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
+    flat_fits = {} # (gene,region) -> fit (may be None)
+    for g in data.gene_names:
+        for r in data.region_names:
+            flat_fits[(g,r)] = None
+    for dsfits in fits.itervalues():
+        for (g,r),fit in dsfits.iteritems():
+            fit.rank = int(np.ceil(n_ranks * fit.LOO_score)) if fit.LOO_score > 0 else 0
+            flat_fits[(g,r)] = fit     
+            
+    html = Template("""
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="fits.css">
+</head>
+<body>
+<H1>Fits broken down by pathway {% if b_unique %} (unique genes only) {% endif %} </H1>
+{% for pathway_name, pathway_genes in dct_pathways.iteritems() %}
+<P>
+<H2>{{pathway_name}}</H2>
+<table>
+    <th>
+        {% for region_name in data.region_names %}
+        <td class="tableHeading">
+            <b>{{region_name}}</b>
+        </td>
+        {% endfor %}
+    </th>
+    {% for gene_name in pathway_genes %}
+    <tr>
+        <td>
+            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
+        </td>
+        {% for region_name in data.region_names %}
+        <td>
+            {% if flat_fits[(gene_name,region_name)] %}
+                <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                {% if flat_fits[(gene_name,region_name)].LOO_score %}
+                    <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                   {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                   </div>
+                {% else %}
+                   No Score
+                {% endif %}
+                </a>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+</P>
+{% endfor %} {# dct_pathways #}
+
+</body>
+</html>    
+""").render(**locals())
+    str_unique = '-unique' if b_unique else ''
+    filename = 'pathway-fits{}.html'.format(str_unique)
+    with open(join(basedir,filename), 'w') as f:
+        f.write(html)
+    
 def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None):
+
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
@@ -258,4 +340,9 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
             fig = plot_score_distribution(fits)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
     if do_html and k_of_n is None:
-        create_html(data, fitter, fits, basedir, gene_dir, series_dir)
+        dct_pathways = load_17_pathways_breakdown()
+        pathway_genes = set.union(*dct_pathways.values())
+        data_genes = set(data.gene_names)
+        missing = pathway_genes - data_genes
+        b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
+        create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways)

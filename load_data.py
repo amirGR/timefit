@@ -1,3 +1,4 @@
+import pickle
 from os.path import join, splitext, basename, isfile
 import numpy as np
 from scipy.io import loadmat
@@ -6,11 +7,22 @@ import config as cfg
 from utils.formats import matlab_cell_array_to_list_of_strings, read_strings_from_file
 from utils.misc import get_unique
 
-def load_17_pathways_breakdown():
-    import pickle
+def unique_genes_only(dct_pathways):
+    res = {}
+    def count(dct,g):
+        return sum(1 for pathway_genes in dct.itervalues() if g in pathway_genes)
+    for pathway_name,genes in dct_pathways.iteritems():
+        dct_counts = {g:count(dct_pathways,g) for g in genes}
+        unique_genes = {g for g,c in dct_counts.iteritems() if c == 1}
+        res[pathway_name] = unique_genes
+    return res
+
+def load_17_pathways_breakdown(b_unique=False):
     filename = join(project_dirs.data_dir(),'17pathways-breakdown.pkl')
     with open(filename) as f:
         dct_pathways = pickle.load(f)
+    if b_unique:
+        dct_pathways = unique_genes_only(dct_pathways)
     return dct_pathways
 
 def load_data(dataset='both', pathway=None, remove_prenatal=False, scaler=None):
