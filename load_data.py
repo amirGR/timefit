@@ -59,8 +59,8 @@ class GeneData(object):
         return get_unique(ds.pathway for ds in self.datasets)
         
     @property
-    def postnatal_only(self):
-        return get_unique(ds.postnatal_only for ds in self.datasets)
+    def age_restriction(self):
+        return get_unique(ds.age_restriction for ds in self.datasets)
 
     @property
     def age_scaler(self):
@@ -95,6 +95,11 @@ class GeneData(object):
         for ds in self.datasets:
             ds.restrict_pathway(pathway, ad_hoc_genes, allow_missing_genes)
         return self
+
+    def restrict_ages(self, restriction_name, from_age=-10, to_age=1000):
+        for ds in self.datasets:
+            ds.restrict_ages(restriction_name, from_age, to_age)
+        return self    
 
     def restrict_postnatal(self, b=True):
         for ds in self.datasets:
@@ -134,7 +139,7 @@ class OneDataset(object):
         self.ages = ages        
         self.name = name
         self.pathway = 'all'
-        self.postnatal_only = False
+        self.age_restriction = None
         self.age_scaler = None
         self.is_shuffled = False
         
@@ -176,14 +181,20 @@ class OneDataset(object):
         self.pathway = pathway
         return self
 
+    def restrict_ages(self, restriction_name, from_age=-10, to_age=1000):
+        if self.age_scaler is not None:
+            from_age = self.age_scaler(from_age)
+            to_age = self.age_scaler(to_age)
+        valid = ((self.ages>=from_age) & (self.ages<=to_age))
+        self.ages = self.ages[valid]
+        self.genders = self.genders[valid]
+        self.expression = self.expression[valid,:,:]
+        self.age_restriction = restriction_name
+        return self    
+
     def restrict_postnatal(self, b=True):
         if b:
-            assert self.age_scaler is None, 'restrict_postnatal cannot be called after scaling'
-            valid = (self.ages>0)
-            self.ages = self.ages[valid]
-            self.genders = self.genders[valid]
-            self.expression = self.expression[valid,:,:]
-            self.postnatal_only = True
+            self.restrict_ages('postnatal',from_age=0)
         return self    
 
     def restrict_regions(self, lst_regions):
