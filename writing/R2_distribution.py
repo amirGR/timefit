@@ -3,6 +3,7 @@ import setup
 from os.path import join
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import wilcoxon
 import config as cfg
 from load_data import GeneData
 from shapes.sigmoid import Sigmoid
@@ -61,9 +62,10 @@ data_shuffled = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_s
 shape = Sigmoid('sigmoid_wide')
 fitter = Fitter(shape,sigma_prior='normal')
 fits = get_all_fits(data,fitter,allow_new_computation=False)
-R2 = np.array([fit.LOO_score for fit in iterate_fits(fits)])
 fits_shuffled = get_all_fits(data_shuffled,fitter,allow_new_computation=False)
-R2_shuffled = np.array([fit.LOO_score for fit in iterate_fits(fits_shuffled)])
+R2_pairs = [(fit.LOO_score,fit2.LOO_score) for fit,fit2 in iterate_fits(fits,fits_shuffled)]
+R2 = np.array([r for r,r_shuffled in R2_pairs])
+R2_shuffled = np.array([r_shuffled for r,r_shuffled in R2_pairs])
 
 name = '{}-{}'.format(data.pathway,shape.cache_name())
 fig = plot_score_distribution(R2,R2_shuffled)
@@ -75,6 +77,7 @@ z_scores = (R2-mu_shuffled)/std_shuffled
 fig = plot_z_scores(z_scores)
 save_figure(fig,'RP/R2-z-scores-{}.png'.format(name), under_results=True, b_close=True)
 
+T, signed_rank_p_value = wilcoxon(R2, R2_shuffled)
 maxShuffled = R2_shuffled.max()
 nAbove = np.count_nonzero(R2 > maxShuffled)
 nTotal = len(R2)
@@ -88,3 +91,4 @@ with open(filename,'w') as f:
         nAbove = np.count_nonzero(z_scores > z_threshold)
         pct = 100.0 * nAbove/nTotal
         print('{:.2g}% ({}/{}) of z-scores are above {}'.format(pct,nAbove,nTotal,z_threshold), file=f)
+    print('wilxocon signed-rank p-value = {:.2g}'.format(signed_rank_p_value), file=f)
