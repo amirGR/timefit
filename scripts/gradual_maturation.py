@@ -19,7 +19,7 @@ def plot_correlation_histogram(scores,pathway):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
-    lst_r = [r for g,r,lst_R2 in scores]
+    lst_r = [r for g,r,pval,lst_R2 in scores]
 
     ax.hist(lst_r)
     ax.set_title('Gradual maturation for {}'.format(pathway), fontsize=fontsize)
@@ -29,8 +29,8 @@ def plot_correlation_histogram(scores,pathway):
     return fig
 
 def plot_scatter(scores, pathway, fR2):
-    lst_r = [abs(r) for g,r,lst_R2 in scores]
-    R2 = [fR2(lst_R2) for g,r,lst_R2 in scores]
+    lst_r = [abs(r) for g,r,pval,lst_R2 in scores]
+    R2 = [fR2(lst_R2) for g,r,pval,lst_R2 in scores]
     
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
@@ -43,24 +43,33 @@ def plot_scatter(scores, pathway, fR2):
     ax.set_ylabel('abs(r)', fontsize=fontsize)
     return fig
 
-def create_top_correlations_html(data, fitter, fits, scores, regions, n_top):
+def create_top_correlations_html(data, fitter, fits, scores, regions, n_top=None):
+    if n_top is None:
+        n_top = len(scores)
+        
     basedir = join(results_dir(), fit_results_relative_path(data,fitter))
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
 
     def key_func(score):
-        g,r,lst_R2 = score
+        g,r,pval,lst_R2 = score
         return abs(r)
     scores.sort(key=key_func, reverse=True)
-    top_genes = [g for g,r,lst_R2 in scores[:n_top]]
-    top_scores = {g:r for g,r,lst_R2 in scores[:n_top]}
+    top_genes = [g for g,r,pval,lst_R2 in scores[:n_top]]
+    top_scores = {g:r for g,r,pval,lst_R2 in scores[:n_top]}
+    top_pvals = {g:pval for g,r,pval,lst_R2 in scores[:n_top]}
+    
+    def get_onset_time(fit):
+        a,h,mu,w = fit.theta
+        return 'onset={:.3g}'.format(mu)
     
     create_html(
         data, fitter, fits, basedir, gene_dir, series_dir,
         gene_names = top_genes, 
         region_names = regions,
-        extra_columns = [('r',top_scores)],
+        extra_columns = [('r',top_scores),('p-value',top_pvals)],
+        extra_fields_per_fit = [get_onset_time],
         b_inline_images = True,
         b_R2_dist = False, 
         ttl = 'Fit for genes with top Spearman correlations',
@@ -80,7 +89,7 @@ def get_gene_correlation(fits, gene, regions):
     lst_mu_R2 = [get_onset_time(r) for r in regions]
     onset_times, lst_R2 = zip(*lst_mu_R2)
     r,pval = spearmanr(onset_times, range(len(regions)))
-    return r,lst_R2
+    return r,pval,lst_R2
 
 lst_pathways = [
     'serotonin',
@@ -98,8 +107,8 @@ for pathway in lst_pathways:
     
     scores = []
     for g in data.gene_names:
-        r,lst_R2 = get_gene_correlation(fits,g,regions)
-        scores.append( (g,r,lst_R2) )
+        r,pval,lst_R2 = get_gene_correlation(fits,g,regions)
+        scores.append( (g,r,pval,lst_R2) )
     
     fig = plot_correlation_histogram(scores,pathway)
     save_figure(fig,'{}/gradual-maturation-hist.png'.format(pathway,pathway), under_results=True, b_close=True)
@@ -108,4 +117,4 @@ for pathway in lst_pathways:
         fig = plot_scatter(scores, pathway, fR2)
         save_figure(fig,'{}/gradual-maturation-scatter-{}.png'.format(pathway,fR2.__name__), under_results=True, b_close=True)
     
-    create_top_correlations_html(data,fitter,fits,scores,regions,n_top=10)
+    create_top_correlations_html(data,fitter,fits,scores,regions)

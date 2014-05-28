@@ -179,7 +179,8 @@ def plot_score_distribution(fits):
     return fig
 
 def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=False, 
-                gene_names=None, region_names=None, extra_columns=None,
+                gene_names=None, region_names=None, 
+                extra_columns=None, extra_fields_per_fit=None,
                 b_inline_images=False, b_R2_dist=True, ttl=None, filename=None):
     from jinja2 import Template
     import shutil
@@ -190,6 +191,8 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
         region_names = data.region_names
     if extra_columns is None:
         extra_columns = []
+    if extra_fields_per_fit is None:
+        extra_fields_per_fit = []
     if ttl is None:
         ttl = 'Fits for every Gene and Region'
     if filename is None:
@@ -265,6 +268,10 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
                 {% else %}
                    No Score
                 {% endif %}
+                {% for f in extra_fields_per_fit %}
+                    <br/>
+                    <b>{{f(flat_fits[(gene_name,region_name)])}}</b>
+                {% endfor %}
                 {% if b_inline_images %}
                     <br/>
                     <img src="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png" height="20%">
