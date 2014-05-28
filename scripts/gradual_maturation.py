@@ -54,15 +54,16 @@ def create_top_correlations_html(data, fitter, fits, scores, regions, n_top=None
 
     def key_func(score):
         g,r,pval,lst_R2 = score
-        return abs(r)
-    scores.sort(key=key_func, reverse=True)
+        return r
+    scores.sort(key=key_func)
     top_genes = [g for g,r,pval,lst_R2 in scores[:n_top]]
     top_scores = {g:r for g,r,pval,lst_R2 in scores[:n_top]}
     top_pvals = {g:pval for g,r,pval,lst_R2 in scores[:n_top]}
     
     def get_onset_time(fit):
         a,h,mu,w = fit.theta
-        return 'onset={:.3g}'.format(mu)
+        age = age_scaler.unscale(mu)
+        return 'onset &nbsp; = &nbsp; {:.3g} years'.format(age)
     
     create_html(
         data, fitter, fits, basedir, gene_dir, series_dir,

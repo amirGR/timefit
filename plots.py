@@ -114,6 +114,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
                 ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
         ax.legend(fontsize=cfg.fontsize, frameon=False)
         
+    ax.tick_params(axis='y', labelsize=cfg.fontsize)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     return fig
 
@@ -263,15 +264,15 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
                     {% endif %}
-                   {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                    {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                    {% for f in extra_fields_per_fit %}
+                        <br/>
+                        <b>{{f(flat_fits[(gene_name,region_name)])}}</b>
+                    {% endfor %}
                    </div>
                 {% else %}
                    No Score
                 {% endif %}
-                {% for f in extra_fields_per_fit %}
-                    <br/>
-                    <b>{{f(flat_fits[(gene_name,region_name)])}}</b>
-                {% endfor %}
                 {% if b_inline_images %}
                     <br/>
                     <img src="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png" height="20%">
