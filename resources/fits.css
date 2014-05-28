@@ -21,6 +21,12 @@ table,th,td
 	color:white;
 }
 
+.tableExtraColumnHeading
+{
+	background-color:blue;
+	color:white;
+}
+
 .score { font-weight:bold; }
 .rank0 { color:black; }
 .rank1 { color:blue; }

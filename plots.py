@@ -4,6 +4,7 @@ import config as cfg
 from load_data import load_17_pathways_breakdown
 from all_fits import get_all_fits
 from fit_score import loo_score
+import os.path
 from os.path import join, isfile
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils.misc import ensure_dir, interactive, rect_subplot
@@ -14,8 +15,8 @@ import scalers
 def save_figure(fig, filename, b_close=False, b_square=True, show_frame=False, under_results=False):
     if under_results:
         dirname = results_dir()
-        ensure_dir(dirname)
         filename = join(dirname,filename)
+        ensure_dir(os.path.dirname(filename))
     if cfg.verbosity >= 1:
         print 'Saving figure to {}'.format(filename)
     figure_size_x = cfg.default_figure_size_x_square if b_square else cfg.default_figure_size_x
@@ -177,9 +178,22 @@ def plot_score_distribution(fits):
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
-def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways):
+def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=False, 
+                gene_names=None, region_names=None, extra_columns=None,
+                b_inline_images=False, b_R2_dist=True, ttl=None, filename=None):
     from jinja2 import Template
     import shutil
+
+    if gene_names is None:
+        gene_names = data.gene_names
+    if region_names is None:
+        region_names = data.region_names
+    if extra_columns is None:
+        extra_columns = []
+    if ttl is None:
+        ttl = 'Fits for every Gene and Region'
+    if filename is None:
+        filename = 'fits'
     
     if b_pathways:
         create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique=True)
@@ -187,8 +201,8 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways):
 
     n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
     flat_fits = {} # (gene,region) -> fit (may be None)
-    for g in data.gene_names:
-        for r in data.region_names:
+    for g in gene_names:
+        for r in region_names:
             flat_fits[(g,r)] = None
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
@@ -201,40 +215,59 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways):
     <link rel="stylesheet" type="text/css" href="fits.css">
 </head>
 <body>
-<H1>Fits for every Gene and Region</H1>
-<P>
-<a href="R2-hist.png">Distribution of LOO R2 scores</a>
-</P>
+<H1>{{ttl}}</H1>
+{% if b_R2_dist %}
+    <P>
+    <a href="R2-hist.png">Distribution of LOO R2 scores</a>
+    </P>
+{% endif %}
 {% if b_pathways %}
-<P>
-<a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
-<a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
-</P>
+    <P>
+    <a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
+    <a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
+    </P>
 {% endif %}
 <P>
 <table>
     <th>
-        {% for region_name in data.region_names %}
+        {% for column_name,dct_vals in extra_columns %}
+        <td class="tableExtraColumnHeading">
+            <b>{{column_name}}</b>
+        </td>
+        {% endfor %}
+        {% for region_name in region_names %}
         <td class="tableHeading">
             <b>{{region_name}}</b>
         </td>
         {% endfor %}
     </th>
-    {% for gene_name in data.gene_names %}
+    {% for gene_name in gene_names %}
     <tr>
         <td>
             <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
         </td>
-        {% for region_name in data.region_names %}
+        {% for column_name,dct_vals in extra_columns %}
+            <td>
+                {{dct_vals[gene_name] | round(2)}}
+            </td>
+        {% endfor %}
+        {% for region_name in region_names %}
         <td>
             {% if flat_fits[(gene_name,region_name)] %}
                 <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
                 {% if flat_fits[(gene_name,region_name)].LOO_score %}
                     <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                    {% if b_inline_images %}
+                        R2 &nbsp; = &nbsp;
+                    {% endif %}
                    {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
                    </div>
                 {% else %}
                    No Score
+                {% endif %}
+                {% if b_inline_images %}
+                    <br/>
+                    <img src="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png" height="20%">
                 {% endif %}
                 </a>
             {% endif %}
@@ -248,14 +281,13 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways):
 </body>
 </html>    
 """).render(**locals())
-    with open(join(basedir,'fits.html'), 'w') as f:
+    with open(join(basedir,'{}.html'.format(filename)), 'w') as f:
         f.write(html)
     
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
 def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique):
     from jinja2 import Template
-    import shutil
 
     dct_pathways = load_17_pathways_breakdown(b_unique)
 
