@@ -34,6 +34,8 @@ log_scale_x0 = -45.0/52
 
 fitter_scaling_percentiles = (10,90)
 
+n_parameter_estimate_bootstrap_samples = 100
+
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'

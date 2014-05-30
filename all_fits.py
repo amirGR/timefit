@@ -68,6 +68,15 @@ def _compute_fit(series, fitter):
         fit_predictions = None
     else:
         fit_predictions = fitter.predict(theta,x)
+        
+        # create bootstrap estimates of the parameters
+        nSamples = cfg.n_parameter_estimate_bootstrap_samples
+        theta_samples = np.empty((len(theta),nSamples))
+        rng = np.random.RandomState(cfg.random_seed)
+        for iSample in range(nSamples):
+            noise = rng.normal(0,sigma,x.shape)
+            theta_i, sigma_i, _ = fitter.fit(x, fit_predictions + noise)
+            theta_samples[:,iSample] = theta_i
     
     return Bunch(
         fitter = fitter,
@@ -76,6 +85,7 @@ def _compute_fit(series, fitter):
         sigma = sigma,
         fit_predictions = fit_predictions,
         LOO_predictions = LOO_predictions,
+        theta_samples = theta_samples,
     )
 
 def save_as_mat_files(data, fitter, fits):
