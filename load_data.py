@@ -183,8 +183,8 @@ class OneDataset(object):
 
     def restrict_ages(self, restriction_name, from_age=-10, to_age=1000):
         if self.age_scaler is not None:
-            from_age = self.age_scaler(from_age)
-            to_age = self.age_scaler(to_age)
+            from_age = self.age_scaler.scale(from_age)
+            to_age = self.age_scaler.scale(to_age)
         valid = ((self.ages>=from_age) & (self.ages<=to_age))
         self.ages = self.ages[valid]
         self.genders = self.genders[valid]
