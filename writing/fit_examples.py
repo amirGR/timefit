@@ -18,7 +18,7 @@ equation_fontsize = 36
 
 def plot_one_series(series, shapes, thetas, yrange=None, show_title=False):
     x = series.ages
-    y = series.expression    
+    y = series.single_expression    
     xmin, xmax = min(x), max(x)
     xmin = max(xmin,-2)
 
@@ -84,7 +84,7 @@ for g,r,yrange in GRs:
         series = data.get_one_series(g,r)
         sigma_prior = 'normal' if not isinstance(shape,Spline) else None
         fitter = Fitter(shape, sigma_prior=sigma_prior)
-        theta,_,_ = fitter.fit(series.ages, series.expression)
+        theta,_,_ = fitter.fit(series.ages, series.single_expression)
         thetas.append(theta)
     fig = plot_one_series(series,shapes,thetas,yrange)
     save_figure(fig,'RP/fit-examples-{}-{}.png'.format(g,r), under_results=True)

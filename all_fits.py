@@ -48,11 +48,11 @@ def _add_scores(dataset,dataset_fits):
             if fit.fit_predictions is None:
                 fit.fit_score = None
             else:
-                fit.fit_score = cfg.score(series.expression, fit.fit_predictions)
+                fit.fit_score = cfg.score(series.single_expression, fit.fit_predictions)
         except:
             fit.fit_score = None
         try:
-            fit.LOO_score = loo_score(series.expression, fit.LOO_predictions)
+            fit.LOO_score = loo_score(series.single_expression, fit.LOO_predictions)
         except:
             fit.LOO_score = None
     return dataset_fits
@@ -61,7 +61,7 @@ def _compute_fit(series, fitter):
     if cfg.verbosity > 0:
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
-    y = series.expression
+    y = series.single_expression
     theta,sigma,LOO_predictions = fitter.fit(x,y,loo=True)
     if theta is None:
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)

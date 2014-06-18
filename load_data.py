@@ -30,14 +30,30 @@ def load_data(dataset='both', pathway=None, remove_prenatal=False, scaler=None):
     """
     return GeneData.load(dataset).restrict_pathway(pathway).restrict_postnatal(remove_prenatal).scale_ages(scaler)
 
-class OneGeneRegion(object):
-    def __init__(self, expression, ages, gene_name, region_name, original_inds, age_scaler):
+class SeveralGenesOneRegion(object):
+    def __init__(self, expression, ages, gene_names, region_name, original_inds, age_scaler):
+        n_ages, n_genes = expression.shape
+        assert len(ages) == n_ages
+        assert len(gene_names) == n_genes
         self.expression = expression
         self.ages = ages
-        self.gene_name = gene_name
+        self.gene_names = gene_names
         self.region_name = region_name
         self.original_inds = original_inds
         self.age_scaler = age_scaler
+        
+    @property
+    def num_genes(self): return len(self.gene_names)
+        
+    @property
+    def gene_name(self):
+        assert self.num_genes == 1
+        return self.gene_names[0]
+        
+    @property
+    def single_expression(self):
+        assert self.num_genes == 1
+        return self.expression[:,0]
 
 class GeneData(object):
     def __init__(self, datasets, name):
@@ -129,9 +145,23 @@ class GeneData(object):
         if allow_missing:
             return None
         raise Exception('{}@{} not found in the datasets'.format(iGene,iRegion))
+    
+    def get_several_series(self, genes, iRegion, allow_missing=False):
+        for ds in self.datasets:
+            series = ds.get_several_series(genes, iRegion, allow_missing=True)
+            if series is not None:
+                return series
+        if allow_missing:
+            return None
+        raise Exception('{}@{} not found in the datasets'.format(genes,iRegion))
 
 class OneDataset(object):
     def __init__(self, expression, gene_names, region_names, genders, ages, name):
+        n_ages, n_genes, n_regions = expression.shape
+        assert len(ages) == n_ages
+        assert len(genders) == n_ages
+        assert len(gene_names) == n_genes
+        assert len(region_names) == n_regions
         self.expression = expression
         self.gene_names = gene_names
         self.region_names = region_names
@@ -221,20 +251,25 @@ class OneDataset(object):
         self.is_shuffled = True
 
     def get_one_series(self, iGene, iRegion, allow_missing=False):
-        if isinstance(iGene, basestring):
-            iGene = self._find_gene_index(iGene, allow_missing=allow_missing)
+        return self.get_several_series([iGene],iRegion,allow_missing)
+        
+    def get_several_series(self, genes, iRegion, allow_missing=False):
         if isinstance(iRegion, basestring):
             iRegion = self._find_region_index(iRegion, allow_missing=allow_missing)
-        if iGene is None or iRegion is None:
+        if iRegion is None:
             return None
-        expression = self.expression[:,iGene,iRegion]
+        genes = [self._find_gene_index(g,allow_missing=allow_missing) if isinstance(g, basestring) else g for g in genes]
+        genes = [g for g in genes if g is not None] # remove genes we don't have data for
+        if not genes:
+            return None
+        expression = self.expression[:,genes,iRegion]
         ages = self.ages
-        valid = ~np.isnan(expression)
-        ages, expression = ages[valid], expression[valid]
-        return OneGeneRegion(
+        valid = ~np.any(np.isnan(expression),axis=1) # remove subjects where we don't have data for all genes
+        ages, expression = ages[valid], expression[valid,:]
+        return SeveralGenesOneRegion(
             expression = expression,
             ages = ages,
-            gene_name = self.gene_names[iGene],
+            gene_names = self.gene_names[genes],
             region_name = self.region_names[iRegion],
             original_inds = valid.nonzero(),
             age_scaler = self.age_scaler,

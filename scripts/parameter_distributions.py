@@ -62,7 +62,7 @@ fits = get_all_fits(data,fitter, allow_new_computation=False)
 
 def translate(g,r,fit):
     series = data.get_one_series(g,r)
-    theta,sigma = fitter.translate_parameters_to_priors_scale(series.ages, series.expression, fit.theta, fit.sigma)
+    theta,sigma = fitter.translate_parameters_to_priors_scale(series.ages, series.single_expression, fit.theta, fit.sigma)
     a,h,mu,w = theta
     if h < 0:
         theta = (a+h,-h,mu,-w) # this is an equivalent sigmoid, with h now positive

@@ -17,7 +17,7 @@ equation_fontsize = 36
 
 def plot_one_series(series, shape, theta, yrange=None, b_annotate=False, train_mask=None, test_preds=None, show_title=False):
     x = series.ages
-    y = series.expression    
+    y = series.single_expression    
     xmin, xmax = min(x), max(x)
     xmin = max(xmin,-2)
 
@@ -116,7 +116,7 @@ age_scaler = LogScaler()
 data = GeneData.load('both').scale_ages(age_scaler)
 series = data.get_one_series('HTR1D','STR')
 x = series.ages
-y = series.expression
+y = series.single_expression
 yrange = (3,8)
 
 shape = Sigmoid(priors='sigmoid_wide')

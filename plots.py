@@ -55,7 +55,7 @@ def _plot_gene_inner(g,region_series_fits):
     nRows, nCols = rect_subplot(len(region_series_fits))
     for iRegion,(r,series,fit) in enumerate(region_series_fits):
         ax = fig.add_subplot(nRows,nCols,iRegion+1)
-        ax.plot(series.ages,series.expression,'ro')
+        ax.plot(series.ages,series.single_expression,'ro')
         if fit is not None and fit.theta is not None:
             x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
             ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
@@ -70,12 +70,12 @@ def _plot_gene_inner(g,region_series_fits):
 
 def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     x = series.ages
-    y = series.expression    
+    y = series.single_expression    
     fig = plt.figure()
     ax = fig.add_subplot(111)
     
     # plot the data points
-    ax.plot(series.ages,series.expression, 'ks', markersize=8)
+    ax.plot(series.ages, y, 'ks', markersize=8)
     ax.set_ylabel('expression level', fontsize=cfg.fontsize)
     ax.set_xlabel('age', fontsize=cfg.fontsize)
     ttl = '{}@{}'.format(series.gene_name, series.region_name)
@@ -117,6 +117,9 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
     ax.tick_params(axis='y', labelsize=cfg.fontsize)
     ax.set_title(ttl, fontsize=cfg.fontsize)
     return fig
+
+def plot_several_series(series, shape=None, theta=None, LOO_predictions=None):
+    YYY
 
 def plot_and_save_all_genes(data, fitter, fits, dirname):
     ensure_dir(dirname)

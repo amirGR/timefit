@@ -16,7 +16,7 @@ cfg.verbosity = 1
 data = load_data(pathway='serotonin', scaler=LogScaler())
 series = data.get_one_series('HTR1A','MD')
 x = series.ages
-y = series.expression
+y = series.single_expression
 fitter = Fitter(Spline())
 theta, sigma, LOO_predictions = fitter.fit(x,y)
 spline = theta[0]
