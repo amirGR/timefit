@@ -75,7 +75,7 @@ def _compute_fit(series, fitter):
         rng = np.random.RandomState(cfg.random_seed)
         for iSample in range(nSamples):
             noise = rng.normal(0,sigma,x.shape)
-            theta_i, sigma_i, _ = fitter.fit(x, fit_predictions + noise)
+            theta_i, _, _ = fitter.fit(x, fit_predictions + noise)
             theta_samples[:,iSample] = theta_i
     
     return Bunch(
