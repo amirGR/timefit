@@ -54,6 +54,27 @@ class SeveralGenesOneRegion(object):
     def single_expression(self):
         assert self.num_genes == 1
         return self.expression[:,0]
+        
+    def get_single_gene_series(self, g):
+        if isinstance(g, basestring):
+            g = self._find_gene_index(g)
+        return SeveralGenesOneRegion(
+            expression = self.expression[:,[g]],
+            ages = self.ages,
+            gene_names = [self.gene_names[g]],
+            region_name = self.region_name,
+            original_inds = self.original_inds,
+            age_scaler = self.age_scaler,
+        )
+
+    def _find_gene_index(self, name, allow_missing=False):
+        match_positions = np.where(self.gene_names == name)[0]
+        if len(match_positions) > 0:
+            return match_positions[0]
+        if allow_missing:
+            return None
+        raise Exception('Gene {} not found'.format(name))
+
 
 class GeneData(object):
     def __init__(self, datasets, name):
@@ -264,7 +285,7 @@ class OneDataset(object):
             return None
         expression = self.expression[:,genes,iRegion]
         ages = self.ages
-        valid = ~np.any(np.isnan(expression),axis=1) # remove subjects where we don't have data for all genes
+        valid = ~np.all(np.isnan(expression),axis=1) # remove subjects where we don't have data for any gene
         ages, expression = ages[valid], expression[valid,:]
         return SeveralGenesOneRegion(
             expression = expression,

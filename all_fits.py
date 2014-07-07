@@ -67,7 +67,7 @@ def _compute_fit(series, fitter):
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
         fit_predictions = None
     else:
-        fit_predictions = fitter.predict(theta,x)
+        fit_predictions = fitter.shape.f(theta,x)
         
         # create bootstrap estimates of the parameters
         nSamples = cfg.n_parameter_estimate_bootstrap_samples

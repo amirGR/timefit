@@ -68,16 +68,19 @@ def _plot_gene_inner(g,region_series_fits):
     fig.suptitle('Gene {}'.format(g))
     return fig
 
-def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
+def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, ax=None):
     x = series.ages
-    y = series.single_expression    
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    y = series.single_expression
+    b_subplot = ax is not None
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
     
     # plot the data points
     ax.plot(series.ages, y, 'ks', markersize=8)
-    ax.set_ylabel('expression level', fontsize=cfg.fontsize)
-    ax.set_xlabel('age', fontsize=cfg.fontsize)
+    if not b_subplot:
+        ax.set_ylabel('expression level', fontsize=cfg.fontsize)
+        ax.set_xlabel('age', fontsize=cfg.fontsize)
     ttl = '{}@{}'.format(series.gene_name, series.region_name)
     
     # set the development stages as x labels
@@ -115,11 +118,24 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None):
         ax.legend(fontsize=cfg.fontsize, frameon=False)
         
     ax.tick_params(axis='y', labelsize=cfg.fontsize)
-    ax.set_title(ttl, fontsize=cfg.fontsize)
-    return fig
+    if not b_subplot:
+        ax.set_title(ttl, fontsize=cfg.fontsize)
+    return ax.figure
 
-def plot_several_series(series, shape=None, theta=None, LOO_predictions=None):
-    YYY
+def plot_series(series, shape=None, theta=None, LOO_predictions=None):
+    if series.num_genes == 1:
+        return plot_one_series(series, shape, theta, LOO_predictions)
+    fig = plt.figure()
+    nRows, nCols = rect_subplot(series.num_genes)
+    for iGene,g in enumerate(series.gene_names):
+        ax = fig.add_subplot(nRows,nCols,iGene+1)
+        theta_i = theta[iGene] if theta is not None else None
+        LOO_i = LOO_predictions[:,iGene] if LOO_predictions is not None else None
+        plot_one_series(series.get_single_gene_series(iGene), shape, theta_i, LOO_i, ax=ax)
+        ax.set_title('Gene {}'.format(g), fontsize=cfg.fontsize)
+    fig.tight_layout(h_pad=0,w_pad=0)
+    fig.suptitle('Region {}'.format(series.region_name), fontsize=cfg.fontsize)
+    return fig
 
 def plot_and_save_all_genes(data, fitter, fits, dirname):
     ensure_dir(dirname)

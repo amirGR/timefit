@@ -4,6 +4,7 @@ import numpy as np
 from minimization import minimize_with_restarts
 from sklearn.cross_validation import LeaveOneOut, KFold
 from shapes.priors import get_prior
+from numpy import linalg
 
 class Fitter(object):
     def __init__(self, shape, sigma_prior=None):
@@ -39,10 +40,15 @@ class Fitter(object):
             return r'{}, sigma={:.2f}'.format(shape_params, sigma)
 
     def fit(self, x, y, loo=False):
+        assert x.ndim == 1
+        assert y.ndim <= 2
+        assert y.shape[0] == len(x)
+        n_series = y.shape[1] if y.ndim == 2 else 1
+        
         t0,s0 = self._fit(x,y)
         if loo:            
-            n = len(y)
-            test_preds = np.empty(n)
+            n = y.size
+            test_preds = np.empty(y.shape)
             
             k = cfg.n_folds
             if k == 0 or k>=n:
@@ -56,17 +62,47 @@ class Fitter(object):
             for i,(train,test) in enumerate(train_test_split):
                 if cfg.verbosity >= 2:
                     print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i,n_batches)
-                theta,sigma = self._fit(x[train],y[train])
-                if theta is None:
-                    test_preds[test] = np.nan
+                if n_series == 1:
+                    theta,sigma = self._fit(x[train],y[train])
+                    if theta is None:
+                        test_preds[test] = np.nan
+                    else:
+                        test_preds[test] = self.shape.f(theta,x[test])
                 else:
-                    test_preds[test] = self.predict(theta,x[test])
+                    y_train = np.copy(y)
+                    y_train.ravel()[test] = np.NaN # remove information for test-set points
+                    theta,sigma = self._fit(x,y_train)
+                    if theta is None:
+                        test_preds.ravel()[test] = np.NaN
+                    else:
+                        L = linalg.inv(sigma)
+                        for idx_test in test:
+                            idx_x = int(idx_test / n_series)
+                            idx_y = idx_test % n_series
+                            y_other = np.copy(y[idx_x,:])
+                            y_other[idx_y] = np.NaN
+                            test_preds.ravel()[idx_test] = self._predict_with_covariance(theta, L, x[idx_x], y_other, idx_y)
         else:
             test_preds = None
         return t0, s0, test_preds
         
-    def predict(self, theta, x):
-        return self.shape.f(theta,x)
+    def _predict_with_covariance(self, theta, L, x, y_other, k):
+        """Predicts value for series number k at value x (both scalars).
+           Theta contains a set of fit parameters for each series.
+           L is the precision matrix (inverse of the covariance matrix) showing the covariance
+           between different series for each subject.
+           The prediction is based on the mean value across subjects at x f(theta,x) and
+           the per-subject variation for series k is estimated from the variations of the other series
+           using the precision matrix L.
+           The predicted value of the "noise", dy, is the mean of the conditional 
+           Gaussian distribution, given the other y values. See Bishop p. 87, eq. 2.75.
+        """        
+        assert np.isnan(y_other[k])
+        y0 = self.shape.f(theta[k],x)
+        dy_other = np.array([yi - self.shape.f(t,x) for t,yi in zip(theta,y_other)]) # dy_other[k] will be NaN
+        dy_other[np.isnan(dy_other)] = 0 # ignore in dot product (includes index k)
+        dy = -np.dot(dy_other,L[k,:]) / L[k,k]
+        return y0 + dy
 
     def translate_parameters_to_priors_scale(self,x,y,theta,sigma):
         """Priors for the parameters are specified for data that is already 
@@ -93,6 +129,7 @@ class Fitter(object):
 
     def _fit(self,x,y):
         if self.shape.has_special_fitting():
+            assert y.ndim == 1, "Fitting for {} with multiple series not supported yet".format(self.shape)
             theta = self.shape.fit(x,y)
             y_fit = self.shape.f(theta,x)
             sigma = np.std(y - y_fit)
@@ -101,6 +138,31 @@ class Fitter(object):
             return self._gradient_fit(x,y)
             
     def _gradient_fit(self,x,y):
+        if y.ndim == 1:
+            return self._gradient_fit_single_series(x,y)
+        n_series = y.shape[1]
+        theta_sigma_pairs = [self._gradient_fit_single_series(x,y[:,i]) for i in xrange(n_series)]
+        theta = [t for t,s in theta_sigma_pairs]
+        sigma = self._calc_covariance_matrix(theta,x,y)
+        return theta,sigma
+        
+    def _calc_covariance_matrix(self,theta,x,y):
+        """Maximum likelihood for the covariance matrix is just the empirical covariance
+           matrix. See Bishop p. 93-94
+        """
+        f_vals = np.empty(y.shape)
+        for i,ti in enumerate(theta):
+            f_vals[:,i] = self.shape.f(ti,x)
+        r = y - f_vals
+        r = np.ma.masked_array(r, np.isnan(r))
+        C = np.ma.cov(r,rowvar=0)
+        return C
+        
+    def _gradient_fit_single_series(self,x,y):
+        assert y.ndim == 1
+        valid = ~np.isnan(y)
+        y = y[valid]
+        x = x[valid]
         x,sx = self._scale(x)
         y,sy = self._scale(y)
         n_restarts = cfg.n_optimization_restarts
