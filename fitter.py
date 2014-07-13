@@ -49,6 +49,7 @@ class Fitter(object):
         if loo:            
             n = y.size
             test_preds = np.empty(y.shape)
+            test_fits = np.empty(y.shape, dtype=object)
             
             k = cfg.n_folds
             if k == 0 or k>=n:
@@ -64,6 +65,8 @@ class Fitter(object):
                     print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i,n_batches)
                 if n_series == 1:
                     theta,sigma = self._fit(x[train],y[train])
+                    for idxTest in test:
+                        test_fits[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
                     if theta is None:
                         test_preds[test] = np.nan
                     else:
@@ -72,6 +75,8 @@ class Fitter(object):
                     y_train = np.copy(y)
                     y_train.ravel()[test] = np.NaN # remove information for test-set points
                     theta,sigma = self._fit(x,y_train)
+                    for idxTest in test:
+                        test_fits[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
                     if theta is None:
                         test_preds.ravel()[test] = np.NaN
                     else:
@@ -84,7 +89,8 @@ class Fitter(object):
                             test_preds.ravel()[idx_test] = self._predict_with_covariance(theta, L, x[idx_x], y_other, idx_y)
         else:
             test_preds = None
-        return t0, s0, test_preds
+            test_fits = None
+        return t0, s0, test_preds, test_fits
         
     def _predict_with_covariance(self, theta, L, x, y_other, k):
         """Predicts value for series number k at value x (both scalars).

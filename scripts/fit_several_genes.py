@@ -9,7 +9,7 @@ from plots import plot_series, save_figure
 
 def fit_serveral_genes(series, fitter, loo, filename, b_show):
     if fitter is not None:
-        theta, L, LOO_predictions = fitter.fit(series.ages, series.expression, loo=loo)
+        theta, L, LOO_predictions,_ = fitter.fit(series.ages, series.expression, loo=loo)
         print 'L = {}'.format(L)
         fig = plot_series(series, fitter.shape, theta, LOO_predictions)
     else:

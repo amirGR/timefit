@@ -42,6 +42,6 @@ def get_series():
 if __name__ == '__main__':
     fitter = get_fitter()
     series = get_series()    
-    theta, sigma, LOO_predictions = fitter.fit(series.ages, series.expression, loo=True)
+    theta, sigma, LOO_predictions,_ = fitter.fit(series.ages, series.expression, loo=True)
     print 'sigma:\n{}'.format(sigma)
     plot_series(series, fitter.shape, theta, LOO_predictions)

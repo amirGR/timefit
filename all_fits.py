@@ -62,7 +62,7 @@ def _compute_fit(series, fitter):
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.single_expression
-    theta,sigma,LOO_predictions = fitter.fit(x,y,loo=True)
+    theta,sigma,LOO_predictions,LOO_fits = fitter.fit(x,y,loo=True)
     if theta is None:
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
         fit_predictions = None
@@ -75,7 +75,7 @@ def _compute_fit(series, fitter):
         rng = np.random.RandomState(cfg.random_seed)
         for iSample in range(nSamples):
             noise = rng.normal(0,sigma,x.shape)
-            theta_i, _, _ = fitter.fit(x, fit_predictions + noise)
+            theta_i, _, _,_ = fitter.fit(x, fit_predictions + noise)
             theta_samples[:,iSample] = theta_i
     
     return Bunch(
@@ -85,6 +85,7 @@ def _compute_fit(series, fitter):
         sigma = sigma,
         fit_predictions = fit_predictions,
         LOO_predictions = LOO_predictions,
+        LOO_fits = LOO_fits,
         theta_samples = theta_samples,
     )
 

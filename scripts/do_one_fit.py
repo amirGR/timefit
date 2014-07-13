@@ -8,7 +8,7 @@ from plots import plot_one_series, plot_gene, save_figure
 
 def do_one_fit(series, fitter, loo, filename, b_show):
     if fitter is not None:
-        theta, sigma, LOO_predictions = fitter.fit(series.ages, series.single_expression, loo=loo)
+        theta, sigma, LOO_predictions,_ = fitter.fit(series.ages, series.single_expression, loo=loo)
         fig = plot_one_series(series, fitter.shape, theta, LOO_predictions)
     else:
         fig = plot_one_series(series)

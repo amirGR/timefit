@@ -77,7 +77,7 @@ for g,r,yrange in GRs:
     series = data.get_one_series(g,r)
     thetas = []
     for fitter in fitters:
-        theta,_,_ = fitter.fit(series.ages, series.single_expression)
+        theta,_,_,_ = fitter.fit(series.ages, series.single_expression)
         thetas.append(theta)
     fig = plot_one_series(series,fitters,thetas,labels,yrange)
     save_figure(fig,'RP/fit-examples-{}-{}.png'.format(g,r), under_results=True)            

@@ -124,13 +124,13 @@ fitter = Fitter(shape, sigma_prior='normal')
 
 def basic_fit():
     print 'Drawing basic fit...'
-    theta,_,_ = fitter.fit(x,y)
+    theta,_,_,_ = fitter.fit(x,y)
     fig = plot_one_series(series,shape,theta,yrange)
     save_figure(fig,'RP/methods-1-basic-fit.png', under_results=True)
 
 def annotate_parameters():
     print 'Drawing fit with parameters...'
-    theta,_,_ = fitter.fit(x,y)
+    theta,_,_,_ = fitter.fit(x,y)
     fig = plot_one_series(series,shape,theta, yrange, b_annotate=True)
     save_figure(fig,'RP/methods-2-sigmoid-params.png', under_results=True)
 
@@ -140,13 +140,13 @@ def show_loo_prediction():
     train_mask = np.arange(len(x)) != iLOO
     x_train = x[train_mask]
     y_train = y[train_mask]
-    theta,_,_ = fitter.fit(x_train,y_train)
+    theta,_,_,_ = fitter.fit(x_train,y_train)
     fig = plot_one_series(series,shape,theta,yrange,train_mask=train_mask)
     save_figure(fig,'RP/methods-3-LOO-prediction.png', under_results=True)
   
 def show_loo_score():
     print 'Drawing LOO prediction for all points and R2 score...'
-    theta,_,test_preds = fitter.fit(x,y,loo=True)
+    theta,_,test_preds,_ = fitter.fit(x,y,loo=True)
     fig = plot_one_series(series,shape,theta=None,yrange=yrange,test_preds=test_preds)
     save_figure(fig,'RP/methods-4-R2-score.png', under_results=True)
 

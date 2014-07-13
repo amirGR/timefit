@@ -18,7 +18,7 @@ series = data.get_one_series('HTR1A','MD')
 x = series.ages
 y = series.single_expression
 fitter = Fitter(Spline())
-theta, sigma, LOO_predictions = fitter.fit(x,y)
+theta, sigma, LOO_predictions,_ = fitter.fit(x,y)
 spline = theta[0]
 preds = spline(x)
 print preds
