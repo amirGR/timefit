@@ -27,6 +27,7 @@ job_batch_size = 16
 job_big_key_size = 10000
 job_big_batch_size = 128
 parallel_n_jobs = -2 #1
+parallel_run_locally = False # disable parallelization for debugging
 
 n_folds = 30 # 0 is LOO
 

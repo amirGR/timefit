@@ -53,7 +53,10 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
     for i,batch in enumerate(batches):
         if cfg.verbosity > 0:
             print 'Computing {}: batch {}/{} ({} jobs per batch)'.format(name,i+1,len(batches),batch_size)
-        updates = pool(pool.delay(f,key,*arg_mapper(key,proxy)) for key in batch)
+        if cfg.parallel_run_locally:
+            updates = [_job_wrapper(f,key,*arg_mapper(key,proxy)) for key in batch]
+        else:
+            updates = pool(pool.delay(f,key,*arg_mapper(key,proxy)) for key in batch)
         dct_updates = dict(updates) # convert key,value pairs to dictionary
         _save_batch(dct_updates, base_filename, k_of_n, i)
         dct_res.update(dct_updates)
