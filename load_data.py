@@ -175,6 +175,10 @@ class GeneData(object):
         if allow_missing:
             return None
         raise Exception('{}@{} not found in the datasets'.format(genes,iRegion))
+        
+    def get_dataset_for_region(self, region_name):
+        res = {ds.name for ds in self.datasets if region_name in ds.region_names}
+        return get_unique(res)
 
 class OneDataset(object):
     def __init__(self, expression, gene_names, region_names, genders, ages, name):

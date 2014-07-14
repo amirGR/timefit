@@ -76,7 +76,7 @@ class Fitter(object):
                     y_train.ravel()[test] = np.NaN # remove information for test-set points
                     theta,sigma = self._fit(x,y_train)
                     for idxTest in test:
-                        test_fits[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
+                        test_fits.ravel()[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
                     if theta is None:
                         test_preds.ravel()[test] = np.NaN
                     else:
@@ -91,6 +91,36 @@ class Fitter(object):
             test_preds = None
             test_fits = None
         return t0, s0, test_preds, test_fits
+
+    def fit_multiple_series_with_cache(self, x, y, cache):
+        """The fit for a single series (with or without LOO) is retrieved 
+           from the cache by calling cache(iy, ix) to get the fit theta for
+           series number iy, with possible leaving out of series item ix (if ix is not None)
+        """
+        assert x.ndim == 1
+        assert y.ndim == 2, "cache doesn't make sense and is not meant to be used for single series fitting"
+        assert y.shape[0] == len(x)
+        nx, ny = y.shape
+        
+        test_preds = np.empty(y.shape)
+        test_fits = np.empty(y.shape, dtype=object)        
+        theta0 = [cache(iy,None) for iy in xrange(ny)]
+        for ix in xrange(nx):
+            for iy in xrange(ny):
+                y_train = np.copy(y)
+                y_train[ix,iy] = np.NaN # remove information for LOO point
+                theta = theta0[:]
+                theta[iy] = cache(iy,ix)
+                sigma = self._calc_covariance_matrix(theta,x,y_train)
+                test_fits[ix,iy] = (theta,sigma)
+                if theta is None:
+                    test_preds[ix,iy] = np.NaN
+                else:
+                    L = linalg.inv(sigma)
+                    y_other = np.copy(y[ix,:])
+                    y_other[iy] = np.NaN
+                    test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_other, iy)
+        return test_preds, test_fits
         
     def _predict_with_covariance(self, theta, L, x, y_other, k):
         """Predicts value for series number k at value x (both scalars).
