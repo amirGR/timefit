@@ -116,7 +116,7 @@ class Fitter(object):
                 if theta is None:
                     test_preds[ix,iy] = np.NaN
                 else:
-                    L = linalg.inv(sigma)
+                    L = linalg.pinv(sigma)
                     y_other = np.copy(y[ix,:])
                     y_other[iy] = np.NaN
                     test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_other, iy)

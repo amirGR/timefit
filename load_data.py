@@ -17,12 +17,36 @@ def unique_genes_only(dct_pathways):
         res[pathway_name] = unique_genes
     return res
 
-def load_17_pathways_breakdown(b_unique=False):
+def get_17_pathways_short_names():
+    return {
+        'Glutamatergic synapse' : 'glutamate', 
+        'Amyotrophic lateral sclerosis (ALS)' : 'ALS', 
+        "Huntington's disease" : 'huntington', 
+        'GABAergic synapse' : 'GABA', 
+        'Cocaine addiction' : 'cocaine', 
+        'Cholinergic synapse' : 'cholinergic', 
+        "Parkinson's disease" : 'parkinsons', 
+        'Amphetamine addiction' : 'amphetamine', 
+        'Long-term depression' : 'LTD', 
+        'Nicotine addiction' : 'nicotine', 
+        'Morphine addiction' : 'morphine', 
+        'Calcium signaling' : 'calcium', 
+        'Dopaminergic synapse' : 'dopamine', 
+        'Neuroactive ligand-receptor interaction' : 'ligand-receptor-interaction', 
+        'Alcoholism' : 'alcoholism', 
+        "Alzheimer's disease" : 'alzheimers', 
+        'Serotonergic synapse' : 'serotonin',
+    }
+
+def load_17_pathways_breakdown(b_unique=False, short_names=False):
     filename = join(project_dirs.data_dir(),'17pathways-breakdown.pkl')
     with open(filename) as f:
         dct_pathways = pickle.load(f)
     if b_unique:
         dct_pathways = unique_genes_only(dct_pathways)
+    if short_names:
+        name_mapping = get_17_pathways_short_names()
+        dct_pathways = {name_mapping[name]:val for name,val in dct_pathways.iteritems()}
     return dct_pathways
 
 def load_data(dataset='both', pathway=None, remove_prenatal=False, scaler=None):
@@ -328,12 +352,11 @@ class OneDataset(object):
 def _translate_pathway(pathway, ad_hoc_genes):
     if pathway is None or pathway == 'all':
         return 'all',None
-    if pathway in cfg.pathways:
-        assert ad_hoc_genes is None, 'Specifying ad_hoc_genes for a known pathway is not allowed. Pathway: {}'.format(pathway)
-        _, pathway_genes = _translate_gene_list(cfg.pathways[pathway])
-        return pathway, pathway_genes
     if ad_hoc_genes is not None:
         _, pathway_genes = _translate_gene_list(ad_hoc_genes)
+        return pathway, pathway_genes
+    if pathway in cfg.pathways:
+        _, pathway_genes = _translate_gene_list(cfg.pathways[pathway])
         return pathway, pathway_genes
         
     pathway_name, pathway_genes = _translate_gene_list(pathway)
