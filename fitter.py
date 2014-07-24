@@ -32,8 +32,8 @@ class Fitter(object):
             name = '{}-sigma-{}'.format(name,self.inv_sigma_prior_name)
         return name
         
-    def format_params(self, theta, sigma, latex=False):
-        shape_params = self.shape.format_params(theta,latex)
+    def format_params(self, theta, sigma, x_scaler, latex=False):
+        shape_params = self.shape.format_params(theta, x_scaler, latex)
         if latex:
             return r'{}, $\sigma$={:.2f}'.format(shape_params, sigma)
         else:

@@ -96,7 +96,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, ax=Non
     if shape is not None and theta is not None:
         # add fit parameters to title
         ttl = '{}, {} fit'.format(ttl, shape)
-        more_ttl = shape.format_params(theta,latex=True)
+        more_ttl = shape.format_params(theta, series.age_scaler, latex=True)
         if more_ttl:
             ttl = '\n'.join([ttl, more_ttl])
         

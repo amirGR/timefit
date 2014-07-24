@@ -10,7 +10,7 @@ class Spline(Shape):
     def param_names(self, latex=False):
         return ['spline-params']
         
-    def format_params(self, theta, latex=False):
+    def format_params(self, theta, x_scaler, latex=False):
         return ''
 
     def can_export_params_to_matlab(self):

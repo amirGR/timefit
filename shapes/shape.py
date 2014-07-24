@@ -40,7 +40,7 @@ class Shape(object):
     def n_params(self):
         return len(self.param_names())
 
-    def format_params(self, theta, latex=False):
+    def format_params(self, theta, x_scaler, latex=False):
         names = self.param_names(latex)
         return ', '.join('{}={:.2g}'.format(name,val) for name,val in zip(names,theta))
 

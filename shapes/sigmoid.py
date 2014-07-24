@@ -11,6 +11,17 @@ class Sigmoid(Shape):
         else:
             return ['baseline', 'height', 'onset', 'width']
                 
+    def format_params(self, theta, x_scaler, latex=False):
+        a,h,mu,w = theta
+        if x_scaler is not None:
+            unscaled_mu = x_scaler.unscale(mu)
+            w_minus = x_scaler.unscale(mu-w)
+            w_plus = x_scaler.unscale(mu+w)
+            unscaled_w = 0.5 * (w_plus - w_minus)
+        theta = (a, h, unscaled_mu, unscaled_w)
+        names = self.param_names(latex)
+        return ', '.join('{}={:.2g}'.format(name,val) for name,val in zip(names,theta))
+
     def cache_name(self):
         return 'sigmoid'
 
