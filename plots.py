@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg
 from load_data import load_17_pathways_breakdown
-from all_fits import get_all_fits
+from all_fits import get_all_fits, iterate_fits
 from fit_score import loo_score
 import os.path
 from os.path import join, isfile
@@ -160,7 +160,7 @@ def _plot_genes_job(gene,region_series_fits,filename):
         fig = _plot_gene_inner(gene,region_series_fits)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, fits, dirname):
+def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations):
     ensure_dir(dirname)
     to_plot = []
     for dsfits in fits.itervalues():
@@ -170,21 +170,29 @@ def plot_and_save_all_series(data, fitter, fits, dirname):
                 print 'Figure already exists for {}@{}. skipping...'.format(g,r)
                 continue
             series = data.get_one_series(g,r)
-            to_plot.append((series,fit,filename))
+            to_plot.append((series,fit,filename,use_correlations))
     pool = Parallel(_plot_series_job)
     pool(pool.delay(*args) for args in to_plot)
 
-def _plot_series_job(series,fit,filename):
+def _plot_series_job(series, fit, filename, use_correlations):
     with interactive(False):
         print 'Saving figure for {}@{}'.format(series.gene_name, series.region_name)
-        fig = plot_one_series(series, fit.fitter.shape, fit.theta, fit.LOO_predictions)
+        if use_correlations:
+            preds = fit.with_correlations.LOO_predictions
+        else:
+            preds = fit.LOO_predictions
+        fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds)
         save_figure(fig, filename, b_close=True)
 
-def plot_score_distribution(fits):
-    def flat_values(fits):
-        return (fit for dsfits in fits.itervalues() for fit in dsfits.itervalues())
-    n_failed = len([1 for fit in flat_values(fits) if fit.LOO_score is None])
-    LOO_R2 = np.array([fit.LOO_score for fit in flat_values(fits) if fit.LOO_score is not None])
+def plot_score_distribution(fits, use_correlations):
+    def flat_scores(fits):
+        for fit in iterate_fits(fits):
+            if use_correlations:
+                yield fit.with_correlations.LOO_score
+            else:
+                yield fit.LOO_score
+    n_failed = len([1 for score in flat_scores(fits) if score is None])
+    LOO_R2 = np.array([score for score in flat_scores(fits) if score is not None])
     low,high = -1, 1
     n_low = np.count_nonzero(LOO_R2 < low)
     fig = plt.figure()
@@ -198,7 +206,9 @@ def plot_score_distribution(fits):
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
-def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=False, 
+def create_html(data, fitter, fits, basedir, gene_dir, series_dir, 
+                use_correlations=False,
+                b_pathways=False, 
                 gene_names=None, region_names=None, 
                 extra_columns=None, extra_fields_per_fit=None,
                 b_inline_images=False, inline_image_size=None,
@@ -223,8 +233,8 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
         filename = 'fits'
     
     if b_pathways:
-        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique=True)
-        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique=False)
+        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_unique=True)
+        create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_unique=False)
 
     n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
     flat_fits = {} # (gene,region) -> fit (may be None)
@@ -233,7 +243,12 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
             flat_fits[(g,r)] = None
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
-            fit.rank = int(np.ceil(n_ranks * fit.LOO_score)) if fit.LOO_score > 0 else 0
+            if use_correlations:
+                score = fit.with_correlations.LOO_score
+            else:
+                score = fit.LOO_score
+            fit.score = score
+            fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
             flat_fits[(g,r)] = fit     
             
     html = Template("""
@@ -287,12 +302,12 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
         <td>
             {% if flat_fits[(gene_name,region_name)] %}
                 <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-                {% if flat_fits[(gene_name,region_name)].LOO_score %}
+                {% if flat_fits[(gene_name,region_name)].score %}
                     <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
                     {% endif %}
-                    {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                    {{flat_fits[(gene_name,region_name)].score | round(2)}}
                     {% for f in extra_fields_per_fit %}
                         <br/>
                         <b>{{f(flat_fits[(gene_name,region_name)])|e}}</b>
@@ -322,7 +337,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways=Fa
     
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
-def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, b_unique):
+def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations, b_unique):
     from jinja2 import Template
 
     dct_pathways = load_17_pathways_breakdown(b_unique)
@@ -334,7 +349,12 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
             flat_fits[(g,r)] = None
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
-            fit.rank = int(np.ceil(n_ranks * fit.LOO_score)) if fit.LOO_score > 0 else 0
+            if use_correlations:
+                score = fit.with_correlations.LOO_score
+            else:
+                score = fit.LOO_score
+            fit.score = score
+            fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
             flat_fits[(g,r)] = fit     
             
     html = Template("""
@@ -364,9 +384,9 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
         <td>
             {% if flat_fits[(gene_name,region_name)] %}
                 <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-                {% if flat_fits[(gene_name,region_name)].LOO_score %}
+                {% if flat_fits[(gene_name,region_name)].score %}
                     <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
-                   {{flat_fits[(gene_name,region_name)].LOO_score | round(2)}}
+                   {{flat_fits[(gene_name,region_name)].score | round(2)}}
                    </div>
                 {% else %}
                    No Score
@@ -389,12 +409,13 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
     with open(join(basedir,filename), 'w') as f:
         f.write(html)
     
-def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None):
-
+def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None, use_correlations=False):
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
         basedir = join(results_dir(), fit_results_relative_path(data,fitter))
+        if use_correlations:
+            basedir = join(basedir,'with-correlations')
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
@@ -402,10 +423,10 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
     if do_genes: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series:
-        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir))
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations)
     if do_hist and k_of_n is None:
         with interactive(False):
-            fig = plot_score_distribution(fits)
+            fig = plot_score_distribution(fits,use_correlations)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
     if do_html and k_of_n is None:
         dct_pathways = load_17_pathways_breakdown()
@@ -413,4 +434,4 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
         data_genes = set(data.gene_names)
         missing = pathway_genes - data_genes
         b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
-        create_html(data, fitter, fits, basedir, gene_dir, series_dir, b_pathways)
+        create_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_pathways=b_pathways)
