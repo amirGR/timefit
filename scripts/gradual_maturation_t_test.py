@@ -54,7 +54,9 @@ one sided t-test: {regions[0]} < {regions[1]}
         mu = age_scaler.unscale(mu)
         vLow = age_scaler.unscale(vLow)
         vHigh = age_scaler.unscale(vHigh)
-        return 'onset reestimate (mean [20%, 80%]) = {:.3g} [{:.3g},{:.3g}]'.format(mu,vLow,vHigh)
+        txt = 'onset reestimate (mean [20%, 80%]) = {:.3g} [{:.3g},{:.3g}]'.format(mu,vLow,vHigh)
+        cls = ''
+        return txt,cls
     
     create_html(
         data, fitter, fits, basedir, gene_dir, series_dir,

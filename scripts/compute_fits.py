@@ -19,7 +19,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations):
+def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_onsets):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -27,7 +27,43 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations):
 ==============================================================================================
 ==============================================================================================
 """
-    save_fits_and_create_html(data, fitter, fits=fits, basedir=html_dir, k_of_n=k_of_n, use_correlations=use_correlations)
+    save_fits_and_create_html(data, fitter,         
+        fits = fits,
+        basedir = html_dir, 
+        k_of_n = k_of_n, 
+        use_correlations = use_correlations,
+    )
+
+    if show_onsets:
+        def get_onset_time(fit):
+            a,h,mu,w = fit.theta
+            age = data.age_scaler.unscale(mu)
+            txt = '{:.2g}'.format(age)
+            if fit.LOO_score > 0.2: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
+                cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
+            else:
+                cls = ''
+            return txt,cls
+
+        kw = dict(
+            filename = 'onsets',
+            ttl = 'Onset times',
+            top_text = 'red = strong positive transition</br>blue = strong negative transition',
+            show_R2 = False,
+            extra_fields_per_fit = [get_onset_time],
+            b_R2_dist = False, 
+        )
+
+        save_fits_and_create_html(data, fitter,         
+            fits = fits,
+            basedir = html_dir, 
+            k_of_n = k_of_n, 
+            use_correlations = use_correlations,
+            html_kw = kw,
+        )
+
+    else:
+        kw = None
 
 def save_mat_file(data, fitter, fits):
     print """
@@ -81,6 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
+    parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table')
     args = parser.parse_args()
     if args.part is not None and args.mat:
         print '--mat cannot be used with --part'
@@ -91,14 +128,19 @@ if __name__ == '__main__':
             sys.exit(-1)
         if args.mat:
             print '--correlations not compatible with --mat'
+            sys.exit(-1)
         if args.html == NOT_USED:
             print '--correlations only currently makes sense with --html (since fits are not saved)'
+            sys.exit(-1)
+    if args.onset and args.html == NOT_USED:
+        print '--onset should only be used with --html'
+        sys.exit(-1)
     k_of_n = parse_k_of_n(args.part)
     data, fitter = process_common_inputs(args)
     fits = do_fits(data, fitter, k_of_n)
     if args.correlations:
         add_predictions_using_correlations(data, fitter, fits)
     if args.html != NOT_USED:
-        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations)
+        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, show_onsets=args.onset)
     if args.mat:
         save_mat_file(data,fitter,fits)

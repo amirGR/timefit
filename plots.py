@@ -207,8 +207,9 @@ def plot_score_distribution(fits, use_correlations):
     return fig
 
 def create_html(data, fitter, fits, basedir, gene_dir, series_dir, 
-                use_correlations=False,
-                b_pathways=False, 
+                use_correlations = False,
+                b_pathways = False, 
+                show_R2 = True,
                 gene_names=None, region_names=None, 
                 extra_columns=None, extra_fields_per_fit=None,
                 b_inline_images=False, inline_image_size=None,
@@ -303,16 +304,21 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
             {% if flat_fits[(gene_name,region_name)] %}
                 <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
                 {% if flat_fits[(gene_name,region_name)].score %}
-                    <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
                     {% endif %}
-                    {{flat_fits[(gene_name,region_name)].score | round(2)}}
+                    {% if show_R2 %}
+                        <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                            {{flat_fits[(gene_name,region_name)].score | round(2)}}
+                        </div>
+                    {% endif %}
                     {% for f in extra_fields_per_fit %}
+                        {% set txt,cls = f(flat_fits[(gene_name,region_name)]) %}
                         <br/>
-                        <b>{{f(flat_fits[(gene_name,region_name)])|e}}</b>
+                        <div class="fitField {{cls}}">
+                            <b>{{txt|e}}</b>
+                        </div>
                     {% endfor %}
-                   </div>
                 {% else %}
                    No Score
                 {% endif %}
@@ -332,9 +338,10 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
 </body>
 </html>    
 """).render(**locals())
-    with open(join(basedir,'{}.html'.format(filename)), 'w') as f:
+    filename = join(basedir,'{}.html'.format(filename))
+    print 'Saving HTML to {}'.format(filename)
+    with open(filename, 'w') as f:
         f.write(html)
-    
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
 def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations, b_unique):
@@ -409,7 +416,7 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
     with open(join(basedir,filename), 'w') as f:
         f.write(html)
     
-def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None, use_correlations=False):
+def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None, use_correlations=False, html_kw=None):
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
@@ -434,4 +441,6 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
         data_genes = set(data.gene_names)
         missing = pathway_genes - data_genes
         b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
-        create_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_pathways=b_pathways)
+        if html_kw is None:
+            html_kw = {}
+        create_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_pathways=b_pathways, **html_kw)

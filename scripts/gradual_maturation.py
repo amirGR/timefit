@@ -63,7 +63,9 @@ def create_top_correlations_html(data, fitter, fits, scores, regions, n_top=None
     def get_onset_time(fit):
         a,h,mu,w = fit.theta
         age = age_scaler.unscale(mu)
-        return 'onset = {:.3g} years'.format(age)
+        txt = 'onset = {:.3g} years'.format(age)
+        cls = ''
+        return txt,cls
     
     create_html(
         data, fitter, fits, basedir, gene_dir, series_dir,

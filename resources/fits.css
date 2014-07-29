@@ -27,6 +27,8 @@ table,th,td
 	color:white;
 }
 
+a { color: inherit; }
+
 .score { font-weight:bold; }
 .rank0 { color:black; }
 .rank1 { color:blue; }
@@ -34,5 +36,9 @@ table,th,td
 .rank3 { color:brown; }
 .rank4 { color:orange; }
 .rank5 { color:red; }
+
+.fitField { font-weight:bold; }
+.positiveTransition { color:red; }
+.negativeTransition { color:blue; }
 
 a {text-decoration:none;}
