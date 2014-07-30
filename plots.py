@@ -212,6 +212,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
                 show_R2 = True,
                 gene_names=None, region_names=None, 
                 extra_columns=None, extra_fields_per_fit=None,
+                extra_top_links=None,
                 b_inline_images=False, inline_image_size=None,
                 b_R2_dist=True, ttl=None, top_text=None,
                 filename=None):
@@ -226,6 +227,8 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
         extra_columns = []
     if extra_fields_per_fit is None:
         extra_fields_per_fit = []
+    if extra_top_links is None:
+        extra_top_links = []
     if inline_image_size is None:
         inline_image_size = '20%'
     if ttl is None:
@@ -252,6 +255,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
             fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
             flat_fits[(g,r)] = fit     
             
+    extra_fields_per_fit = list(enumerate(extra_fields_per_fit))
     html = Template("""
 <html>
 <head>
@@ -270,6 +274,9 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
     <a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
     </P>
 {% endif %}
+{% for href,txt in extra_top_links %}
+    <a href={{href}}>{{txt}}</a>
+{% endfor %}
 {% if top_text %}
 <pre>
 {{ top_text }}
@@ -302,7 +309,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
         {% for region_name in region_names %}
         <td>
             {% if flat_fits[(gene_name,region_name)] %}
-                <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                <a class=noColorChange href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
                 {% if flat_fits[(gene_name,region_name)].score %}
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
@@ -312,9 +319,11 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
                             {{flat_fits[(gene_name,region_name)].score | round(2)}}
                         </div>
                     {% endif %}
-                    {% for f in extra_fields_per_fit %}
+                    {% for i,f in extra_fields_per_fit %}
                         {% set txt,cls = f(flat_fits[(gene_name,region_name)]) %}
-                        <br/>
+                        {% if i>0 or show_R2 %}
+                            <br/>
+                        {% endif %}
                         <div class="fitField {{cls}}">
                             <b>{{txt|e}}</b>
                         </div>

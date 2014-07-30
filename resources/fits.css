@@ -27,7 +27,8 @@ table,th,td
 	color:white;
 }
 
-a { color: inherit; }
+a {text-decoration:none;}
+a.noColorChange { color: inherit; }
 
 .score { font-weight:bold; }
 .rank0 { color:black; }
@@ -41,4 +42,3 @@ a { color: inherit; }
 .positiveTransition { color:red; }
 .negativeTransition { color:blue; }
 
-a {text-decoration:none;}

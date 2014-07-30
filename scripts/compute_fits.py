@@ -27,11 +27,20 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_ons
 ==============================================================================================
 ==============================================================================================
 """
+    if show_onsets:
+        kw = dict(
+            extra_top_links = [ 
+                ('onsets.html','Onset Times'),
+            ],
+        )
+    else:
+        kw = None
     save_fits_and_create_html(data, fitter,         
         fits = fits,
         basedir = html_dir, 
         k_of_n = k_of_n, 
         use_correlations = use_correlations,
+        html_kw = kw,
     )
 
     if show_onsets:
@@ -48,7 +57,12 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_ons
         kw = dict(
             filename = 'onsets',
             ttl = 'Onset times',
-            top_text = 'red = strong positive transition</br>blue = strong negative transition',
+            top_text = """\
+All onset times are in years.
+
+red = strong positive transition.
+blue = strong negative transition.
+""",
             show_R2 = False,
             extra_fields_per_fit = [get_onset_time],
             b_R2_dist = False, 
