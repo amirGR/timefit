@@ -46,7 +46,10 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_ons
     if show_onsets:
         def get_onset_time(fit):
             a,h,mu,w = fit.theta
-            age = data.age_scaler.unscale(mu)
+            if data.age_scaler is None:
+                age = mu
+            else:
+                age = data.age_scaler.unscale(mu)
             txt = '{:.2g}'.format(age)
             if fit.LOO_score > 0.2: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
