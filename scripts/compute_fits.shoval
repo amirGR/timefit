@@ -1,0 +1,7 @@
+-v
+#--html
+#--mat
+--sigma_prior normal
+--priors sigmoid_wide
+--pathway cannabinoids
+--from_age postnatal

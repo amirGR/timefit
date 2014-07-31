@@ -13,7 +13,10 @@ class Sigmoid(Shape):
                 
     def format_params(self, theta, x_scaler, latex=False):
         a,h,mu,w = theta
-        if x_scaler is not None:
+        if x_scaler is None:
+            unscaled_mu = mu
+            unscaled_w = w
+        else:
             unscaled_mu = x_scaler.unscale(mu)
             w_minus = x_scaler.unscale(mu-w)
             w_plus = x_scaler.unscale(mu+w)
