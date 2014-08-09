@@ -80,7 +80,7 @@ class Fitter(object):
                     if theta is None:
                         test_preds.ravel()[test] = np.NaN
                     else:
-                        L = linalg.inv(sigma)
+                        L = linalg.pinv(sigma)
                         for idx_test in test:
                             idx_x = int(idx_test / n_series)
                             idx_y = idx_test % n_series
