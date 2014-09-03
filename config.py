@@ -31,7 +31,7 @@ parallel_run_locally = False # disable parallelization for debugging
 
 n_folds = 30 # 0 is LOO
 
-log_scale_x0 = -45.0/52
+log_scale_x0 = -38.0/52
 
 fitter_scaling_percentiles = (10,90)
 
