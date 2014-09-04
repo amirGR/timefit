@@ -6,6 +6,7 @@ from all_fits import get_all_fits, iterate_fits
 from fit_score import loo_score
 import os.path
 from os.path import join, isfile
+from utils.statsmodels_graphics.correlation import plot_corr
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils.misc import ensure_dir, interactive, rect_subplot
 from utils.parallel import Parallel
@@ -206,8 +207,18 @@ def plot_score_distribution(fits, use_correlations):
     ax.set_ylabel('count', fontsize=cfg.fontsize)    
     return fig
 
+def plot_and_save_all_gene_correlations(data, correlations, dirname):
+    ensure_dir(dirname)
+    for region in data.region_names:
+        sigma = correlations[region]        
+        ttl = 'Gene expression correlations at {}'.format(region)
+        fig = plot_corr(sigma, xnames=data.gene_names, normcolor=True, title=ttl)
+        save_figure(fig, join(dirname,'{}.png'.format(region)), b_close=True)
+
 def create_html(data, fitter, fits, basedir, gene_dir, series_dir, 
+                correlations_dir = None,
                 use_correlations = False,
+                link_to_correlation_plots = False,
                 b_pathways = False, 
                 show_R2 = True,
                 gene_names=None, region_names=None, 
@@ -283,6 +294,9 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
 </pre>
 {% endif %}
 <P>
+Column/row headings and/or cell entries may link to more details for the corresponding entity.
+</P>
+<P>
 <table>
     <th>
         {% for column_name,dct_vals in extra_columns %}
@@ -292,7 +306,11 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
         {% endfor %}
         {% for region_name in region_names %}
         <td class="tableHeading">
-            <b>{{region_name}}</b>
+            {% if link_to_correlation_plots %}
+                <a class=noColorChange href="{{correlations_dir}}/{{region_name}}.png"><b>{{region_name}}</b></a>
+            {% else %}
+                <b>{{region_name}}</b>
+            {% endif %}
         </td>
         {% endfor %}
     </th>
@@ -425,7 +443,11 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
     with open(join(basedir,filename), 'w') as f:
         f.write(html)
     
-def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=True, do_series=True, do_hist=True, do_html=True, k_of_n=None, use_correlations=False, html_kw=None):
+def save_fits_and_create_html(data, fitter, fits=None, basedir=None, 
+                              do_genes=True, do_series=True, do_hist=True, do_html=True, 
+                              k_of_n=None, 
+                              use_correlations=False, correlations=None,
+                              html_kw=None):
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
@@ -436,6 +458,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
+    correlations_dir = 'gene-correlations'
     if do_genes: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series:
@@ -445,6 +468,9 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
             fig = plot_score_distribution(fits,use_correlations)
             save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
     if do_html and k_of_n is None:
+        link_to_correlation_plots = use_correlations and correlations is not None
+        if link_to_correlation_plots:
+            plot_and_save_all_gene_correlations(data, correlations, join(basedir,correlations_dir))
         dct_pathways = load_17_pathways_breakdown()
         pathway_genes = set.union(*dct_pathways.values())
         data_genes = set(data.gene_names)
@@ -452,4 +478,8 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None, do_genes=Tr
         b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
         if html_kw is None:
             html_kw = {}
-        create_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_pathways=b_pathways, **html_kw)
+        create_html(
+            data, fitter, fits, basedir, gene_dir, series_dir, correlations_dir=correlations_dir, 
+            use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
+            b_pathways=b_pathways, **html_kw
+        )

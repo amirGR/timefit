@@ -105,6 +105,7 @@ class Fitter(object):
         test_preds = np.empty(y.shape)
         test_fits = np.empty(y.shape, dtype=object)        
         theta0 = [cache(iy,None) for iy in xrange(ny)]
+        sigma0 = self._calc_covariance_matrix(theta0,x,y)
         for ix in xrange(nx):
             for iy in xrange(ny):
                 y_train = np.copy(y)
@@ -120,7 +121,7 @@ class Fitter(object):
                     y_other = np.copy(y[ix,:])
                     y_other[iy] = np.NaN
                     test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_other, iy)
-        return test_preds, test_fits
+        return test_preds, test_fits, sigma0
         
     def _predict_with_covariance(self, theta, L, x, y_other, k):
         """Predicts value for series number k at value x (both scalars).

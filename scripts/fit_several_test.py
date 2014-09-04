@@ -99,7 +99,7 @@ if __name__ == '__main__':
     
     x = series.ages
     y = series.expression
-    multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
+    multi_gene_preds,_,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):

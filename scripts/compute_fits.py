@@ -19,7 +19,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_onsets):
+def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -27,21 +27,23 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_ons
 ==============================================================================================
 ==============================================================================================
 """
+    basic_kw = dict(
+        fits = fits,
+        basedir = html_dir, 
+        k_of_n = k_of_n, 
+        use_correlations = use_correlations,
+        correlations = correlations,
+    )
+    
     if show_onsets:
-        kw = dict(
+        html_kw = dict(
             extra_top_links = [ 
                 ('onsets.html','Onset Times'),
             ],
         )
     else:
-        kw = None
-    save_fits_and_create_html(data, fitter,         
-        fits = fits,
-        basedir = html_dir, 
-        k_of_n = k_of_n, 
-        use_correlations = use_correlations,
-        html_kw = kw,
-    )
+        html_kw = None
+    save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
 
     if show_onsets:
         def get_onset_time(fit):
@@ -57,7 +59,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, show_ons
                 cls = ''
             return txt,cls
 
-        kw = dict(
+        html_kw = dict(
             filename = 'onsets',
             ttl = 'Onset times',
             top_text = """\
@@ -70,17 +72,7 @@ blue = strong negative transition.
             extra_fields_per_fit = [get_onset_time],
             b_R2_dist = False, 
         )
-
-        save_fits_and_create_html(data, fitter,         
-            fits = fits,
-            basedir = html_dir, 
-            k_of_n = k_of_n, 
-            use_correlations = use_correlations,
-            html_kw = kw,
-        )
-
-    else:
-        kw = None
+        save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
 
 def save_mat_file(data, fitter, fits):
     print """
@@ -93,6 +85,7 @@ def save_mat_file(data, fitter, fits):
     save_as_mat_files(data, fitter, fits)
 
 def add_predictions_using_correlations(data, fitter, fits):
+    correlations = {} # {region -> sigma}
     for r in data.region_names:
         print 'Analyzing correlations for region {}...'.format(r)
         series = data.get_several_series(data.gene_names,r)
@@ -105,7 +98,8 @@ def add_predictions_using_correlations(data, fitter, fits):
             else:
                 theta,sigma = fit.LOO_fits[ix]
                 return theta    
-        preds,_ = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
+        preds,_,sigma = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
+        correlations[r] = sigma
         for iy,g in enumerate(series.gene_names):
             fit = ds_fits[(g,r)]
             y_real = series.expression[:,iy]
@@ -114,7 +108,7 @@ def add_predictions_using_correlations(data, fitter, fits):
                 LOO_predictions = y_preds,
                 LOO_score = loo_score(y_real, y_preds),
             )
-    return fits
+    return fits, correlations
 
 def parse_k_of_n(s):
     """Parse a string that looks like "3/5" and return tuple (3,5)"""
@@ -156,8 +150,10 @@ if __name__ == '__main__':
     data, fitter = process_common_inputs(args)
     fits = do_fits(data, fitter, k_of_n)
     if args.correlations:
-        add_predictions_using_correlations(data, fitter, fits)
+        fits, correlations = add_predictions_using_correlations(data, fitter, fits)
+    else:
+        correlations = None
     if args.html != NOT_USED:
-        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, show_onsets=args.onset)
+        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset)
     if args.mat:
         save_mat_file(data,fitter,fits)
