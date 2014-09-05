@@ -185,27 +185,115 @@ def _plot_series_job(series, fit, filename, use_correlations):
         fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds)
         save_figure(fig, filename, b_close=True)
 
+def get_scores_from_fits(fits, use_correlations):
+    if use_correlations:
+        R2_pairs = [(fit.LOO_score,fit.with_correlations.LOO_score) for fit in iterate_fits(fits)]
+        R2_pairs = [(s1,s2) for s1,s2 in R2_pairs if s1>-1 and s2>-1]
+        basic = np.array([b for b,m in R2_pairs])
+        multi = np.array([m for b,m in R2_pairs])
+    else:
+        basic = np.array([fit.LOO_score for fit in iterate_fits(fits) if fit.LOO_score>-1])
+        multi = None
+    return basic,multi
+
 def plot_score_distribution(fits, use_correlations):
-    def flat_scores(fits):
-        for fit in iterate_fits(fits):
-            if use_correlations:
-                yield fit.with_correlations.LOO_score
-            else:
-                yield fit.LOO_score
-    n_failed = len([1 for score in flat_scores(fits) if score is None])
-    LOO_R2 = np.array([score for score in flat_scores(fits) if score is not None])
+    basic, multi = get_scores_from_fits(fits, use_correlations=use_correlations)    
     low,high = -1, 1
-    n_low = np.count_nonzero(LOO_R2 < low)
+    def do_hist(scores):
+        counts,bin_edges = np.histogram(scores,50,range=(low,high))
+        probs = counts / float(sum(counts))
+        width = bin_edges[1] - bin_edges[0]
+        return bin_edges[:-1],probs,width
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.hist(LOO_R2, 50, range=(low,high))
-    ttl = 'LOO R2 score distribution'
-    if n_low or n_failed:
-        ttl = ttl + '\n(another {} failed fits and {} scores below {})'.format(n_failed, n_low,low)
-    ax.set_title(ttl, fontsize=cfg.fontsize)
-    ax.set_xlabel('R2', fontsize=cfg.fontsize)
-    ax.set_ylabel('count', fontsize=cfg.fontsize)    
+    pos, probs, width = do_hist(basic)
+    ax.bar(pos, probs, width=width, color='b', label='Single Gene')
+    if use_correlations:
+        pos, probs, width = do_hist(multi)
+        ax.bar(pos, probs, width=width, color='g', alpha=0.5, label='Using Correlations')
+        ax.legend(loc='best', fontsize=cfg.fontsize, frameon=False)
+    ax.set_xlabel('test set $R^2$', fontsize=cfg.fontsize)
+    ax.set_ylabel('probability', fontsize=cfg.fontsize)   
+    ax.tick_params(axis='both', labelsize=cfg.fontsize)
     return fig
+
+def plot_score_comparison_scatter_for_correlations(fits):
+    basic, multi = get_scores_from_fits(fits, use_correlations=True)    
+    fig = plt.figure()
+    ax = fig.add_axes([0.12,0.12,0.8,0.8])
+    ax.scatter(basic, multi, alpha=0.8, label='data')
+    ax.plot(np.mean(basic), np.mean(multi), 'rx', markersize=8, markeredgewidth=2, label='mean')
+    ax.plot([-1, 1], [-1, 1],'k--')
+    ax.set_xlim(-1,1)
+    ax.set_ylim(-1,1)
+    ticks = [-1,1]
+    ax.set_yticks(ticks)
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([str(t) for t in ticks], fontsize=cfg.fontsize)
+    ax.set_yticklabels([str(t) for t in ticks], fontsize=cfg.fontsize)
+    ax.set_xlabel('$R^2$ for single gene fits', fontsize=cfg.fontsize)
+    ax.set_ylabel('multi gene $R^2$', fontsize=cfg.fontsize)
+    ax.set_title('$R^2$ change using correlations', fontsize=cfg.fontsize)
+    ax.legend(fontsize=cfg.fontsize, frameon=False, loc='upper left')
+    return fig
+
+def plot_score_improvement_histogram_for_correlations(fits):
+    basic, multi = get_scores_from_fits(fits, use_correlations=True)    
+    delta = multi - basic    
+    fig = plt.figure()
+    ax = fig.add_axes([0.12,0.12,0.8,0.72])
+    ax.hist(delta, bins=20)
+    ttl1 = r'$\Delta R^2$ using correlations'
+    ttl2 = r'$\Delta R^2 = {:.2g} \pm {:.2g}$'.format(np.mean(delta), np.std(delta))
+    ttl = '{}\n{}\n'.format(ttl1,ttl2)
+    ax.set_title(ttl, fontsize=cfg.fontsize)
+    ax.set_xlabel('$\Delta R^2$', fontsize=cfg.fontsize)
+    ax.set_ylabel('number of gene-regions', fontsize=cfg.fontsize)   
+    ax.tick_params(axis='both', labelsize=cfg.fontsize)
+    return fig
+            
+
+def create_score_distribution_html(fits, use_correlations, dirname):
+    ensure_dir(dirname)
+    with interactive(False):
+        hist_filename = 'R2-hist.png'
+        fig = plot_score_distribution(fits,use_correlations)
+        save_figure(fig, join(dirname,hist_filename), b_close=True)
+        
+        if use_correlations:
+            scatter_filename = 'comparison-scatter.png'
+            fig = plot_score_comparison_scatter_for_correlations(fits)
+            save_figure(fig, join(dirname,scatter_filename), b_close=True)
+            
+            delta_hist_filename = 'R2-delta-hist.png'
+            fig = plot_score_improvement_histogram_for_correlations(fits)
+            save_figure(fig, join(dirname,delta_hist_filename), b_close=True)
+                        
+    image_size = "50%"
+    from jinja2 import Template
+    import shutil
+    html = Template("""
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="score-distribution.css">
+</head>
+<body>
+<center><H1>R2 Score Distribution</H1></center>
+
+<a href="{{hist_filename}}"> <img src="{{hist_filename}}" height="{{image_size}}"></a>
+
+{% if use_correlations %}
+    <a href="{{delta_hist_filename}}"> <img src="{{delta_hist_filename}}" height="{{image_size}}"></a>
+    <a href="{{scatter_filename}}"> <img src="{{scatter_filename}}" height="{{image_size}}"></a>
+{% endif %}
+
+</body>
+</html>    
+""").render(**locals())
+    filename = join(dirname,'scores.html')
+    with open(filename, 'w') as f:
+        f.write(html)
+    shutil.copy(join(resources_dir(),'score-distribution.css'), dirname)
 
 def plot_and_save_all_gene_correlations(data, correlations, dirname):
     ensure_dir(dirname)
@@ -215,7 +303,8 @@ def plot_and_save_all_gene_correlations(data, correlations, dirname):
         fig = plot_corr(sigma, xnames=data.gene_names, normcolor=True, title=ttl)
         save_figure(fig, join(dirname,'{}.png'.format(region)), b_close=True)
 
-def create_html(data, fitter, fits, basedir, gene_dir, series_dir, 
+def create_html(data, fitter, fits, 
+                basedir, gene_dir, series_dir, scores_dir,
                 correlations_dir = None,
                 use_correlations = False,
                 link_to_correlation_plots = False,
@@ -276,7 +365,7 @@ def create_html(data, fitter, fits, basedir, gene_dir, series_dir,
 <H1>{{ttl}}</H1>
 {% if b_R2_dist %}
     <P>
-    <a href="R2-hist.png">Distribution of LOO R2 scores</a>
+    <a href="{{scores_dir}}/scores.html">Distribution of LOO R2 scores</a>
     </P>
 {% endif %}
 {% if b_pathways %}
@@ -459,14 +548,13 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     gene_dir = 'gene-subplot'
     series_dir = 'gene-region-fits'
     correlations_dir = 'gene-correlations'
+    scores_dir = 'score_distributions'
     if do_genes: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations)
     if do_hist and k_of_n is None:
-        with interactive(False):
-            fig = plot_score_distribution(fits,use_correlations)
-            save_figure(fig, join(basedir,'R2-hist.png'), b_close=True)
+        create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
         link_to_correlation_plots = use_correlations and correlations is not None
         if link_to_correlation_plots:
@@ -479,7 +567,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
         if html_kw is None:
             html_kw = {}
         create_html(
-            data, fitter, fits, basedir, gene_dir, series_dir, correlations_dir=correlations_dir, 
+            data, fitter, fits, basedir, gene_dir, series_dir, scores_dir, correlations_dir=correlations_dir,
             use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
             b_pathways=b_pathways, **html_kw
         )
