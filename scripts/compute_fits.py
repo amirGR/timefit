@@ -2,7 +2,7 @@ import setup
 import re
 import sys
 from sklearn.datasets.base import Bunch
-from utils.misc import disable_all_warnings
+from utils.misc import disable_all_warnings, covariance_to_correlation
 from all_fits import get_all_fits, save_as_mat_files
 from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
@@ -99,7 +99,7 @@ def add_predictions_using_correlations(data, fitter, fits):
                 theta,sigma = fit.LOO_fits[ix]
                 return theta    
         preds,_,sigma = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
-        correlations[r] = sigma
+        correlations[r] = covariance_to_correlation(sigma)
         for iy,g in enumerate(series.gene_names):
             fit = ds_fits[(g,r)]
             y_real = series.expression[:,iy]

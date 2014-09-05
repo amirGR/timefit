@@ -70,3 +70,10 @@ def rect_subplot(nPlots):
     nRows = ceil(sqrt(nPlots))
     nCols = ceil(float(nPlots)/nRows)
     return nRows,nCols
+    
+def covariance_to_correlation(sigma):
+    """Returns a correlation matrix for the covariance matrix 'sigma'"""
+    V = np.diagonal(sigma)
+    s = np.sqrt(V)
+    factors = np.outer(s,s)
+    return sigma / factors
