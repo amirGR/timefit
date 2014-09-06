@@ -143,6 +143,10 @@ if __name__ == '__main__':
         if args.html == NOT_USED:
             print '--correlations only currently makes sense with --html (since fits are not saved)'
             sys.exit(-1)
+    if args.onset:
+        if args.shape != 'sigmoid':
+            print '--onset can only be used with sigmoid fits'
+            sys.exit(-1)
     if args.onset and args.html == NOT_USED:
         print '--onset should only be used with --html'
         sys.exit(-1)
