@@ -72,7 +72,7 @@ blue = strong negative transition.
             extra_fields_per_fit = [get_onset_time],
             b_R2_dist = False, 
         )
-        save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
+        save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)
 
 def save_mat_file(data, fitter, fits):
     print """

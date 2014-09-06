@@ -533,7 +533,7 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
         f.write(html)
     
 def save_fits_and_create_html(data, fitter, fits=None, basedir=None, 
-                              do_genes=True, do_series=True, do_hist=True, do_html=True, 
+                              do_genes=True, do_series=True, do_hist=True, do_html=True, only_main_html=False,
                               k_of_n=None, 
                               use_correlations=False, correlations=None,
                               html_kw=None):
@@ -549,15 +549,15 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     series_dir = 'gene-region-fits'
     correlations_dir = 'gene-correlations'
     scores_dir = 'score_distributions'
-    if do_genes: # relies on the sharding of the fits respecting gene boundaries
+    if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
-    if do_series:
+    if do_series and not only_main_html:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations)
-    if do_hist and k_of_n is None:
+    if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
         link_to_correlation_plots = use_correlations and correlations is not None
-        if link_to_correlation_plots:
+        if link_to_correlation_plots and not only_main_html:
             plot_and_save_all_gene_correlations(data, correlations, join(basedir,correlations_dir))
         dct_pathways = load_17_pathways_breakdown()
         pathway_genes = set.union(*dct_pathways.values())
