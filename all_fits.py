@@ -71,7 +71,8 @@ def _compute_fit(series, fitter):
         
         # create bootstrap estimates of the parameters
         nSamples = cfg.n_parameter_estimate_bootstrap_samples
-        theta_samples = np.empty((len(theta),nSamples))
+        dtype = fitter.shape.parameter_type()
+        theta_samples = np.empty((len(theta),nSamples), dtype=dtype)
         rng = np.random.RandomState(cfg.random_seed)
         for iSample in range(nSamples):
             noise = rng.normal(0,sigma,x.shape)

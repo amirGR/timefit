@@ -47,8 +47,11 @@ class Shape(object):
     def has_special_fitting(self):
         return hasattr(self,'fit')
 
+    def parameter_type(self): # XXX - we assume all parameters are the same type
+        return float #override where different
+
     def can_export_params_to_matlab(self):
-        return True #override where not possible
+        return self.parameter_type() == float
 
     def bounds(self):
         if self.priors is None:

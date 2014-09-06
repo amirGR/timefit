@@ -28,6 +28,9 @@ class ScaledX(Shape):
     def has_special_fitting(self):
         return self.shape.has_special_fitting()
 
+    def parameter_type(self):
+        return self.shape.parameter_type()        
+
     def can_export_params_to_matlab(self):
         return self.shape.can_export_params_to_matlab()
 
