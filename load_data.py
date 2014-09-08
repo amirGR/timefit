@@ -118,6 +118,13 @@ class GeneData(object):
     @property
     def pathway(self):
         return get_unique(ds.pathway for ds in self.datasets)
+
+    @property
+    def age_range(self):
+        ds_ranges = [ds.age_range for ds in self.datasets]
+        min_age = min(ds_min for ds_min,ds_max in ds_ranges)
+        max_age = max(ds_max for ds_min,ds_max in ds_ranges)
+        return min_age, max_age
         
     @property
     def age_restriction(self):
@@ -221,6 +228,12 @@ class OneDataset(object):
         self.age_restriction = None
         self.age_scaler = None
         self.is_shuffled = False
+        
+    @property
+    def age_range(self):
+        min_age = min(self.ages)
+        max_age = max(self.ages)
+        return min_age, max_age
         
     @staticmethod
     def load(dataset):
