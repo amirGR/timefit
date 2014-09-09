@@ -69,30 +69,10 @@ def _compute_fit(series, fitter):
     else:
         fit_predictions = fitter.shape.f(theta,x)
         
-        # create bootstrap estimates of the parameters
-        
-        # boostrap version 2 - generate from predicted model. Same ages.
+        # create bootstrap estimates of the parameters: resample points + add gaussian noise
         nSamples = cfg.n_parameter_estimate_bootstrap_samples
         dtype = fitter.shape.parameter_type()
         theta_samples = np.empty((len(theta),nSamples), dtype=dtype)
-        rng = np.random.RandomState(cfg.random_seed)
-        for iSample in range(nSamples):
-            noise = rng.normal(0,sigma,x.shape)
-            theta_i, _, _,_ = fitter.fit(x, fit_predictions + noise)
-            theta_samples[:,iSample] = theta_i
-
-        # boostrap version 2 - sample from data points (x,y)
-        theta_samples2 = np.empty((len(theta),nSamples), dtype=dtype)
-        rng = np.random.RandomState(cfg.random_seed)
-        for iSample in range(nSamples):
-            idx = np.floor(rng.rand(len(x))*len(x)).astype(int)
-            x2 = x[idx]
-            y2 = y[idx]
-            theta_i, _, _,_ = fitter.fit(x2, y2)
-            theta_samples2[:,iSample] = theta_i
-
-        # bootstrap version 3 - both of above (resample points + gaussian noise)
-        theta_samples3 = np.empty((len(theta),nSamples), dtype=dtype)
         rng = np.random.RandomState(cfg.random_seed)
         for iSample in range(nSamples):
             idx = np.floor(rng.rand(len(x))*len(x)).astype(int)
@@ -100,7 +80,7 @@ def _compute_fit(series, fitter):
             noise = rng.normal(0,sigma,x.shape)
             y2 = fit_predictions[idx] + noise
             theta_i, _, _,_ = fitter.fit(x2, y2)
-            theta_samples3[:,iSample] = theta_i
+            theta_samples[:,iSample] = theta_i
     
     return Bunch(
         fitter = fitter,
@@ -111,8 +91,6 @@ def _compute_fit(series, fitter):
         LOO_predictions = LOO_predictions,
         LOO_fits = LOO_fits,
         theta_samples = theta_samples,
-        theta_samples2 = theta_samples2,
-        theta_samples3 = theta_samples3,
     )
 
 def save_as_mat_files(data, fitter, fits):
