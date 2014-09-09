@@ -7,6 +7,8 @@ from all_fits import get_all_fits, save_as_mat_files
 from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
+from sigmoid_change_distribution import add_change_distributions
+
 
 def do_fits(data, fitter, k_of_n):
     print """
@@ -74,7 +76,7 @@ blue = strong negative transition.
         )
         save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)
 
-def save_mat_file(data, fitter, fits):
+def save_mat_file(data, fitter, fits, has_change_distributions):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -82,7 +84,7 @@ def save_mat_file(data, fitter, fits):
 ==============================================================================================
 ==============================================================================================
 """
-    save_as_mat_files(data, fitter, fits)
+    save_as_mat_files(data, fitter, fits, has_change_distributions)
 
 def add_predictions_using_correlations(data, fitter, fits):
     correlations = {} # {region -> sigma}
@@ -157,7 +159,10 @@ if __name__ == '__main__':
         fits, correlations = add_predictions_using_correlations(data, fitter, fits)
     else:
         correlations = None
+    has_change_distributions = fitter.shape.cache_name() == 'sigmoid'
+    if has_change_distributions:
+        add_change_distributions(data, fitter, fits)
     if args.html != NOT_USED:
         create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset)
     if args.mat:
-        save_mat_file(data,fitter,fits)
+        save_mat_file(data, fitter, fits, has_change_distributions)

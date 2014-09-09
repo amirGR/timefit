@@ -18,12 +18,11 @@ def plot_onset_times(data, fitter, fits, dct_pathways, R2_threshold):
 
     for i,(pathway_name, genes) in enumerate(sorted(dct_pathways.items())):
         pathway_fits = restrict_genes(fits,genes)
-        bin_edges, change_vals, n_fits = aggregate_change_distribution(pathway_fits, R2_threshold=R2_threshold)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+        bin_centers, weights, n_fits = aggregate_change_distribution(pathway_fits, R2_threshold=R2_threshold)
         linestyles = ['-', '--', '-.']
         style = linestyles[int(i/7)]
         label = '{} ({} fits)'.format(pathway_name, n_fits)
-        ax.plot(bin_centers, change_vals, style, linewidth=3, label=label)
+        ax.plot(bin_centers, weights, style, linewidth=3, label=label)
     ax.legend(loc='best', fontsize=18, frameon=False)
     ax.set_ylabel('expression change magnitude', fontsize=fontsize)
 

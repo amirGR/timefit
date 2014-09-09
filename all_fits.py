@@ -12,10 +12,16 @@ from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
 import scalers
 
+class Fits(dict):
+    # This is just a placeholder for now, till I have the time to refactor this into
+    # a real class and change all the code using it appropriately.
+    # For now the inheritance from dict just allows adding additinal fields, like change_distribution_params 
+    pass 
+
 def get_all_fits(data, fitter, k_of_n=None, allow_new_computation=True):
     """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
     """
-    return {ds.name : _get_dataset_fits(data,ds,fitter,k_of_n,allow_new_computation) for ds in data.datasets}
+    return Fits({ds.name : _get_dataset_fits(data,ds,fitter,k_of_n,allow_new_computation) for ds in data.datasets})
 
 def _get_dataset_fits(data, dataset, fitter, k_of_n=None, allow_new_computation=True):
     def arg_mapper(gr,f_proxy):
@@ -93,7 +99,7 @@ def _compute_fit(series, fitter):
         theta_samples = theta_samples,
     )
 
-def save_as_mat_files(data, fitter, fits):
+def save_as_mat_files(data, fitter, fits, has_change_distributions):
     for dataset in data.datasets:
         filename = join(cache_dir(), fit_results_relative_path(dataset,fitter) + '.mat')
         dataset_fits = fits[dataset.name]
@@ -121,6 +127,13 @@ def save_as_mat_files(data, fitter, fits):
         high_res_predictions = init_array(np.NaN, cfg.n_curve_points_to_plot, n_genes, n_regions)
         scaled_high_res_ages = np.linspace(dataset.ages.min(), dataset.ages.max(), cfg.n_curve_points_to_plot)
         original_high_res_ages = scalers.unify(dataset.age_scaler).unscale(scaled_high_res_ages)
+        if has_change_distributions:
+            change_distribution_bin_centers = fits.change_distribution_params.bin_centers
+            n_bins = len(change_distribution_bin_centers)
+            change_distribution_weights = init_array(np.NaN, n_bins, n_genes, n_regions)
+        else:
+            change_distribution_bin_centers = []
+            change_distribution_weights = []
         for (g,r),fit in dataset_fits.iteritems():
             series = dataset.get_one_series(g,r)
             ig = gene_idx[g]
@@ -132,18 +145,22 @@ def save_as_mat_files(data, fitter, fits):
             fit_predictions[series.original_inds,ig,ir] = fit.fit_predictions
             LOO_predictions[series.original_inds,ig,ir] = fit.LOO_predictions
             high_res_predictions[:,ig,ir] = shape.f(fit.theta, scaled_high_res_ages)
-        
-        mdict = {
-            'gene_names' : list_of_strings_to_matlab_cell_array(gene_names),
-            'region_names' : list_of_strings_to_matlab_cell_array(region_names),
-            'theta' : theta,
-            'fit_scores' : fit_scores,
-            'LOO_scores' : LOO_scores,
-            'fit_predictions' : fit_predictions,
-            'LOO_predictions' : LOO_predictions,
-            'high_res_predictions' : high_res_predictions,
-            'high_res_ages' : original_high_res_ages,
-        }
+            change_weights = getattr(fit,'change_distribution_weights',None)
+            if change_weights is not None:
+                change_distribution_weights[:,ig,ir] = change_weights
+        mdict = dict(
+            gene_names = list_of_strings_to_matlab_cell_array(gene_names),
+            region_names = list_of_strings_to_matlab_cell_array(region_names),
+            theta = theta,
+            fit_scores = fit_scores,
+            LOO_scores = LOO_scores,
+            fit_predictions = fit_predictions,
+            LOO_predictions = LOO_predictions,
+            high_res_predictions = high_res_predictions,
+            high_res_ages = original_high_res_ages,
+            change_distribution_bin_centers = change_distribution_bin_centers,
+            change_distribution_weights = change_distribution_weights,
+        )
         savemat(filename, mdict, oned_as='column')
     
 def restrict_genes(fits, genes):

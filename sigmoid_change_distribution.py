@@ -3,19 +3,17 @@ from sklearn.datasets.base import Bunch
 from all_fits import iterate_fits
 
 def aggregate_change_distribution(fits, R2_threshold=None, b_normalize=False):
+    bin_centers = fits.change_distribution_params.bin_centers
     for i,fit in enumerate(iterate_fits(fits, R2_threshold=R2_threshold)):
-        hist = fit.change_histogram
         if i == 0:
-            bin_edges = hist.bin_edges
-            change_vals = hist.change_vals
+            weights = fit.change_distribution_weights
         else:
-            assert (hist.bin_edges == bin_edges).all()
-            change_vals =+ hist.change_vals
+            weights =+ fit.change_distribution_weights
     n_fits = i + 1
-    change_vals /= n_fits
+    weights /= n_fits
     if b_normalize:
-        change_vals /= sum(change_vals)
-    return bin_edges, change_vals, n_fits
+        weights /= sum(weights)
+    return bin_centers, weights, n_fits
 
 def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
     """ Compute a histogram of "strength of transition" at different ages.
@@ -29,30 +27,31 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
     if age_range is None:
         age_range = data.age_range
     from_age, to_age = age_range
+    bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    fits.change_distribution_params = Bunch(
+        bin_edges = bin_edges,
+        bin_centers = bin_centers,
+    )
 
     for dsname,g,r,fit in iterate_fits(fits, return_keys=True):
         thetas = fit.theta_samples # bootstrap samples of theta values
         n_params, n_samples = thetas.shape
-        bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
-        change_vals = np.zeros(n_bins)
+        weights = np.zeros(n_bins)
         for i in xrange(n_samples):
             t = thetas[:,i]
             a,h,mu,w = t
             edge_vals = shape.f(t,bin_edges)
             changes = np.abs(edge_vals[1:] - edge_vals[:-1])
             # ignore change magnitude per gene - take only distribution of change times
-            change_vals += changes / abs(h)
-        change_vals /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
-        fit.change_histogram = Bunch(
-            bin_edges = bin_edges,
-            change_vals = change_vals,
-        )
+            weights += changes / abs(h)
+        weights /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
+        fit.change_distribution_weights = weights
     return fits
 
-def width_of_change_distribution(bin_edges, change_vals):
-    change_vals = np.array(change_vals, dtype=float) # in case it's a list
-    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
-    change_vals /= np.sum(change_vals) # normalize to make it a PMF
-    x0 = np.sum([x*w for x,w in zip(bin_centers,change_vals)])
-    V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,change_vals)])
+def change_distribution_width_std(bin_centers, weights):
+    weights = np.array(weights, dtype=float) # in case it's a list
+    weights /= np.sum(weights) # normalize to make it a PMF
+    x0 = np.sum([x*w for x,w in zip(bin_centers,weights)])
+    V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,weights)])
     return np.sqrt(V)

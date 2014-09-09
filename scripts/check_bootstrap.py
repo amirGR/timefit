@@ -36,7 +36,7 @@ def plot_bootstrap_histograms(data, fit, n_bins, n_samples):
     ax.plot(bin_centers, changes, 'r-', linewidth=3, label='original fit')
 
     # plot average of all samples
-    changes = fit.change_histogram.change_vals
+    changes = fit.change_distribution_weights
     ax.plot(bin_centers, changes, 'b-', linewidth=3 ,label='average of samples')
     ax.set_ylabel('expression change magnitude', fontsize=cfg.fontsize)
 
