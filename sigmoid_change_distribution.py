@@ -48,3 +48,11 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
             change_vals = change_vals,
         )
     return fits
+
+def width_of_change_distribution(bin_edges, change_vals):
+    change_vals = np.array(change_vals, dtype=float) # in case it's a list
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    change_vals /= np.sum(change_vals) # normalize to make it a PMF
+    x0 = np.sum([x*w for x,w in zip(bin_centers,change_vals)])
+    V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,change_vals)])
+    return np.sqrt(V)
