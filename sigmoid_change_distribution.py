@@ -55,3 +55,13 @@ def change_distribution_width_std(bin_centers, weights):
     x0 = np.sum([x*w for x,w in zip(bin_centers,weights)])
     V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,weights)])
     return np.sqrt(V)
+
+def change_distribution_width_cumsum(bin_centers, weights, threshold=0.8):
+    weights = np.array(weights, dtype=float) # in case it's a list
+    weights /= np.sum(weights) # normalize to make it a PMF
+    bin_width = bin_centers[1] - bin_centers[0] # we assume uniform bins here
+    s = np.cumsum(weights)
+    i_from = np.argmax(s > 0.5 - threshold/2.0)
+    i_to = np.argmax(s > 0.5 + threshold/2.0)
+    width = bin_centers[i_to] - bin_centers[i_from] + bin_width
+    return width
