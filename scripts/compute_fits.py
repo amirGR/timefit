@@ -49,12 +49,12 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
 
     if show_onsets:
         def get_onset_time(fit):
-            a,h,mu,w = fit.theta
-            x_from, x_to = fit.change_distribution_width
+            a,h,mu,w = fit.theta            
+            x_median, x_from, x_to = fit.change_distribution_spread
             if data.age_scaler is None:
-                age = mu
+                age = x_median
             else:
-                age = data.age_scaler.unscale(mu)
+                age = data.age_scaler.unscale(x_median)
                 x_from = data.age_scaler.unscale(x_from)
                 x_to = data.age_scaler.unscale(x_to)
             txt = '{:.2g} </br> <small>({:.2g},{:.2g})</small>'.format(age, x_from, x_to)
@@ -66,8 +66,8 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
 
         top_text = """\
 All onset times are in years. 
-The two numbers (age1,age2) beneath the onset time are the range where most of the transition occurs. 
-The range is estimated using bootstrap samples and may differ from the transition width of the best fit as displayed in the figure. 
+The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. 
+The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
 
 red = strong positive transition.
 blue = strong negative transition.

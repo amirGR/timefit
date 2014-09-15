@@ -47,7 +47,7 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
             weights += changes / abs(h)
         weights /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
         fit.change_distribution_weights = weights
-        fit.change_distribution_width = change_distribution_width_cumsum(bin_centers, weights)
+        fit.change_distribution_spread = change_distribution_spread_cumsum(bin_centers, weights)
     return fits
 
 def change_distribution_width_std(bin_centers, weights):
@@ -57,13 +57,15 @@ def change_distribution_width_std(bin_centers, weights):
     V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,weights)])
     return np.sqrt(V)
 
-def change_distribution_width_cumsum(bin_centers, weights, threshold=0.8):
+def change_distribution_spread_cumsum(bin_centers, weights, threshold=0.8):
     weights = np.array(weights, dtype=float) # in case it's a list
     weights /= np.sum(weights) # normalize to make it a PMF
     bin_width = bin_centers[1] - bin_centers[0] # we assume uniform bins here
     s = np.cumsum(weights)
     i_from = np.argmax(s > 0.5 - threshold/2.0)
     i_to = np.argmax(s > 0.5 + threshold/2.0)
+    i_median = np.argmax(s > 0.5)
     x_from = bin_centers[i_from] - 0.5*bin_width
     x_to = bin_centers[i_to] + 0.5*bin_width
-    return x_from, x_to
+    x_median = bin_centers[i_median]
+    return x_median, x_from, x_to
