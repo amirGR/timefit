@@ -1,7 +1,7 @@
 import numpy as np
 
 verbosity = 0
-random_seed = 0 # None means initialize using time or /dev/urandom
+random_seed = 1 # None means initialize using time or /dev/urandom
 
 fontsize = 30
 xtick_fontsize = 30
