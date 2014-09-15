@@ -50,26 +50,37 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
     if show_onsets:
         def get_onset_time(fit):
             a,h,mu,w = fit.theta
+            x_from, x_to = fit.change_distribution_width
             if data.age_scaler is None:
                 age = mu
             else:
                 age = data.age_scaler.unscale(mu)
-            txt = '{:.2g}'.format(age)
+                x_from = data.age_scaler.unscale(x_from)
+                x_to = data.age_scaler.unscale(x_to)
+            txt = '{:.2g} </br> <small>({:.2g},{:.2g})</small>'.format(age, x_from, x_to)
             if fit.LOO_score > 0.2: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
             else:
                 cls = ''
             return txt,cls
 
-        html_kw = dict(
-            filename = 'onsets',
-            ttl = 'Onset times',
-            top_text = """\
-All onset times are in years.
+        top_text = """\
+All onset times are in years. 
+The two numbers (age1,age2) beneath the onset time are the range where most of the transition occurs. 
+The range is estimated using bootstrap samples and may differ from the transition width of the best fit as displayed in the figure. 
 
 red = strong positive transition.
 blue = strong negative transition.
-""",
+"""
+        if use_correlations:
+            top_text += """
+Click on a region name to see the correlation matrix for that region.
+"""
+
+        html_kw = dict(
+            filename = 'onsets',
+            ttl = 'Onset times',
+            top_text = top_text,
             show_R2 = False,
             extra_fields_per_fit = [get_onset_time],
             b_R2_dist = False, 

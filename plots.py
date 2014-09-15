@@ -432,7 +432,7 @@ Column/row headings and/or cell entries may link to more details for the corresp
                             <br/>
                         {% endif %}
                         <div class="fitField {{cls}}">
-                            <b>{{txt|e}}</b>
+                            <b>{{txt}}</b>
                         </div>
                     {% endfor %}
                 {% else %}
