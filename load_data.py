@@ -1,5 +1,6 @@
 import pickle
 from os.path import join, splitext, basename, isfile
+from collections import defaultdict
 import numpy as np
 from scipy.io import loadmat
 import project_dirs
@@ -250,6 +251,18 @@ class OneDataset(object):
         expression = mat['expression']
         if expression.ndim == 2: # extend shape to represent a single region name
             expression.shape = list(expression.shape)+[1]
+            
+        # average expression for duplicate genes
+        dct = defaultdict(list) # gene_name -> list of indices where it appears
+        for i,g in enumerate(gene_names):
+            dct[g].append(i)
+        new_gene_names = sorted(set(gene_names))
+        new_expression = np.empty([len(ages),len(new_gene_names),len(region_names)])
+        for i,g in enumerate(new_gene_names):
+            idx = dct[g]
+            new_expression[:,i,:] = expression[:,idx,:].mean(axis=1)
+        gene_names = np.array(new_gene_names)
+        expression = new_expression
 
         # make sure ages are sorted (for colantuoni there are 2 datapoints that aren't)
         inds = np.argsort(ages)
@@ -410,4 +423,3 @@ def _translate_gene_list(gene_list):
 
     # not found
     return None,None 
-        
