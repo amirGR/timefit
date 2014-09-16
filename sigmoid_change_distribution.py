@@ -2,6 +2,36 @@ import numpy as np
 from sklearn.datasets.base import Bunch
 from all_fits import iterate_fits
 
+def calc_change_distribution(shape, theta, bin_edges):
+    a,h,mu,w = theta
+    edge_vals = shape.f(theta,bin_edges)
+    changes = np.abs(edge_vals[1:] - edge_vals[:-1])
+    return changes / abs(h) # ignore change magnitude per gene - take only distribution of change times
+    
+def change_distribution_width_std(bin_centers, weights):
+    weights = np.array(weights, dtype=float) # in case it's a list
+    weights /= np.sum(weights) # normalize to make it a PMF
+    x0 = np.sum([x*w for x,w in zip(bin_centers,weights)])
+    V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,weights)])
+    return np.sqrt(V)
+    
+def change_distribution_width_cumsum(bin_centers, weights, threshold=0.8):
+    x_median, x_from, x_to = change_distribution_spread_cumsum(bin_centers, weights, threshold=0.8)
+    return x_to - x_from
+
+def change_distribution_spread_cumsum(bin_centers, weights, threshold=0.8):
+    weights = np.array(weights, dtype=float) # in case it's a list
+    weights /= np.sum(weights) # normalize to make it a PMF
+    bin_width = bin_centers[1] - bin_centers[0] # we assume uniform bins here
+    s = np.cumsum(weights)
+    i_from = np.argmax(s > 0.5 - threshold/2.0)
+    i_to = np.argmax(s > 0.5 + threshold/2.0)
+    i_median = np.argmax(s > 0.5)
+    x_from = bin_centers[i_from] - 0.5*bin_width
+    x_to = bin_centers[i_to] + 0.5*bin_width
+    x_median = bin_centers[i_median]
+    return x_median, x_from, x_to
+
 def aggregate_change_distribution(fits, R2_threshold=None, b_normalize=False):
     bin_centers = fits.change_distribution_params.bin_centers
     for i,fit in enumerate(iterate_fits(fits, R2_threshold=R2_threshold)):
@@ -39,33 +69,9 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
         n_params, n_samples = thetas.shape
         weights = np.zeros(n_bins)
         for i in xrange(n_samples):
-            t = thetas[:,i]
-            a,h,mu,w = t
-            edge_vals = shape.f(t,bin_edges)
-            changes = np.abs(edge_vals[1:] - edge_vals[:-1])
-            # ignore change magnitude per gene - take only distribution of change times
-            weights += changes / abs(h)
+            weights += calc_change_distribution(shape, thetas[:,i], bin_edges)
         weights /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
         fit.change_distribution_weights = weights
         fit.change_distribution_spread = change_distribution_spread_cumsum(bin_centers, weights)
     return fits
-
-def change_distribution_width_std(bin_centers, weights):
-    weights = np.array(weights, dtype=float) # in case it's a list
-    weights /= np.sum(weights) # normalize to make it a PMF
-    x0 = np.sum([x*w for x,w in zip(bin_centers,weights)])
-    V = np.sum([w*(x-x0)**2 for x,w in zip(bin_centers,weights)])
-    return np.sqrt(V)
-
-def change_distribution_spread_cumsum(bin_centers, weights, threshold=0.8):
-    weights = np.array(weights, dtype=float) # in case it's a list
-    weights /= np.sum(weights) # normalize to make it a PMF
-    bin_width = bin_centers[1] - bin_centers[0] # we assume uniform bins here
-    s = np.cumsum(weights)
-    i_from = np.argmax(s > 0.5 - threshold/2.0)
-    i_to = np.argmax(s > 0.5 + threshold/2.0)
-    i_median = np.argmax(s > 0.5)
-    x_from = bin_centers[i_from] - 0.5*bin_width
-    x_to = bin_centers[i_to] + 0.5*bin_width
-    x_median = bin_centers[i_median]
-    return x_median, x_from, x_to
+    
