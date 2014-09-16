@@ -21,9 +21,14 @@ class Sigmoid(Shape):
             w_minus = x_scaler.unscale(mu-w)
             w_plus = x_scaler.unscale(mu+w)
             unscaled_w = 0.5 * (w_plus - w_minus)
-        theta = (a, h, unscaled_mu, unscaled_w)
-        names = self.param_names(latex)
-        return ', '.join('{}={:.2g}'.format(name,val) for name,val in zip(names,theta))
+        theta = [
+            '{:.2g}'.format(a),
+            '{:.2g}'.format(h),
+            '{:.2g} years'.format(unscaled_mu),
+            '{:.2g} years'.format(unscaled_w),
+        ]
+        a_name, h_name, mu_name, w_name = self.param_names(latex)
+        return '{mu_name}={unscaled_mu:.2g} years, {w_name}={unscaled_w:.2g} years'.format(**locals())
 
     def cache_name(self):
         return 'sigmoid'
