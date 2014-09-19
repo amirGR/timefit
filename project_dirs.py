@@ -13,6 +13,9 @@ def resources_dir():
 def data_dir():
     return join(base_dir(), 'data')
 
+def pathways_dir():
+    return join(data_dir(), 'pathways')
+
 def cache_dir():
     return join(base_dir(), 'cache')
 

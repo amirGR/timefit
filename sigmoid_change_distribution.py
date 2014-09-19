@@ -85,7 +85,7 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
     if exists(filename):
         print 'Loading timing d-prime info from {}'.format(filename)
         with open(filename) as f:
-            d_mu, std = pickle.load(f)
+            f_data = pickle.load(f)
     else:
         genes = data.gene_names
         regions = data.region_names 
@@ -110,5 +110,11 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
                     std[ig,ir1,ir2] = math.sqrt(0.5*(std1*std1 + std2*std2))
         print 'Saving timing d-prime info to {}'.format(filename)
         with open(filename,'w') as f:
-            pickle.dump((d_mu,std),f)
-    return d_mu, std
+            f_data = dict(
+                d_mu = d_mu,
+                std = std,
+                genes = genes,
+                regions = regions,
+            )
+            pickle.dump(f_data,f)
+    return f_data
