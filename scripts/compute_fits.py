@@ -7,7 +7,7 @@ from all_fits import get_all_fits, save_as_mat_files
 from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
-from sigmoid_change_distribution import add_change_distributions
+from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs
 
 
 def do_fits(data, fitter, k_of_n):
@@ -141,7 +141,8 @@ if __name__ == '__main__':
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
-    parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table')
+    parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
+    parser.add_argument('--timing_dprime', action='store_true', help='Compute measures for timing differences between all regions (sigmoid only)')
     args = parser.parse_args()
     if args.part is not None and args.mat:
         print '--mat cannot be used with --part'
@@ -156,10 +157,12 @@ if __name__ == '__main__':
         if args.html == NOT_USED:
             print '--correlations only currently makes sense with --html (since fits are not saved)'
             sys.exit(-1)
-    if args.onset:
-        if args.shape != 'sigmoid':
-            print '--onset can only be used with sigmoid fits'
-            sys.exit(-1)
+    if args.onset and args.shape != 'sigmoid':
+        print '--onset can only be used with sigmoid fits'
+        sys.exit(-1)
+    if args.timing_dprime and args.shape != 'sigmoid':
+        print '--timing_dprime can only be used with sigmoid fits'
+        sys.exit(-1)
     if args.onset and args.html == NOT_USED:
         print '--onset should only be used with --html'
         sys.exit(-1)
@@ -172,7 +175,11 @@ if __name__ == '__main__':
         correlations = None
     has_change_distributions = fitter.shape.cache_name() == 'sigmoid'
     if has_change_distributions:
+        print 'Computing change distributions...'
         add_change_distributions(data, fitter, fits)
+        print 'Computing region pair timing measures...'
+        if args.timing_dprime:
+            compute_dprime_measures_for_all_pairs(data, fitter, fits)
     if args.html != NOT_USED:
         create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset)
     if args.mat:
