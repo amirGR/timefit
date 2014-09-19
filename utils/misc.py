@@ -5,6 +5,7 @@ from functools import wraps
 from os import makedirs
 import os.path
 import numpy as np
+import scipy.stats
 import matplotlib.pyplot as plt
 import config as cfg
 
@@ -77,3 +78,8 @@ def covariance_to_correlation(sigma):
     s = np.sqrt(V)
     factors = np.outer(s,s)
     return sigma / factors
+
+def z_score_to_p_value(z):
+    cdf = scipy.stats.norm.cdf(z)
+    pval = 2 * (1-cdf if cdf > 0.5 else cdf) # two sided p-value of the z score
+    return pval
