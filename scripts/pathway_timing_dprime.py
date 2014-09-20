@@ -3,10 +3,12 @@ import pickle
 from os.path import join
 from os import listdir
 import numpy as np
+from scipy.io import savemat
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
 from project_dirs import cache_dir, pathways_dir
 from utils.misc import z_score_to_p_value, cache
+from utils.formats import list_of_strings_to_matlab_cell_array
 
 class RegionPairTiming(object):
     def __init__(self):
@@ -32,6 +34,8 @@ class RegionPairTiming(object):
             pathway_genes = self.pathways[pathway]
             for r1 in self.regions:
                 for r2 in self.regions:
+                    if r2 <= r1: # keep only results "above the diagonal" (r1 < r2 lexicographically)
+                        continue
                     res[(pathway,r1,r2)] = self.analyze_pathway_and_region_pair(pathway_genes, r1, r2)
         return res
 
@@ -100,5 +104,29 @@ class RegionPairTiming(object):
         genes = [x.strip() for x in lines] # remove newlines
         return [x for x in genes if x] # rmeove empty strings
 
+class TimingResults(object):
+    def __init__(self, res):
+        self.res = res
+        flat = [
+            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, pval=v.pval)
+            for (p,r1,r2),v in res.iteritems()
+        ]
+        self.sorted_res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
+        
+    def save_to_mat(self, filename):
+        mdict = dict(
+            pathway = list_of_strings_to_matlab_cell_array([x.pathway for x in self.sorted_res]),
+            r1 = list_of_strings_to_matlab_cell_array([x.r1 for x in self.sorted_res]),
+            r2 = list_of_strings_to_matlab_cell_array([x.r2 for x in self.sorted_res]),
+            score = np.array([x.score for x in self.sorted_res]),
+            delta = np.array([x.delta for x in self.sorted_res]),
+            weighted_delta = np.array([x.weighted_delta for x in self.sorted_res]),
+            pval = np.array([x.pval for x in self.sorted_res]),
+        )
+        
+        print 'Saving results to {}'.format(filename)
+        savemat(filename, mdict, oned_as='column')
+
 timing = RegionPairTiming()
-res = timing.analyze_all_pathways()
+res = TimingResults(timing.analyze_all_pathways())
+res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
