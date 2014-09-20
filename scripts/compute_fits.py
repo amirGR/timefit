@@ -21,7 +21,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets):
+def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -35,6 +35,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         k_of_n = k_of_n, 
         use_correlations = use_correlations,
         correlations = correlations,
+        show_change_distributions = show_change_distributions,
     )
     
     if show_onsets:
@@ -181,6 +182,6 @@ if __name__ == '__main__':
         if args.timing_dprime:
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
     if args.html != NOT_USED:
-        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset)
+        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset, show_change_distributions=has_change_distributions)
     if args.mat:
         save_mat_file(data, fitter, fits, has_change_distributions)

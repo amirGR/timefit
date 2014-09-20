@@ -6,6 +6,7 @@ from all_fits import get_all_fits, iterate_fits
 from fit_score import loo_score
 import os.path
 from os.path import join, isfile
+from sklearn.datasets.base import Bunch
 from utils.statsmodels_graphics.correlation import plot_corr
 from project_dirs import resources_dir, results_dir, fit_results_relative_path
 from utils.misc import ensure_dir, interactive, rect_subplot
@@ -69,7 +70,7 @@ def _plot_gene_inner(g,region_series_fits):
     fig.suptitle('Gene {}'.format(g))
     return fig
 
-def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, ax=None):
+def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, ax=None):
     x = series.ages
     y = series.single_expression
     b_subplot = ax is not None
@@ -83,7 +84,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, ax=Non
         ax.set_ylabel('expression level', fontsize=cfg.fontsize)
         ax.set_xlabel('age', fontsize=cfg.fontsize)
     ttl = '{}@{}'.format(series.gene_name, series.region_name)
-    
+
     # set the development stages as x labels
     stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
     ax.set_xticks([stage.central_age for stage in stages])
@@ -93,6 +94,14 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, ax=Non
     ymin, ymax = ax.get_ylim()
     birth_age = scalers.unify(series.age_scaler).scale(0)
     ax.plot([birth_age, birth_age], [ymin, ymax], '--', color='0.85')
+
+    # plot change distribution if provided
+    if change_distribution:
+        centers = change_distribution.centers
+        width = centers[1] - centers[0]
+        weights = change_distribution.weights
+        weights *= 0.9 * (ymax - ymin) / weights.max()
+        ax.bar(centers, weights, width=width, bottom=ymin, color='g', alpha=0.1)
 
     if shape is not None and theta is not None:
         # add fit parameters to title
@@ -161,7 +170,7 @@ def _plot_genes_job(gene,region_series_fits,filename):
         fig = _plot_gene_inner(gene,region_series_fits)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations):
+def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions):
     ensure_dir(dirname)
     to_plot = []
     for dsfits in fits.itervalues():
@@ -171,18 +180,29 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations):
                 print 'Figure already exists for {}@{}. skipping...'.format(g,r)
                 continue
             series = data.get_one_series(g,r)
-            to_plot.append((series,fit,filename,use_correlations))
-    pool = Parallel(_plot_series_job)
-    pool(pool.delay(*args) for args in to_plot)
+            if show_change_distributions:
+                change_distribution = Bunch(
+                    centers = fits.change_distribution_params.bin_centers,
+                    weights = fit.change_distribution_weights,
+                )
+            else:
+                change_distribution = None
+            to_plot.append((series,fit,filename,use_correlations, change_distribution))
+    if cfg.parallel_run_locally:
+        for args in to_plot:
+            _plot_series_job(*args)
+    else:
+        pool = Parallel(_plot_series_job)
+        pool(pool.delay(*args) for args in to_plot)
 
-def _plot_series_job(series, fit, filename, use_correlations):
+def _plot_series_job(series, fit, filename, use_correlations, change_distribution):
     with interactive(False):
         print 'Saving figure for {}@{}'.format(series.gene_name, series.region_name)
         if use_correlations:
             preds = fit.with_correlations.LOO_predictions
         else:
             preds = fit.LOO_predictions
-        fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds)
+        fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds, change_distribution=change_distribution)
         save_figure(fig, filename, b_close=True)
 
 def get_scores_from_fits(fits, use_correlations):
@@ -536,6 +556,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
                               do_genes=True, do_series=True, do_hist=True, do_html=True, only_main_html=False,
                               k_of_n=None, 
                               use_correlations=False, correlations=None,
+                              show_change_distributions=False,
                               html_kw=None):
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
@@ -552,7 +573,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
     if do_series and not only_main_html:
-        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations)
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions)
     if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
