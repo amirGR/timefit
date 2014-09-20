@@ -110,11 +110,6 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
                     std[ig,ir1,ir2] = math.sqrt(0.5*(std1*std1 + std2*std2))
         print 'Saving timing d-prime info to {}'.format(filename)
         with open(filename,'w') as f:
-            f_data = dict(
-                d_mu = d_mu,
-                std = std,
-                genes = genes,
-                regions = regions,
-            )
+            f_data = dict(d_mu=d_mu, std=std, genes=genes, regions=regions)
             pickle.dump(f_data,f)
     return f_data

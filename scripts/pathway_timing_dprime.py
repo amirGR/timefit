@@ -50,11 +50,11 @@ class RegionPairTiming(object):
         z = (score - mu) / sigma
         pval = z_score_to_p_value(z)
 
-        pathway_d_mu = [self.d_mu[ig,ir1,ir2] for ig in pathway_ig]
-        pathway_std = [self.std[ig,ir1,ir2] for ig in pathway_ig]
-        delta = sum(pathway_d_mu)
-        weights = [1/sigma for sigma in pathway_std] / sum(pathway_std)
-        weighted_delta = sum([w*d_mu_i for w,d_mu_i in zip(weights,pathway_d_mu)])
+        pathway_d_mu = self.d_mu[pathway_ig,ir1,ir2]
+        pathway_std = self.std[pathway_ig,ir1,ir2]
+        delta = np.mean(pathway_d_mu)
+        weights = 1/pathway_std
+        weighted_delta = np.dot(weights, pathway_d_mu) / sum(weights)
         return Bunch(
             score = score,
             delta = delta,
@@ -127,6 +127,13 @@ class TimingResults(object):
         print 'Saving results to {}'.format(filename)
         savemat(filename, mdict, oned_as='column')
 
+    def print_top_results(self, n=10):
+        for x in self.sorted_res[:n]:
+            logpval = -np.log10(x.pval)
+            print '{x.pathway}, {x.r1} {x.r2}: -log10(pval)={logpval:.2g}, score={x.score:.2g}, delta={x.delta:.2g}, weighted_delta={x.weighted_delta:.2g}'.format(**locals())
+
 timing = RegionPairTiming()
 res = TimingResults(timing.analyze_all_pathways())
 res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
+res.print_top_results()
+
