@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from functools import wraps
 from os import makedirs
 import os.path
+import pickle
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt
@@ -83,3 +84,20 @@ def z_score_to_p_value(z):
     cdf = scipy.stats.norm.cdf(z)
     pval = 2 * (1-cdf if cdf > 0.5 else cdf) # two sided p-value of the z score
     return pval
+
+def cache(filename, name='data'):
+    def deco(func):
+        @wraps(func)
+        def _wrapper(*a, **kw):
+            if os.path.exists(filename):
+                print 'Loading {} from {}'.format(name, filename)
+                with open(filename) as f:
+                    res = pickle.load(f)
+            else:
+                res = func(*a,**kw)
+                print 'Saving {} to {}'.format(name, filename)
+                with open(filename,'w') as f:
+                    pickle.dump(res,f)
+            return res
+        return _wrapper
+    return deco

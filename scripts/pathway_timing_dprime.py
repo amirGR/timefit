@@ -1,12 +1,12 @@
 import setup
 import pickle
-from os.path import join, exists
+from os.path import join
 from os import listdir
 import numpy as np
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
 from project_dirs import cache_dir, pathways_dir
-from utils.misc import z_score_to_p_value
+from utils.misc import z_score_to_p_value, cache
 
 class RegionPairTiming(object):
     def __init__(self):
@@ -24,6 +24,7 @@ class RegionPairTiming(object):
 
         self.baseline = self.baseline_distribution_all_pairs(100, 10000)
 
+    @cache(filename = join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.pkl'))
     def analyze_all_pathways(self):
         res = {} # (pathway,r1,r2) -> timing results
         for pathway in self.pathways.iterkeys():
@@ -57,25 +58,17 @@ class RegionPairTiming(object):
             pval = pval,
         )
 
+    @cache(filename = join(cache_dir(), 'both', 'dprime-baseline.pkl'))
     def baseline_distribution_all_pairs(self, sample_size, n_samples):
-        filename = join(cache_dir(), 'both', 'dprime-baseline.pkl')
-        if exists(filename):
-            print 'Loading timing d-prime baseline distribution from {}'.format(filename)
-            with open(filename) as f:
-                res = pickle.load(f)
-        else:
-            res = {}
-            for r1 in self.regions:
-                print 'Sampling baseline distribution of {} vs. all other regions'.format(r1)
-                for r2 in self.regions:
-                    if (r2,r1) in res:
-                        mu,sigma = res[(r2,r1)]
-                        res[(r1,r2)] = -mu,sigma
-                    else:
-                        res[(r1,r2)] = self.baseline_distribution_one_pair(r1, r2, sample_size, n_samples)
-            print 'Saving timing d-prime baseline distribution to {}'.format(filename)
-            with open(filename,'w') as f:
-                pickle.dump(res,f)
+        res = {}
+        for r1 in self.regions:
+            print 'Sampling baseline distribution of {} vs. all other regions'.format(r1)
+            for r2 in self.regions:
+                if (r2,r1) in res:
+                    mu,sigma = res[(r2,r1)]
+                    res[(r1,r2)] = -mu,sigma
+                else:
+                    res[(r1,r2)] = self.baseline_distribution_one_pair(r1, r2, sample_size, n_samples)
         return res
 
     def baseline_distribution_one_pair(self, r1, r2, sample_size, n_samples):
