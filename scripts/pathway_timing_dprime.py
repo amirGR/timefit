@@ -6,7 +6,7 @@ import numpy as np
 from scipy.io import savemat
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
-from project_dirs import cache_dir, pathways_dir
+from project_dirs import cache_dir, pathways_dir, results_dir
 from utils.misc import z_score_to_p_value, cache
 from utils.formats import list_of_strings_to_matlab_cell_array
 
@@ -19,7 +19,8 @@ class RegionPairTiming(object):
         self.regions = info['regions']
         self.g2i = {g:i for i,g in enumerate(self.genes)}
         self.r2i = {r:i for i,r in enumerate(self.regions)}
-
+        self.age_scaler = info['age_scaler']
+        self.mu = info['mu']
         self.d_mu = info['d_mu']
         self.std = info['std']
         self.scores = self.d_mu / self.std
@@ -59,6 +60,8 @@ class RegionPairTiming(object):
             score = score,
             delta = delta,
             weighted_delta = weighted_delta,
+            mu1_years = self.age_scaler.unscale(np.mean(self.mu[pathway_ig,ir1])),
+            mu2_years = self.age_scaler.unscale(np.mean(self.mu[pathway_ig,ir2])),
             pval = pval,
         )
 
@@ -108,7 +111,7 @@ class TimingResults(object):
     def __init__(self, res):
         self.res = res
         flat = [
-            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, pval=v.pval)
+            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval)
             for (p,r1,r2),v in res.iteritems()
         ]
         self.sorted_res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
@@ -121,19 +124,27 @@ class TimingResults(object):
             score = np.array([x.score for x in self.sorted_res]),
             delta = np.array([x.delta for x in self.sorted_res]),
             weighted_delta = np.array([x.weighted_delta for x in self.sorted_res]),
+            mu1_years = np.array([x.mu1_years for x in self.sorted_res]),
+            mu2_years = np.array([x.mu2_years for x in self.sorted_res]),
             pval = np.array([x.pval for x in self.sorted_res]),
         )
         
         print 'Saving results to {}'.format(filename)
         savemat(filename, mdict, oned_as='column')
 
-    def print_top_results(self, n=10):
-        for x in self.sorted_res[:n]:
-            logpval = -np.log10(x.pval)
-            print '{x.pathway}, {x.r1} {x.r2}: -log10(pval)={logpval:.2g}, score={x.score:.2g}, delta={x.delta:.2g}, weighted_delta={x.weighted_delta:.2g}'.format(**locals())
+    def save_top_results(self, n=50):
+        filename = join(results_dir(), 'dprime-top-results.txt')
+        print 'Saving top {} results to {}'.format(n,filename)
+        with open(filename,'w') as f:
+            header = '{:<55}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
+            print >>f, header
+            print >>f, '-'*len(header)
+            for x in self.sorted_res[:n]:
+                logpval = -np.log10(x.pval)
+                print >>f, '{x.pathway:<55}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
 timing = RegionPairTiming()
 res = TimingResults(timing.analyze_all_pathways())
 res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
-res.print_top_results()
+res.save_top_results()
 
