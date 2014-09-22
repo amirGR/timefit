@@ -53,15 +53,16 @@ class RegionPairTiming(object):
 
         pathway_d_mu = self.d_mu[pathway_ig,ir1,ir2]
         pathway_std = self.std[pathway_ig,ir1,ir2]
-        delta = np.mean(pathway_d_mu)
+        delta = nanmean(pathway_d_mu)
         weights = 1/pathway_std
-        weighted_delta = np.dot(weights, pathway_d_mu) / sum(weights)
+        valid = ~np.isnan(pathway_d_mu) # needed for the PFC region from colantuoni which doesn't contain all genes
+        weighted_delta = np.dot(weights[valid], pathway_d_mu[valid]) / sum(weights[valid])
         return Bunch(
             score = score,
             delta = delta,
             weighted_delta = weighted_delta,
-            mu1_years = self.age_scaler.unscale(np.mean(self.mu[pathway_ig,ir1])),
-            mu2_years = self.age_scaler.unscale(np.mean(self.mu[pathway_ig,ir2])),
+            mu1_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir1])),
+            mu2_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir2])),
             pval = pval,
         )
 
