@@ -37,7 +37,8 @@ class RegionPairTiming(object):
                 for r2 in self.regions:
                     if r2 <= r1: # keep only results "above the diagonal" (r1 < r2 lexicographically)
                         continue
-                    res[(pathway,r1,r2)] = self.analyze_pathway_and_region_pair(pathway_genes, r1, r2)
+                    pathway_res = self.analyze_pathway_and_region_pair(pathway_genes, r1, r2)
+                    res[(pathway,r1,r2)] = pathway_res
         return res
 
     def analyze_pathway_and_region_pair(self, pathway_genes, r1, r2):
@@ -53,17 +54,25 @@ class RegionPairTiming(object):
 
         pathway_d_mu = self.d_mu[pathway_ig,ir1,ir2]
         pathway_std = self.std[pathway_ig,ir1,ir2]
-        delta = nanmean(pathway_d_mu)
         weights = 1/pathway_std
-        valid = ~np.isnan(pathway_d_mu) # needed for the PFC region from colantuoni which doesn't contain all genes
+        valid = ~np.isnan(pathway_d_mu) # needed for the PFC region from colantuoni which doesn't contain all genes\
         weighted_delta = np.dot(weights[valid], pathway_d_mu[valid]) / sum(weights[valid])
+        delta = nanmean(pathway_d_mu)
+        too_many_nans = False
+        if not valid.all():
+            assert r1 == 'PFC' or r2 == 'PFC', "r1={}, r2={}".format(r1,r2)
+            n_genes = len(valid)
+            n_non_valid = n_genes - np.count_nonzero(valid)
+            if float(n_non_valid)/n_genes > 0.05:
+                too_many_nans = True
         return Bunch(
-            score = score,
-            delta = delta,
-            weighted_delta = weighted_delta,
-            mu1_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir1])),
-            mu2_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir2])),
-            pval = pval,
+            score = score if not too_many_nans else np.nan,
+            delta = delta if not too_many_nans else np.nan,
+            weighted_delta = weighted_delta if not too_many_nans else np.nan,
+            mu1_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir1])) if not too_many_nans else np.nan,
+            mu2_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir2])) if not too_many_nans else np.nan,
+            pval = pval if not too_many_nans else np.nan,
+            pathway_size = len(pathway_genes),
         )
 
     @cache(filename = join(cache_dir(), 'both', 'dprime-baseline.pkl'))
@@ -112,8 +121,9 @@ class TimingResults(object):
     def __init__(self, res):
         self.res = res
         flat = [
-            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval)
+            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval, pathway_size=v.pathway_size)
             for (p,r1,r2),v in res.iteritems()
+            if not np.isnan(v.score)
         ]
         self.sorted_res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
         
@@ -128,6 +138,7 @@ class TimingResults(object):
             mu1_years = np.array([x.mu1_years for x in self.sorted_res]),
             mu2_years = np.array([x.mu2_years for x in self.sorted_res]),
             pval = np.array([x.pval for x in self.sorted_res]),
+            pathway_size = np.array([x.pathway_size for x in self.sorted_res]),
         )
         
         print 'Saving results to {}'.format(filename)
