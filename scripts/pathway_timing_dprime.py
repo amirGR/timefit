@@ -144,7 +144,7 @@ class TimingResults(object):
                 print >>f, '{x.pathway:<55}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
 timing = RegionPairTiming()
-res = TimingResults(timing.analyze_all_pathways())
+res = TimingResults(timing.analyze_all_pathways(force=True))
 res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
 res.save_top_results()
 

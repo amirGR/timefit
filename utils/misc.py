@@ -89,7 +89,8 @@ def cache(filename, name='data'):
     def deco(func):
         @wraps(func)
         def _wrapper(*a, **kw):
-            if os.path.exists(filename):
+            force = kw.pop('force', False)
+            if not force and os.path.exists(filename):
                 print 'Loading {} from {}'.format(name, filename)
                 with open(filename) as f:
                     res = pickle.load(f)
