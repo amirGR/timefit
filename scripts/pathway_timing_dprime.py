@@ -148,12 +148,12 @@ class TimingResults(object):
         filename = join(results_dir(), 'dprime-top-results.txt')
         print 'Saving top {} results to {}'.format(n,filename)
         with open(filename,'w') as f:
-            header = '{:<55}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
+            header = '{:<55}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
             print >>f, header
             print >>f, '-'*len(header)
             for x in self.sorted_res[:n]:
                 logpval = -np.log10(x.pval)
-                print >>f, '{x.pathway:<55}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
+                print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
 timing = RegionPairTiming()
 res = TimingResults(timing.analyze_all_pathways(force=True))
