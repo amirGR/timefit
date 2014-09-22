@@ -412,9 +412,8 @@ def _translate_gene_list(gene_list):
         return None, gene_list 
 
     # try to find a matching filename and read the data from it
-    path = gene_list
     pathway_name = splitext(basename(gene_list))[0] # use the file's basename (without extension) as the pathway name
-    for path in [gene_list, join(project_dirs.data_dir(),gene_list)]:
+    for path in [gene_list, join(project_dirs.data_dir(),gene_list), join(project_dirs.pathways_dir(),gene_list)]:
         if isfile(path):
             if cfg.verbosity > 0:
                 print 'Reading gene list from {}'.format(path)

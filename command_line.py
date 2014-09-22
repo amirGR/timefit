@@ -28,7 +28,7 @@ def get_common_parser(include_pathway=True):
     group.add_argument("-q", "--quiet", action="count", default=0, help="decrease output verbosity")    
     parser.add_argument('--dataset', default='both', help='Default: both', choices=['kang2011', 'colantuoni2011', 'both'])  
     if include_pathway:
-        parser.add_argument('--pathway', default='serotonin', help='Default: serotonin', choices=['all'] + cfg.pathways.keys())
+        parser.add_argument('--pathway', default='serotonin', help='Default: serotonin') #, choices=['all'] + cfg.pathways.keys())
     parser.add_argument('--from_age', help='Use only data points with larger ages than this. Default: all ages', choices=dct_ages.keys())
     parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', choices=allowed_scaler_names())
     parser.add_argument('--shuffle', help='Shuffle the y-values of the data', action='store_true')
