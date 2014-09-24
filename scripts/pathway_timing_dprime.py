@@ -130,44 +130,55 @@ class RegionPairTiming(object):
 
 class TimingResults(object):
     def __init__(self, res):
-        self.res = res
         flat = [
             Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval, pathway_size=v.pathway_size)
             for (p,r1,r2),v in res.iteritems()
             if not np.isnan(v.score)
         ]
-        self.sorted_res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
+        self.res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
+        
+    def filter_regions(self, include=None, exclude=None):
+        if include is None: 
+            include = set(x.r1 for x in self.res) | set(x.r2 for x in self.res)
+        else:
+            include = set(include)
+        if exclude is None: 
+            exclude = set()
+        else:
+            exclude = set(exclude)
+        self.res = [x for x in self.res if (x.r1 in include or x.r2 in include) and not (x.r1 in exclude or x.r2 in exclude)]
+        return self
         
     def save_to_mat(self, filename):
         mdict = dict(
-            pathway = list_of_strings_to_matlab_cell_array([x.pathway for x in self.sorted_res]),
-            r1 = list_of_strings_to_matlab_cell_array([x.r1 for x in self.sorted_res]),
-            r2 = list_of_strings_to_matlab_cell_array([x.r2 for x in self.sorted_res]),
-            score = np.array([x.score for x in self.sorted_res]),
-            delta = np.array([x.delta for x in self.sorted_res]),
-            weighted_delta = np.array([x.weighted_delta for x in self.sorted_res]),
-            mu1_years = np.array([x.mu1_years for x in self.sorted_res]),
-            mu2_years = np.array([x.mu2_years for x in self.sorted_res]),
-            pval = np.array([x.pval for x in self.sorted_res]),
-            pathway_size = np.array([x.pathway_size for x in self.sorted_res]),
+            pathway = list_of_strings_to_matlab_cell_array([x.pathway for x in self.res]),
+            r1 = list_of_strings_to_matlab_cell_array([x.r1 for x in self.res]),
+            r2 = list_of_strings_to_matlab_cell_array([x.r2 for x in self.res]),
+            score = np.array([x.score for x in self.res]),
+            delta = np.array([x.delta for x in self.res]),
+            weighted_delta = np.array([x.weighted_delta for x in self.res]),
+            mu1_years = np.array([x.mu1_years for x in self.res]),
+            mu2_years = np.array([x.mu2_years for x in self.res]),
+            pval = np.array([x.pval for x in self.res]),
+            pathway_size = np.array([x.pathway_size for x in self.res]),
         )
         
         print 'Saving results to {}'.format(filename)
         savemat(filename, mdict, oned_as='column')
 
-    def save_top_results(self, n=50):
-        filename = join(results_dir(), 'dprime-top-results.txt')
+    def save_top_results(self, filename, n=50):
         print 'Saving top {} results to {}'.format(n,filename)
         with open(filename,'w') as f:
             header = '{:<55}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
             print >>f, header
             print >>f, '-'*len(header)
-            for x in self.sorted_res[:n]:
+            for x in self.res[:n]:
                 logpval = -np.log10(x.pval)
                 print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
 timing = RegionPairTiming()
-res = TimingResults(timing.analyze_all_pathways(force=True))
+res = timing.analyze_all_pathways(force=False)
+res = TimingResults(res)
 res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
-res.save_top_results()
-
+res.save_top_results(join(results_dir(), 'dprime-top-results.txt'))
+res.filter_regions(exclude=['CBC']).save_top_results(join(results_dir(), 'dprime-top-results-no-CBC.txt'))
