@@ -21,6 +21,7 @@ class RegionPairTiming(object):
         self.r2i = {r:i for i,r in enumerate(self.regions)}
         self.age_scaler = info['age_scaler']
         self.mu = info['mu']
+        self.single_std = info['single_std']
         self.d_mu = info['d_mu']
         self.std = info['std']
         self.scores = self.d_mu / self.std
@@ -56,8 +57,9 @@ class RegionPairTiming(object):
         pathway_std = self.std[pathway_ig,ir1,ir2]
         weights = 1/pathway_std
         valid = ~np.isnan(pathway_d_mu) # needed for the PFC region from colantuoni which doesn't contain all genes\
-        weighted_delta = np.dot(weights[valid], pathway_d_mu[valid]) / sum(weights[valid])
-        delta = nanmean(pathway_d_mu)
+        weights, pathway_d_mu = weights[valid], pathway_d_mu[valid]
+        weighted_delta = np.dot(weights, pathway_d_mu) / sum(weights)
+        delta = np.mean(pathway_d_mu)
         too_many_nans = False
         if not valid.all():
             assert r1 == 'PFC' or r2 == 'PFC', "r1={}, r2={}".format(r1,r2)
@@ -65,12 +67,21 @@ class RegionPairTiming(object):
             n_non_valid = n_genes - np.count_nonzero(valid)
             if float(n_non_valid)/n_genes > 0.05:
                 too_many_nans = True
+        def mean_age(ir):
+            if too_many_nans:
+                return np.NaN            
+            ages = self.mu[pathway_ig,ir]
+            weights = 1/self.single_std[pathway_ig,ir]
+            valid = ~np.isnan(weights)
+            weights, ages = weights[valid], ages[valid]
+            age = np.dot(weights,ages) / sum(weights)
+            return self.age_scaler.unscale(age)
         return Bunch(
             score = score if not too_many_nans else np.nan,
             delta = delta if not too_many_nans else np.nan,
             weighted_delta = weighted_delta if not too_many_nans else np.nan,
-            mu1_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir1])) if not too_many_nans else np.nan,
-            mu2_years = self.age_scaler.unscale(nanmean(self.mu[pathway_ig,ir2])) if not too_many_nans else np.nan,
+            mu1_years = mean_age(ir1),
+            mu2_years = mean_age(ir2),
             pval = pval if not too_many_nans else np.nan,
             pathway_size = len(pathway_genes),
         )
