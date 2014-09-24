@@ -49,6 +49,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
     save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
 
     if show_onsets:
+        R2_color_threshold = 0.2
         def get_onset_time(fit):
             a,h,mu,w = fit.theta            
             x_median, x_from, x_to = fit.change_distribution_spread
@@ -59,7 +60,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
                 x_from = data.age_scaler.unscale(x_from)
                 x_to = data.age_scaler.unscale(x_to)
             txt = '{:.2g} </br> <small>({:.2g},{:.2g})</small>'.format(age, x_from, x_to)
-            if fit.LOO_score > 0.2: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
+            if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
             else:
                 cls = ''
@@ -70,9 +71,10 @@ All onset times are in years.
 The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. 
 The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
 
-red = strong positive transition.
-blue = strong negative transition.
-"""
+red = strong positive transition (R2 > {R2_color_threshold} and expression level increases with age)
+blue = strong negative transition (R2 > {R2_color_threshold} and expression level decreases with age)
+(for assessing transition strength, R2 above is LOO R2 without using correlations between genes)
+""".format(**locals())
         if use_correlations:
             top_text += """
 Click on a region name to see the correlation matrix for that region.
