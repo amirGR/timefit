@@ -7,7 +7,8 @@ from all_fits import get_all_fits, save_as_mat_files
 from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
-from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs
+from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, compute_fraction_of_change
+from dev_stages import get_stage_by_name
 
 
 def do_fits(data, fitter, k_of_n):
@@ -49,8 +50,9 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
     save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
 
     if show_onsets:
+        bin_edges = fits.change_distribution_params.bin_edges
         R2_color_threshold = 0.2
-        def get_onset_time(fit):
+        def get_change_distribution_info(fit):
             a,h,mu,w = fit.theta            
             x_median, x_from, x_to = fit.change_distribution_spread
             if data.age_scaler is None:
@@ -59,7 +61,9 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
                 age = data.age_scaler.unscale(x_median)
                 x_from = data.age_scaler.unscale(x_from)
                 x_to = data.age_scaler.unscale(x_to)
-            txt = '{:.2g} </br> <small>({:.2g},{:.2g})</small>'.format(age, x_from, x_to)
+            stage = get_stage_by_name('Adolescence')
+            pct_of_change = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, stage.from_age, stage.to_age)
+            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) </br> {stage.short_name}={pct_of_change:.2g}%</small>'.format(**locals())
             if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
             else:
@@ -85,7 +89,7 @@ Click on a region name to see the correlation matrix for that region.
             ttl = 'Onset times',
             top_text = top_text,
             show_R2 = False,
-            extra_fields_per_fit = [get_onset_time],
+            extra_fields_per_fit = [get_change_distribution_info],
             b_R2_dist = False, 
         )
         save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)

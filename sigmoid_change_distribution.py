@@ -115,3 +115,16 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
             f_data = dict(mu=mu, d_mu=d_mu, std=std, genes=genes, regions=regions, age_scaler=data.age_scaler)
             pickle.dump(f_data,f)
     return f_data
+
+def compute_fraction_of_change(weights, bin_edges, x_from, x_to, normalize=False):
+    total = 0
+    for weight, bin_from, bin_to in zip(weights,bin_edges[:-1],bin_edges[1:]):
+        bin_width = bin_to - bin_from
+        effective_from = max(x_from, bin_from)
+        effective_to = min(x_to, bin_to)
+        effective_width = effective_to - effective_from
+        if effective_width > 0:
+            total += weight * effective_width/bin_width
+    if normalize:
+        total /= sum(weights)
+    return total

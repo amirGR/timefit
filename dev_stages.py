@@ -71,6 +71,14 @@ dev_stages = [
     DevStage(15,'Late adulthood', 'LA', 60, 80),
 ]
 
+def get_stage_by_name(name, b_short=False):
+    def name_getter(stage): return stage.short_name if b_short else stage.name
+    for stage in dev_stages:
+        if name_getter(stage) == name:
+            return stage
+    else:
+        raise Exception('Development stage {} not found'.format(name))
+
 def map_age_to_stage(age):
     for i,stage in enumerate(dev_stages):
         if age < stage.to_age:
