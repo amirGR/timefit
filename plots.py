@@ -408,9 +408,7 @@ def create_html(data, fitter, fits,
     <a href={{href}}>{{txt}}</a>
 {% endfor %}
 {% if top_text %}
-<pre>
 {{ top_text }}
-</pre>
 {% endif %}
 <P>
 Column/row headings and/or cell entries may link to more details for the corresponding entity.

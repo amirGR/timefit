@@ -55,15 +55,16 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         def get_change_distribution_info(fit):
             a,h,mu,w = fit.theta            
             x_median, x_from, x_to = fit.change_distribution_spread
+            stage = get_stage_by_name('Adolescence')
             if data.age_scaler is None:
                 age = x_median
             else:
                 age = data.age_scaler.unscale(x_median)
                 x_from = data.age_scaler.unscale(x_from)
                 x_to = data.age_scaler.unscale(x_to)
-            stage = get_stage_by_name('Adolescence')
+                stage = stage.scaled(data.age_scaler)
             pct_of_change = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, stage.from_age, stage.to_age)
-            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) </br> {stage.short_name}={pct_of_change:.2g}%</small>'.format(**locals())
+            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_of_change:.2g}%] </small>'.format(**locals())
             if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
             else:
@@ -71,17 +72,20 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
             return txt,cls
 
         top_text = """\
-All onset times are in years. 
-The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. 
+All onset times are in years. <br/>
+The main number is the median age. The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. </br>
+The percentage in square brackets is the fraction of the change that happens during adolescence. </br>
 The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
-
-red = strong positive transition (R2 > {R2_color_threshold} and expression level increases with age)
-blue = strong negative transition (R2 > {R2_color_threshold} and expression level decreases with age)
+</p>
+<p>
+red = strong positive transition (R2 > {R2_color_threshold} and expression level increases with age) </br>
+blue = strong negative transition (R2 > {R2_color_threshold} and expression level decreases with age) </br>
 (for assessing transition strength, R2 above is LOO R2 without using correlations between genes)
+</p>
 """.format(**locals())
         if use_correlations:
             top_text += """
-Click on a region name to see the correlation matrix for that region.
+<p>Click on a region name to see the correlation matrix for that region.</p>
 """
 
         html_kw = dict(

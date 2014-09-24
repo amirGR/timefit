@@ -37,9 +37,11 @@ def create_top_genes_html(data, fitter, fits, scores, regions, n_top=None, filen
     n05 = len([g for g,pval,qval in scores if qval < 0.05])
     n01 = len([g for g,pval,qval in scores if qval < 0.01])
     top_text = """\
+<pre>
 one sided t-test: {regions[0]} < {regions[1]}
 {n05}/{n} q-values < 0.05
 {n01}/{n} q_values < 0.01
+</pre>
 """.format(**locals())
     
     def get_onset_time(fit):
