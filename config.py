@@ -7,6 +7,7 @@ fontsize = 30
 xtick_fontsize = 30
 ytick_fontsize = 30
 equation_fontsize = 36
+minimal_annotation_fontsize = 10
 default_figure_size_x = 18.5
 default_figure_size_x_square = 12.5
 default_figure_size_y = 10.5

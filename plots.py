@@ -52,43 +52,47 @@ def _extract_gene_data(data, g, fits=None):
         raise Exception('Gene not found in the data')
     return region_series_fits
 
-def _plot_gene_inner(g,region_series_fits):
+def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None):
     fig = plt.figure()
     nRows, nCols = rect_subplot(len(region_series_fits))
     for iRegion,(r,series,fit) in enumerate(region_series_fits):
         ax = fig.add_subplot(nRows,nCols,iRegion+1)
-        ax.plot(series.ages,series.single_expression,'ro')
-        if fit is not None and fit.theta is not None:
-            x_smooth,y_smooth = fit.fitter.shape.high_res_preds(fit.theta, series.ages)
-            ax.plot(x_smooth, y_smooth, 'b-', linewidth=2)
+        if change_distribution_bin_centers is None:
+            change_distribution = None
+        else:
+            change_distribution = Bunch(
+                centers = change_distribution_bin_centers,
+                weights = fit.change_distribution_weights,
+            )
+        plot_one_series(series, fit.fitter.shape, fit.theta, change_distribution=change_distribution, minimal_annotations=True, ax=ax)
         ax.set_title('Region {}'.format(r))
         if iRegion % nCols == 0:
             ax.set_ylabel('expression level')
-        if iRegion / nRows == nRows-1:
-            ax.set_xlabel('age')
     fig.tight_layout(h_pad=0,w_pad=0)
     fig.suptitle('Gene {}'.format(g))
     return fig
 
-def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, ax=None):
+def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, minimal_annotations=False, ax=None):
     x = series.ages
     y = series.single_expression
     b_subplot = ax is not None
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
+    fontsize = cfg.minimal_annotation_fontsize if minimal_annotations else cfg.fontsize
     
     # plot the data points
-    ax.plot(series.ages, y, 'ks', markersize=8)
+    markersize = 8 if not minimal_annotations else 4
+    ax.plot(series.ages, y, 'ks', markersize=markersize)
     if not b_subplot:
-        ax.set_ylabel('expression level', fontsize=cfg.fontsize)
-        ax.set_xlabel('age', fontsize=cfg.fontsize)
+        ax.set_ylabel('expression level', fontsize=fontsize)
+        ax.set_xlabel('age', fontsize=fontsize)
     ttl = '{}@{}'.format(series.gene_name, series.region_name)
 
     # set the development stages as x labels
     stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
     ax.set_xticks([stage.central_age for stage in stages])
-    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=cfg.xtick_fontsize, fontstretch='condensed', rotation=90)    
+    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=fontsize, fontstretch='condensed', rotation=90)    
     
     # mark birth time with a vertical line
     ymin, ymax = ax.get_ylim()
@@ -125,11 +129,13 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
                 label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0 else None
                 ax.plot([xi, xi], [yi, y_loo], '-', color='0.5', label=label)
                 ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
-        ax.legend(fontsize=cfg.fontsize, frameon=False)
+        if not minimal_annotations:
+            ax.legend(fontsize=fontsize, frameon=False)
         
-    ax.tick_params(axis='y', labelsize=cfg.fontsize)
-    if not b_subplot:
-        ax.set_title(ttl, fontsize=cfg.fontsize)
+    if not minimal_annotations:
+        ax.tick_params(axis='y', labelsize=fontsize)
+        if not b_subplot:
+            ax.set_title(ttl, fontsize=fontsize)
     return ax.figure
 
 def plot_series(series, shape=None, theta=None, LOO_predictions=None):
@@ -147,7 +153,7 @@ def plot_series(series, shape=None, theta=None, LOO_predictions=None):
     fig.suptitle('Region {}'.format(series.region_name), fontsize=cfg.fontsize)
     return fig
 
-def plot_and_save_all_genes(data, fitter, fits, dirname):
+def plot_and_save_all_genes(data, fitter, fits, dirname, show_change_distributions):
     ensure_dir(dirname)
     to_plot = []
     genes = set() # use the genes from the fits and not from 'data' to support sharding (k_of_n)
@@ -159,15 +165,19 @@ def plot_and_save_all_genes(data, fitter, fits, dirname):
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
             continue
-        region_series_fits = _extract_gene_data(data,g,fits)            
-        to_plot.append((g,region_series_fits,filename))
+        region_series_fits = _extract_gene_data(data,g,fits)
+        if show_change_distributions:
+            bin_centers = fits.change_distribution_params.bin_centers
+        else:
+            bin_centers = None
+        to_plot.append((g,region_series_fits,filename, bin_centers))
     pool = Parallel(_plot_genes_job)
     pool(pool.delay(*args) for args in to_plot)
 
-def _plot_genes_job(gene,region_series_fits,filename):
+def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
     with interactive(False):
         print 'Saving figure for gene {}'.format(gene)
-        fig = _plot_gene_inner(gene,region_series_fits)
+        fig = _plot_gene_inner(gene, region_series_fits, change_distribution_bin_centers=bin_centers)
         save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions):
@@ -571,7 +581,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     correlations_dir = 'gene-correlations'
     scores_dir = 'score_distributions'
     if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
-        plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir))
+        plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir), show_change_distributions)
     if do_series and not only_main_html:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions)
     if do_hist and k_of_n is None and not only_main_html:
