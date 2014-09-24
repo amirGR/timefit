@@ -94,6 +94,7 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
         d_mu = np.empty(cube_shape) # mu2-mu1 for all genes and region pairs
         std = np.empty(cube_shape) # std (combined) for all genes and region pairs
         mu = np.empty(cube_shape[:-1])
+        single_std = np.empty(cube_shape[:-1])
         def get_mu_std(g,r):
             dsfits = fits[r2ds[r]]
             fit = dsfits.get((g,r))
@@ -106,13 +107,14 @@ def compute_dprime_measures_for_all_pairs(data, fitter, fits):
             for ir1,r1 in enumerate(regions):
                 mu1, std1 = get_mu_std(g,r1)
                 mu[ig,ir1] = mu1
+                single_std[ig,ir1] = std1
                 for ir2,r2 in enumerate(regions):
                     mu2, std2 = get_mu_std(g,r2)
                     d_mu[ig,ir1,ir2] = mu2 - mu1
                     std[ig,ir1,ir2] = math.sqrt(0.5*(std1*std1 + std2*std2))
         print 'Saving timing d-prime info to {}'.format(filename)
         with open(filename,'w') as f:
-            f_data = dict(mu=mu, d_mu=d_mu, std=std, genes=genes, regions=regions, age_scaler=data.age_scaler)
+            f_data = dict(mu=mu, single_std=single_std, d_mu=d_mu, std=std, genes=genes, regions=regions, age_scaler=data.age_scaler)
             pickle.dump(f_data,f)
     return f_data
 
