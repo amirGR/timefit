@@ -135,6 +135,13 @@ class TimingResults(object):
             for (p,r1,r2),v in res.iteritems()
             if not np.isnan(v.score)
         ]
+        for x in flat:
+            if x.score < 0: # reorder regions so r1 transition is before r2
+                x.r1, x.r2 = x.r2, x.r1
+                x.mu1_years, x.mu2_years = x.mu2_years, x.mu1_years
+                x.score = -x.score
+                x.delta = -x.delta
+                x.weighted_delta = -x.weighted_delta
         self.res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
         
     def filter_regions(self, include=None, exclude=None):
