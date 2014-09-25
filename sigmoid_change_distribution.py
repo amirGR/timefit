@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.datasets.base import Bunch
 from all_fits import iterate_fits
 from project_dirs import cache_dir, fit_results_relative_path
+from utils.misc import cache
 
 def calc_change_distribution(shape, theta, bin_edges):
     a,h,mu,w = theta
@@ -80,43 +81,33 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
         fit.change_distribution_spread = change_distribution_spread_cumsum(bin_centers, weights)
         fit.change_distribution_mean_std = change_distribution_mean_and_std(bin_centers, weights)
 
+@cache(lambda data, fitter, fits: join(cache_dir(), fit_results_relative_path(data,fitter) + '-dprime.pkl'))
 def compute_dprime_measures_for_all_pairs(data, fitter, fits):
-    filename = join(cache_dir(), fit_results_relative_path(data,fitter) + '-dprime.pkl')
-    if exists(filename):
-        print 'Loading timing d-prime info from {}'.format(filename)
-        with open(filename) as f:
-            f_data = pickle.load(f)
-    else:
-        genes = data.gene_names
-        regions = data.region_names 
-        r2ds = data.region_to_dataset()        
-        cube_shape = (len(genes), len(regions), len(regions))
-        d_mu = np.empty(cube_shape) # mu2-mu1 for all genes and region pairs
-        std = np.empty(cube_shape) # std (combined) for all genes and region pairs
-        mu = np.empty(cube_shape[:-1])
-        single_std = np.empty(cube_shape[:-1])
-        def get_mu_std(g,r):
-            dsfits = fits[r2ds[r]]
-            fit = dsfits.get((g,r))
-            if fit is None:
-                return np.nan, np.nan
-            else:
-                return fit.change_distribution_mean_std
-            
-        for ig,g in enumerate(genes):
-            for ir1,r1 in enumerate(regions):
-                mu1, std1 = get_mu_std(g,r1)
-                mu[ig,ir1] = mu1
-                single_std[ig,ir1] = std1
-                for ir2,r2 in enumerate(regions):
-                    mu2, std2 = get_mu_std(g,r2)
-                    d_mu[ig,ir1,ir2] = mu2 - mu1
-                    std[ig,ir1,ir2] = math.sqrt(0.5*(std1*std1 + std2*std2))
-        print 'Saving timing d-prime info to {}'.format(filename)
-        with open(filename,'w') as f:
-            f_data = dict(mu=mu, single_std=single_std, d_mu=d_mu, std=std, genes=genes, regions=regions, age_scaler=data.age_scaler)
-            pickle.dump(f_data,f)
-    return f_data
+    genes = data.gene_names
+    regions = data.region_names 
+    r2ds = data.region_to_dataset()        
+    cube_shape = (len(genes), len(regions), len(regions))
+    d_mu = np.empty(cube_shape) # mu2-mu1 for all genes and region pairs
+    std = np.empty(cube_shape) # std (combined) for all genes and region pairs
+    mu = np.empty(cube_shape[:-1])
+    single_std = np.empty(cube_shape[:-1])
+    def get_mu_std(g,r):
+        dsfits = fits[r2ds[r]]
+        fit = dsfits.get((g,r))
+        if fit is None:
+            return np.nan, np.nan
+        else:
+            return fit.change_distribution_mean_std
+    for ig,g in enumerate(genes):
+        for ir1,r1 in enumerate(regions):
+            mu1, std1 = get_mu_std(g,r1)
+            mu[ig,ir1] = mu1
+            single_std[ig,ir1] = std1
+            for ir2,r2 in enumerate(regions):
+                mu2, std2 = get_mu_std(g,r2)
+                d_mu[ig,ir1,ir2] = mu2 - mu1
+                std[ig,ir1,ir2] = math.sqrt(0.5*(std1*std1 + std2*std2))
+    return dict(mu=mu, single_std=single_std, d_mu=d_mu, std=std, genes=genes, regions=regions, age_scaler=data.age_scaler)
 
 def compute_fraction_of_change(weights, bin_edges, x_from, x_to, normalize=False):
     total = 0
