@@ -1,4 +1,5 @@
 import setup
+import argparse
 import pickle
 from os.path import join
 from os import listdir
@@ -6,13 +7,14 @@ import numpy as np
 from scipy.io import savemat
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
-from project_dirs import cache_dir, pathways_dir, results_dir
+from project_dirs import cache_dir, pathways_dir, pathway_lists_dir, results_dir
 from utils.misc import z_score_to_p_value, cache
 from utils.formats import list_of_strings_to_matlab_cell_array
 
 class RegionPairTiming(object):
-    def __init__(self):
-        self.pathways = self.read_all_pathways()
+    def __init__(self, listname='all'):
+        self.listname = listname
+        self.pathways = self.read_all_pathways(listname)
 
         info = self.read_timing_info()
         self.genes = info['genes']
@@ -28,7 +30,7 @@ class RegionPairTiming(object):
 
         self.baseline = self.baseline_distribution_all_pairs(100, 10000)
 
-    @cache(filename = join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.pkl'))
+    @cache(lambda self: join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.pkl'.format(self.listname)))
     def analyze_all_pathways(self):
         res = {} # (pathway,r1,r2) -> timing results
         for pathway in self.pathways.iterkeys():
@@ -117,8 +119,19 @@ class RegionPairTiming(object):
             info = pickle.load(f)
         return info
 
-    def read_all_pathways(self):
-        pathway_names = [f[:-4] for f in listdir(pathways_dir()) if f.endswith('.txt')]
+    @staticmethod
+    def pathway_lists():
+        return listdir(pathway_lists_dir())
+
+    def read_all_pathways(self, listname='all'):
+        if listname == 'all':
+            pathway_names = [f[:-4] for f in listdir(pathways_dir()) if f.endswith('.txt')]
+        else:
+            listfile = join(pathway_lists_dir(),listname)
+            with open(listfile) as f:
+                lines = f.readlines()
+            pathway_names = [x.strip() for x in lines] # remove newlines
+            pathway_names = [x for x in pathway_names if x] # rmeove empty strings
         return {pathway: self.read_gene_names(pathway) for pathway in pathway_names}
     
     def read_gene_names(self, pathway):
@@ -183,9 +196,17 @@ class TimingResults(object):
                 logpval = -np.log10(x.pval)
                 print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
-timing = RegionPairTiming()
-res = timing.analyze_all_pathways(force=False)
-res = TimingResults(res)
-res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
-res.save_top_results(join(results_dir(), 'dprime-top-results.txt'))
-res.filter_regions(exclude=['CBC']).save_top_results(join(results_dir(), 'dprime-top-results-no-CBC.txt'))
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--list', help='Pathways list name. Default=all pathways', default='all', choices=['all'] + RegionPairTiming.pathway_lists())
+    parser.add_argument('-f', '--force', help='Force recomputation of pathway dprime measures', action='store_true')
+    parser.add_argument('--mat', help='Export analysis to mat file', action='store_true')
+    args = parser.parse_args()
+    
+    timing = RegionPairTiming(args.list)
+    res = timing.analyze_all_pathways(force=args.force)
+    res = TimingResults(res)
+    if args.mat:
+        res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
+    res.save_top_results(join(results_dir(), 'dprime-top-results-{}.txt'.format(timing.listname)))
+    res.filter_regions(exclude=['CBC']).save_top_results(join(results_dir(), 'dprime-top-results-no-CBC-{}.txt'.format(timing.listname)))

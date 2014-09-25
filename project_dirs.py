@@ -16,6 +16,9 @@ def data_dir():
 def pathways_dir():
     return join(data_dir(), 'pathways')
 
+def pathway_lists_dir():
+    return join(data_dir(), 'pathways', 'pathway_lists')
+
 def cache_dir():
     return join(base_dir(), 'cache')
 
