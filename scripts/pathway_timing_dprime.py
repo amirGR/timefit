@@ -207,6 +207,6 @@ if __name__ == '__main__':
     res = timing.analyze_all_pathways(force=args.force)
     res = TimingResults(res)
     if args.mat:
-        res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions.mat'))
+        res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.mat'.format(timing.listname)))
     res.save_top_results(join(results_dir(), 'dprime-top-results-{}.txt'.format(timing.listname)))
     res.filter_regions(exclude=['CBC']).save_top_results(join(results_dir(), 'dprime-top-results-no-CBC-{}.txt'.format(timing.listname)))
