@@ -3,6 +3,7 @@ import argparse
 import pickle
 from os.path import join
 from os import listdir
+from collections import defaultdict
 import numpy as np
 from scipy.io import savemat
 from scipy.stats import nanmean
@@ -42,7 +43,7 @@ class RegionPairTiming(object):
                         continue
                     pathway_res = self.analyze_pathway_and_region_pair(pathway_genes, r1, r2)
                     res[(pathway,r1,r2)] = pathway_res
-        return res
+        return TimingResults.fromResultsDct(res, self.listname)
 
     def analyze_pathway_and_region_pair(self, pathway_genes, r1, r2):
         ir1, ir2 = self.r2i[r1], self.r2i[r2]
@@ -142,34 +143,67 @@ class RegionPairTiming(object):
         return [x for x in genes if x] # rmeove empty strings
 
 class TimingResults(object):
-    def __init__(self, res):
-        flat = [
-            Bunch(pathway=p, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval, pathway_size=v.pathway_size)
-            for (p,r1,r2),v in res.iteritems()
-            if not np.isnan(v.score)
-        ]
-        for x in flat:
-            if x.score < 0: # reorder regions so r1 transition is before r2
-                x.r1, x.r2 = x.r2, x.r1
-                x.mu1_years, x.mu2_years = x.mu2_years, x.mu1_years
-                x.score = -x.score
-                x.delta = -x.delta
-                x.weighted_delta = -x.weighted_delta
-        self.res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
+    @staticmethod
+    def fromResultsDct(dct_res, listname):
+        def canonical_form(k,v):
+            pathway,r1,r2 = k
+            if v.score >= 0:
+                return Bunch(pathway=pathway, r1=r1, r2=r2, score=v.score, delta=v.delta, weighted_delta=v.weighted_delta, mu1_years=v.mu1_years, mu2_years=v.mu2_years, pval=v.pval, pathway_size=v.pathway_size)
+            else:
+                return Bunch(pathway=pathway, r1=r2, r2=r1, score=-v.score, delta=-v.delta, weighted_delta=-v.weighted_delta, mu1_years=v.mu2_years, mu2_years=v.mu1_years, pval=v.pval, pathway_size=v.pathway_size)
+        flat = [canonical_form(k,v) for k,v in dct_res.iteritems() if not np.isnan(v.score)]
+        res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
+        return TimingResults(res, listname)
         
-    def filter_regions(self, include=None, exclude=None):
-        if include is None: 
-            include = set(x.r1 for x in self.res) | set(x.r2 for x in self.res)
-        else:
-            include = set(include)
-        if exclude is None: 
-            exclude = set()
-        else:
-            exclude = set(exclude)
-        self.res = [x for x in self.res if (x.r1 in include or x.r2 in include) and not (x.r1 in exclude or x.r2 in exclude)]
-        return self
+    def __init__(self, res, listname, include=None, include_both=None, exclude=None):
+        self.res = res[:] # avoid aliasing
+        self.listname = listname
+        self.include = set(include) if include is not None else None
+        self.include_both = set(include_both) if include_both is not None else None
+        self.exclude = set(exclude) if exclude is not None else None
+        self._apply_region_filter()
         
-    def save_to_mat(self, filename):
+    def _apply_region_filter(self):
+        include = self.include if self.include is not None else self.all_regions
+        include_both = self.include_both if self.include_both is not None else self.all_regions
+        exclude = self.exclude if self.exclude is not None else set()
+        self.res = [x for x in self.res if (x.r1 in include or x.r2 in include) and (x.r1 in include_both and x.r2 in include_both) and not (x.r1 in exclude or x.r2 in exclude)]
+
+    @property
+    def all_regions(self):
+        return set(x.r1 for x in self.res) | set(x.r2 for x in self.res)
+        
+    @property
+    def _filename_suffix(self):
+        suffix = self.listname
+        if self.include is not None:
+            suffix += '-only-' + '-'.join(sorted(self.include))
+        if self.include_both is not None:
+            suffix += '-onlyboth-' + '-'.join(sorted(self.include_both))
+        if self.exclude is not None:
+            suffix += '-no-' + '-'.join(sorted(self.exclude))
+        return suffix
+        
+    def filter_regions(self, include=None, include_both=None, exclude=None):
+        if self.include is not None:
+            if include is None:
+                include = self.include
+            else:
+                include = self.include & set(include)
+        if self.include_both is not None:
+            if include_both is None:
+                include_both = self.include_both
+            else:
+                include_both = self.include_both & set(include_both)
+        if self.exclude is not None:
+            if exclude is None:
+                exclude = self.exclude
+            else:
+                exclude = self.exclude | set(exclude)
+        return TimingResults(self.res, self.listname, include=include, include_both=include_both, exclude=exclude)            
+        
+    def save_to_mat(self):
+        filename = join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.mat'.format(self._filename_suffix))
         mdict = dict(
             pathway = list_of_strings_to_matlab_cell_array([x.pathway for x in self.res]),
             r1 = list_of_strings_to_matlab_cell_array([x.r1 for x in self.res]),
@@ -182,11 +216,11 @@ class TimingResults(object):
             pval = np.array([x.pval for x in self.res]),
             pathway_size = np.array([x.pathway_size for x in self.res]),
         )
-        
         print 'Saving results to {}'.format(filename)
         savemat(filename, mdict, oned_as='column')
 
-    def save_top_results(self, filename, n=50):
+    def save_top_results(self, n=50):
+        filename = join(results_dir(), 'dprime-top-results-{}.txt'.format(self._filename_suffix))
         print 'Saving top {} results to {}'.format(n,filename)
         with open(filename,'w') as f:
             header = '{:<55}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
@@ -199,14 +233,21 @@ class TimingResults(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--list', help='Pathways list name. Default=all pathways', default='all', choices=['all'] + RegionPairTiming.pathway_lists())
+    parser.add_argument('--include', help='whitespace separated list of regions to include (region pair included if at least one of the regions is in the list). Default=all')
+    parser.add_argument('--both', help='whitespace separated list of regions to include (region pair included if BOTH of the regions are in the list). Default=all')
+    parser.add_argument('--exclude', help='whitespace separated list of regions to exclude. Default=None')
     parser.add_argument('-f', '--force', help='Force recomputation of pathway dprime measures', action='store_true')
     parser.add_argument('--mat', help='Export analysis to mat file', action='store_true')
     args = parser.parse_args()
+    if args.exclude is not None:
+        args.exclude = args.exclude.split()
+    if args.include is not None:
+        args.include = args.include.split()
+    if args.both is not None:
+        args.both = args.both.split()
     
     timing = RegionPairTiming(args.list)
-    res = timing.analyze_all_pathways(force=args.force)
-    res = TimingResults(res)
+    res = timing.analyze_all_pathways(force=args.force).filter_regions(exclude=args.exclude, include=args.include, include_both=args.both)
     if args.mat:
-        res.save_to_mat(join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.mat'.format(timing.listname)))
-    res.save_top_results(join(results_dir(), 'dprime-top-results-{}.txt'.format(timing.listname)))
-    res.filter_regions(exclude=['CBC']).save_top_results(join(results_dir(), 'dprime-top-results-no-CBC-{}.txt'.format(timing.listname)))
+        res.save_to_mat()
+    res.save_top_results()
