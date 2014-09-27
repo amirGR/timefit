@@ -43,7 +43,7 @@ class RegionPairTiming(object):
                         continue
                     pathway_res = self.analyze_pathway_and_region_pair(pathway_genes, r1, r2)
                     res[(pathway,r1,r2)] = pathway_res
-        return TimingResults.fromResultsDct(res, self.listname)
+        return TimingResults.fromResultsDct(res, self.listname, self.pathways)
 
     def analyze_pathway_and_region_pair(self, pathway_genes, r1, r2):
         ir1, ir2 = self.r2i[r1], self.r2i[r2]
@@ -144,7 +144,7 @@ class RegionPairTiming(object):
 
 class TimingResults(object):
     @staticmethod
-    def fromResultsDct(dct_res, listname):
+    def fromResultsDct(dct_res, listname, pathways):
         def canonical_form(k,v):
             pathway,r1,r2 = k
             if v.score >= 0:
@@ -153,11 +153,12 @@ class TimingResults(object):
                 return Bunch(pathway=pathway, r1=r2, r2=r1, score=-v.score, delta=-v.delta, weighted_delta=-v.weighted_delta, mu1_years=v.mu2_years, mu2_years=v.mu1_years, pval=v.pval, pathway_size=v.pathway_size)
         flat = [canonical_form(k,v) for k,v in dct_res.iteritems() if not np.isnan(v.score)]
         res = sorted(flat, key=lambda x: -np.log10(x.pval), reverse=True)
-        return TimingResults(res, listname)
+        return TimingResults(res, listname, pathways)
         
-    def __init__(self, res, listname, include=None, include_both=None, exclude=None):
+    def __init__(self, res, listname, pathways, include=None, include_both=None, exclude=None):
         self.res = res[:] # avoid aliasing
         self.listname = listname
+        self.pathways = pathways
         self.include = set(include) if include is not None else None
         self.include_both = set(include_both) if include_both is not None else None
         self.exclude = set(exclude) if exclude is not None else None
@@ -172,9 +173,13 @@ class TimingResults(object):
     @property
     def all_regions(self):
         return set(x.r1 for x in self.res) | set(x.r2 for x in self.res)
+
+    @property
+    def all_pathways(self):
+        return set(x.pathway for x in self.res)
         
     @property
-    def _filename_suffix(self):
+    def filename_suffix(self):
         suffix = self.listname
         if self.include is not None:
             suffix += '-only-' + '-'.join(sorted(self.include))
@@ -200,7 +205,7 @@ class TimingResults(object):
                 exclude = self.exclude
             else:
                 exclude = self.exclude | set(exclude)
-        return TimingResults(self.res, self.listname, include=include, include_both=include_both, exclude=exclude)            
+        return TimingResults(self.res, self.listname, self.pathways, include=include, include_both=include_both, exclude=exclude)            
         
     def save_to_mat(self):
         filename = join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.mat'.format(self._filename_suffix))
@@ -220,7 +225,7 @@ class TimingResults(object):
         savemat(filename, mdict, oned_as='column')
 
     def save_top_results(self, n=50):
-        filename = join(results_dir(), 'dprime-top-results-{}.txt'.format(self._filename_suffix))
+        filename = join(results_dir(), 'dprime-top-results-{}.txt'.format(self.filename_suffix))
         print 'Saving top {} results to {}'.format(n,filename)
         with open(filename,'w') as f:
             header = '{:<55}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
@@ -229,6 +234,42 @@ class TimingResults(object):
             for x in self.res[:n]:
                 logpval = -np.log10(x.pval)
                 print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
+
+class RegionOrdering(object):
+    def __init__(self, timing_results):
+        self.timing = timing_results
+        self.lst_orders = self._region_ordering()
+        
+    def _region_ordering(self):
+        regions = self.timing.all_regions
+        pathways = self.timing.all_pathways
+        dct_before = defaultdict(dict) # {pathway -> {region -> set of regions with transition before this region}}
+        for pathway in pathways: # make sure dictionary includes all pathways and regions
+            for r in regions:
+                dct_before[pathway][r] = set()
+        for x in self.timing.res: # res is already sorted so r1 is before r2
+            dct_before[x.pathway][x.r2].add(x.r1)
+        lst_orders = []
+        for pathway, dct in dct_before.iteritems():
+            ranks = [(r,len(s)) for r,s in dct.iteritems()]
+            ranks.sort(key=lambda x: x[1])
+            lst_orders.append( (pathway, [r for r,rank in ranks]) )
+        lst_orders.sort(key = lambda x: x[1])
+        return lst_orders
+        
+    def save(self):
+        filename = join(results_dir(), 'dprime-region-ordering-{}.txt'.format(self.timing.filename_suffix))
+        print 'Saving ordering results to {}'.format(filename)
+        with open(filename,'w') as f:
+            header = '{:<60}{:<7}{}'.format('pathway', 'nGenes', 'Regions (early to late)')
+            print >>f, header
+            print >>f, '-'*len(header)
+            for pathway,ordered_regions in self.lst_orders:
+                pathway_size = len(self.timing.pathways[pathway])
+                if len(pathway) > 55:
+                    pathway = pathway[:55] + '...'
+                ordered_regions = ' '.join(ordered_regions)
+                print >>f, '{pathway:<60}{pathway_size:<7}{ordered_regions}'.format(**locals())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -251,3 +292,6 @@ if __name__ == '__main__':
     if args.mat:
         res.save_to_mat()
     res.save_top_results()
+
+    region_ordering = RegionOrdering(res)
+    region_ordering.save()
