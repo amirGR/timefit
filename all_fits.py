@@ -1,5 +1,5 @@
 from os.path import join
-import pickle
+import cPickle as pickle
 from itertools import product
 import numpy as np
 from scipy.io import savemat

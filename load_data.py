@@ -1,4 +1,4 @@
-import pickle
+import cPickle as pickle
 from os.path import join, splitext, basename, isfile
 from collections import defaultdict
 import numpy as np

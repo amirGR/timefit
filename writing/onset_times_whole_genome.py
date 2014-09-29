@@ -1,6 +1,6 @@
 import setup
 from os.path import join, isfile, dirname
-import pickle
+import cPickle as pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import config as cfg

@@ -1,6 +1,5 @@
 import math
-import pickle
-from os.path import join, exists
+from os.path import join
 import numpy as np
 from sklearn.datasets.base import Bunch
 from all_fits import iterate_fits

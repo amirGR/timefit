@@ -1,4 +1,4 @@
-import pickle
+import cPickle as pickle
 from sklearn.externals import joblib
 from . import misc
 import config as cfg

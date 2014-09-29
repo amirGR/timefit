@@ -8,7 +8,7 @@ This handles embarrasingly parallel computations, where the computation is a big
 from a set of keys to the result of the computation on them.
 """
 
-import pickle
+import cPickle as pickle
 import os
 import shutil
 from os.path import dirname, join, isfile, isdir

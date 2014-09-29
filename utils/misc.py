@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from functools import wraps
 from os import makedirs
 import os.path
-import pickle
+import cPickle as pickle
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt

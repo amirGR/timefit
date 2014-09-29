@@ -1,5 +1,5 @@
 import setup
-import pickle
+import cPickle as pickle
 from collections import defaultdict
 from os.path import join
 import numpy as np

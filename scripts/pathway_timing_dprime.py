@@ -1,6 +1,6 @@
 import setup
 import argparse
-import pickle
+import cPickle as pickle
 from os.path import join
 from os import listdir
 from collections import defaultdict
