@@ -1,37 +1,14 @@
 import setup
-import argparse
 from os.path import join
-from os import listdir
 from collections import defaultdict
 import numpy as np
 from scipy.io import savemat
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
-from project_dirs import cache_dir, pathways_dir, pathway_lists_dir, results_dir
+from project_dirs import cache_dir, results_dir
 from utils.misc import z_score_to_p_value, cache, load_pickle
 from utils.formats import list_of_strings_to_matlab_cell_array
-from load_data import load_kang_tree_distances
-
-def all_pathway_lists():
-    return listdir(pathway_lists_dir())
-
-def read_all_pathways(listname='all'):
-    if listname == 'all':
-        pathway_names = [f[:-4] for f in listdir(pathways_dir()) if f.endswith('.txt')]
-    else:
-        listfile = join(pathway_lists_dir(),listname)
-        with open(listfile) as f:
-            lines = f.readlines()
-        pathway_names = [x.strip() for x in lines] # remove newlines
-        pathway_names = [x for x in pathway_names if x] # rmeove empty strings
-    return {pathway: read_pathway(pathway) for pathway in pathway_names}
-
-def read_pathway(pathway):
-    filename = join(pathways_dir(), pathway + '.txt')
-    with open(filename) as f:
-        lines = f.readlines()
-    genes = [x.strip() for x in lines] # remove newlines
-    return [x for x in genes if x] # rmeove empty strings
+from single_region import SingleRegion
 
 ##############################################################
 # RegionPairTiming
@@ -39,22 +16,22 @@ def read_pathway(pathway):
 class RegionPairTiming(object):
     def __init__(self, listname='all'):
         self.listname = listname
-        self.pathways = read_all_pathways(listname)
+        self.single = SingleRegion(listname)
+        self.pathways = self.single.pathways
+        self.genes = self.single.genes
+        self.regions = self.single.regions
+        self.g2i = self.single.g2i
+        self.r2i = self.single.r2i
+        self.age_scaler = self.single.age_scaler
+        self.mu = self.single.mu
+        self.single_std = self.single.std
 
-        cube_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl')
-        cube = load_pickle(cube_filename, name='timing d-prime info for all genes and region pairs')
-        change_dist_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-change-dist.pkl')
-        change_dist = load_pickle(change_dist_filename, 'change distribution for all genes and regions')
-
-        self.genes = change_dist['genes']
-        self.regions = change_dist['regions']
-        self.g2i = {g:i for i,g in enumerate(self.genes)}
-        self.r2i = {r:i for i,r in enumerate(self.regions)}
-        self.age_scaler = change_dist['age_scaler']
-        self.mu = change_dist['mu']
-        self.single_std = change_dist['std']
-        self.d_mu = cube['d_mu']
-        self.pair_std = cube['std']
+        cube = load_pickle(
+            filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl'), 
+            name='timing d-prime info for all genes and region pairs'
+        )
+        self.d_mu = cube.d_mu
+        self.pair_std = cube.std
         self.scores = self.d_mu / self.pair_std
 
         self.baseline = self.baseline_distribution_all_pairs(100, 10000)
@@ -116,21 +93,6 @@ class RegionPairTiming(object):
             pval = pval if not too_many_nans else np.nan,
             pathway_size = len(pathway_genes),
         )
-
-    def region_timings_per_pathway(self):
-        def mean_age(pathway_genes, r):
-            pathway_ig = [self.g2i[g] for g in pathway_genes]
-            ir = self.r2i[r]
-            ages = self.mu[pathway_ig,ir]
-            weights = 1/self.single_std[pathway_ig,ir]
-            age = np.dot(weights,ages) / sum(weights)
-            return self.age_scaler.unscale(age)
-
-        res = {} # pathway -> { r -> mu }
-        for pathway in self.pathways.iterkeys():
-            pathway_genes = self.pathways[pathway]
-            res[pathway] = {r : mean_age(pathway_genes, r) for r in self.regions}
-        return res
 
     @cache(filename = join(cache_dir(), 'both', 'dprime-baseline.pkl'))
     def baseline_distribution_all_pairs(self, sample_size, n_samples):
@@ -257,118 +219,4 @@ class TimingResults(object):
             for x in self.res[:n]:
                 logpval = -np.log10(x.pval)
                 print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
-
-##############################################################
-# RegionOrdering
-##############################################################
-class RegionOrdering(object):
-    def __init__(self, timing_results):
-        self.timing = timing_results
-        self.lst_orders = self._region_ordering()
-        
-    def _region_ordering(self):
-        regions = self.timing.all_regions
-        pathways = self.timing.all_pathways
-        dct_before = defaultdict(dict) # {pathway -> {region -> set of regions with transition before this region}}
-        for pathway in pathways: # make sure dictionary includes all pathways and regions
-            for r in regions:
-                dct_before[pathway][r] = set()
-        for x in self.timing.res: # res is already sorted so r1 is before r2
-            dct_before[x.pathway][x.r2].add(x.r1)
-        lst_orders = []
-        for pathway, dct in dct_before.iteritems():
-            ranks = [(r,len(s)) for r,s in dct.iteritems()]
-            ranks.sort(key=lambda x: x[1])
-            #print '{}: {}'.format(pathway,ranks)
-            lst_orders.append( (pathway, [r for r,rank in ranks]) )
-        lst_orders.sort(key = lambda x: x[1])
-        return lst_orders
-        
-    def save(self):
-        filename = join(results_dir(), 'dprime-region-ordering-{}.txt'.format(self.timing.filename_suffix))
-        print 'Saving ordering results to {}'.format(filename)
-        with open(filename,'w') as f:
-            header = '{:<60}{:<7}{}'.format('pathway', 'nGenes', 'Regions (early to late)')
-            print >>f, header
-            print >>f, '-'*len(header)
-            for pathway,ordered_regions in self.lst_orders:
-                pathway_size = len(self.timing.pathways[pathway])
-                if len(pathway) > 55:
-                    pathway = pathway[:55] + '...'
-                ordered_regions = ' '.join(ordered_regions)
-                print >>f, '{pathway:<60}{pathway_size:<7}{ordered_regions}'.format(**locals())
-
-##############################################################
-# Misc analyses
-##############################################################
-def timing_against_region_order(timing):
-    from scipy.stats import spearmanr
-    import matplotlib.pyplot as plt
-    #order = 'AMY HIP MD DFC OFC MFC STC VFC IPC STR S1C M1C CBC ITC V1C A1C'.split() # arbitrary order. replace with a real ordering
-    #order = 'V1C S1C M1C DFC OFC'.split()
-    order = 'MD STR V1C OFC'.split()
-
-    scores = [] # (pval,pathway)
-    for pathway, genes in timing.pathways.iteritems():
-        pairs = []
-        for g in genes:
-            ig = timing.g2i[g]            
-            for i,r in enumerate(order):
-                ir = timing.r2i[r]
-                t = timing.mu[ig,ir]
-                pairs.append( (i,t) )
-        i,t = zip(*pairs)
-        if pathway in ['sensory perception of smell']:
-            fig = plt.figure()
-            ax = plt.gca()
-            ax.plot(i,t,'bx')
-            ax.set_xlim(-0.5,4.5)
-            ax.set_xticks(range(len(order)))
-            ax.set_xticklabels(order)
-            ax.set_title(pathway)
-        sr,pval = spearmanr(i,t)
-        scores.append( (-np.log10(pval), pval, sr, pathway) )
-    scores.sort(reverse=True) 
-    filename = join(results_dir(), 'pathway-spearman.txt')
-    print 'Saving ordering results to {}'.format(filename)
-    with open(filename,'w') as f:
-        header = '{:<60}{:<7}{:<15}{:<10}{:<10}'.format('pathway', 'nGenes', '-log10(pval)', 'pval', 'Spearman r')
-        print >>f, header
-        print >>f, '-'*len(header)
-        for logpval, pval, sr, pathway in scores:
-            pathway_size = len(timing.pathways[pathway])
-            if len(pathway) > 55:
-                pathway = pathway[:55] + '...'
-            print >>f, '{pathway:<60}{pathway_size:<7}{logpval:<15.3g}{pval:<10.3g}{sr:<10.3g}'.format(**locals())
-
-##############################################################
-# main
-##############################################################
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--list', help='Pathways list name. Default=brain_go_num_genes_min_15', default='brain_go_num_genes_min_15', choices=['all'] + all_pathway_lists())
-    parser.add_argument('--include', help='whitespace separated list of regions to include (region pair included if at least one of the regions is in the list). Default=all')
-    parser.add_argument('--both', help='whitespace separated list of regions to include (region pair included if BOTH of the regions are in the list). Default=all')
-    parser.add_argument('--exclude', default='PFC', help='whitespace separated list of regions to exclude. Default=PFC')
-    parser.add_argument('-f', '--force', help='Force recomputation of pathway dprime measures', action='store_true')
-    parser.add_argument('--mat', help='Export analysis to mat file', action='store_true')
-    args = parser.parse_args()
-    if args.exclude is not None:
-        args.exclude = args.exclude.split()
-    if args.include is not None:
-        args.include = args.include.split()
-    if args.both is not None:
-        args.both = args.both.split()
-    
-    timing = RegionPairTiming(args.list)
-    timing_against_region_order(timing)
-#    dct_timings_per_pathway = timing.region_timings_per_pathway()
-#    res = timing.analyze_all_pathways(force=args.force).filter_regions(exclude=args.exclude, include=args.include, include_both=args.both)
-#    d = res.get_by_pathway()
-#    if args.mat:
-#        res.save_to_mat()
-#    res.save_top_results()
-#
-#    region_ordering = RegionOrdering(res)
-#    region_ordering.save()
 
