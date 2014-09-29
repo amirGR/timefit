@@ -90,6 +90,21 @@ class RegionPairTiming(object):
             pathway_size = len(pathway_genes),
         )
 
+    def region_timings_per_pathway(self):
+        def mean_age(pathway_genes, r):
+            pathway_ig = [self.g2i[g] for g in pathway_genes]
+            ir = self.r2i[r]
+            ages = self.mu[pathway_ig,ir]
+            weights = 1/self.single_std[pathway_ig,ir]
+            age = np.dot(weights,ages) / sum(weights)
+            return self.age_scaler.unscale(age)
+
+        res = {} # pathway -> { r -> mu }
+        for pathway in self.pathways.iterkeys():
+            pathway_genes = self.pathways[pathway]
+            res[pathway] = {r : mean_age(pathway_genes, r) for r in self.regions}
+        return res
+
     @cache(filename = join(cache_dir(), 'both', 'dprime-baseline.pkl'))
     def baseline_distribution_all_pairs(self, sample_size, n_samples):
         res = {}
@@ -260,6 +275,7 @@ class RegionOrdering(object):
         for pathway, dct in dct_before.iteritems():
             ranks = [(r,len(s)) for r,s in dct.iteritems()]
             ranks.sort(key=lambda x: x[1])
+            #print '{}: {}'.format(pathway,ranks)
             lst_orders.append( (pathway, [r for r,rank in ranks]) )
         lst_orders.sort(key = lambda x: x[1])
         return lst_orders
@@ -278,6 +294,46 @@ class RegionOrdering(object):
                 ordered_regions = ' '.join(ordered_regions)
                 print >>f, '{pathway:<60}{pathway_size:<7}{ordered_regions}'.format(**locals())
 
+def timing_against_region_order(timing):
+    from scipy.stats import spearmanr
+    import matplotlib.pyplot as plt
+    #order = 'AMY HIP MD DFC OFC MFC STC VFC IPC STR S1C M1C CBC ITC V1C A1C'.split() # arbitrary order. replace with a real ordering
+    #order = 'V1C S1C M1C DFC OFC'.split()
+    order = 'MD STR V1C OFC'.split()
+
+    scores = [] # (pval,pathway)
+    for pathway, genes in timing.pathways.iteritems():
+        pairs = []
+        for g in genes:
+            ig = timing.g2i[g]            
+            for i,r in enumerate(order):
+                ir = timing.r2i[r]
+                t = timing.mu[ig,ir]
+                pairs.append( (i,t) )
+        i,t = zip(*pairs)
+        if pathway in ['sensory perception of smell']:
+            fig = plt.figure()
+            ax = plt.gca()
+            ax.plot(i,t,'bx')
+            ax.set_xlim(-0.5,4.5)
+            ax.set_xticks(range(len(order)))
+            ax.set_xticklabels(order)
+            ax.set_title(pathway)
+        sr,pval = spearmanr(i,t)
+        scores.append( (-np.log10(pval), pval, sr, pathway) )
+    scores.sort(reverse=True) 
+    filename = join(results_dir(), 'pathway-spearman.txt')
+    print 'Saving ordering results to {}'.format(filename)
+    with open(filename,'w') as f:
+        header = '{:<60}{:<7}{:<15}{:<10}{:<10}'.format('pathway', 'nGenes', '-log10(pval)', 'pval', 'Spearman r')
+        print >>f, header
+        print >>f, '-'*len(header)
+        for logpval, pval, sr, pathway in scores:
+            pathway_size = len(timing.pathways[pathway])
+            if len(pathway) > 55:
+                pathway = pathway[:55] + '...'
+            print >>f, '{pathway:<60}{pathway_size:<7}{logpval:<15.3g}{pval:<10.3g}{sr:<10.3g}'.format(**locals())
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--list', help='Pathways list name. Default=brain_go_num_genes_min_15', default='brain_go_num_genes_min_15', choices=['all'] + RegionPairTiming.pathway_lists())
@@ -295,11 +351,14 @@ if __name__ == '__main__':
         args.both = args.both.split()
     
     timing = RegionPairTiming(args.list)
-    res = timing.analyze_all_pathways(force=args.force).filter_regions(exclude=args.exclude, include=args.include, include_both=args.both)
-    d = res.get_by_pathway()
-    if args.mat:
-        res.save_to_mat()
-    res.save_top_results()
+    timing_against_region_order(timing)
+#    dct_timings_per_pathway = timing.region_timings_per_pathway()
+#    res = timing.analyze_all_pathways(force=args.force).filter_regions(exclude=args.exclude, include=args.include, include_both=args.both)
+#    d = res.get_by_pathway()
+#    if args.mat:
+#        res.save_to_mat()
+#    res.save_top_results()
+#
+#    region_ordering = RegionOrdering(res)
+#    region_ordering.save()
 
-    region_ordering = RegionOrdering(res)
-    region_ordering.save()
