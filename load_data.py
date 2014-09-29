@@ -7,6 +7,19 @@ import project_dirs
 import config as cfg
 from utils.formats import matlab_cell_array_to_list_of_strings, read_strings_from_file
 from utils.misc import get_unique
+from sklearn.datasets.base import Bunch
+
+def load_kang_tree_distances():
+    filename = join(project_dirs.data_dir(), 'kangTreeDistances.mat')
+    mat = loadmat(filename)
+    distances = mat['developingTreeDistances']
+    regions = matlab_cell_array_to_list_of_strings(mat['regions'])
+    dct_regions = {r:i for i,r in enumerate(regions)}
+    return Bunch(
+        regions = regions,
+        dct_regions = dct_regions,
+        distances = distances,
+    )
 
 def unique_genes_only(dct_pathways):
     res = {}
