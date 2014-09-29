@@ -7,7 +7,7 @@ from all_fits import get_all_fits, save_as_mat_files
 from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
-from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, compute_fraction_of_change
+from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, compute_timing_info_for_all_fits, compute_fraction_of_change
 from dev_stages import get_stage_by_name
 
 
@@ -191,6 +191,7 @@ if __name__ == '__main__':
         print 'Computing region pair timing measures...'
         if args.timing_dprime:
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
+            compute_timing_info_for_all_fits(data, fitter, fits)
     if args.html != NOT_USED:
         create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset, show_change_distributions=has_change_distributions)
     if args.mat:

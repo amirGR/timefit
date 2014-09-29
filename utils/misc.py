@@ -106,3 +106,8 @@ def cache(filename, name='data'):
             return res
         return _wrapper
     return deco
+
+def load_pickle(filename, name='data'):
+    print 'loading {} from {}'.format(name, filename)
+    with open(filename) as f:
+        return pickle.load(f)

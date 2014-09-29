@@ -1,6 +1,5 @@
 import setup
 import argparse
-import cPickle as pickle
 from os.path import join
 from os import listdir
 from collections import defaultdict
@@ -9,26 +8,54 @@ from scipy.io import savemat
 from scipy.stats import nanmean
 from sklearn.datasets.base import Bunch
 from project_dirs import cache_dir, pathways_dir, pathway_lists_dir, results_dir
-from utils.misc import z_score_to_p_value, cache
+from utils.misc import z_score_to_p_value, cache, load_pickle
 from utils.formats import list_of_strings_to_matlab_cell_array
 from load_data import load_kang_tree_distances
 
+def all_pathway_lists():
+    return listdir(pathway_lists_dir())
+
+def read_all_pathways(listname='all'):
+    if listname == 'all':
+        pathway_names = [f[:-4] for f in listdir(pathways_dir()) if f.endswith('.txt')]
+    else:
+        listfile = join(pathway_lists_dir(),listname)
+        with open(listfile) as f:
+            lines = f.readlines()
+        pathway_names = [x.strip() for x in lines] # remove newlines
+        pathway_names = [x for x in pathway_names if x] # rmeove empty strings
+    return {pathway: read_pathway(pathway) for pathway in pathway_names}
+
+def read_pathway(pathway):
+    filename = join(pathways_dir(), pathway + '.txt')
+    with open(filename) as f:
+        lines = f.readlines()
+    genes = [x.strip() for x in lines] # remove newlines
+    return [x for x in genes if x] # rmeove empty strings
+
+##############################################################
+# RegionPairTiming
+##############################################################
 class RegionPairTiming(object):
     def __init__(self, listname='all'):
         self.listname = listname
-        self.pathways = self.read_all_pathways(listname)
+        self.pathways = read_all_pathways(listname)
 
-        info = self.read_timing_info()
-        self.genes = info['genes']
-        self.regions = info['regions']
+        cube_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl')
+        cube = load_pickle(cube_filename, name='timing d-prime info for all genes and region pairs')
+        change_dist_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-change-dist.pkl')
+        change_dist = load_pickle(change_dist_filename, 'change distribution for all genes and regions')
+
+        self.genes = change_dist['genes']
+        self.regions = change_dist['regions']
         self.g2i = {g:i for i,g in enumerate(self.genes)}
         self.r2i = {r:i for i,r in enumerate(self.regions)}
-        self.age_scaler = info['age_scaler']
-        self.mu = info['mu']
-        self.single_std = info['single_std']
-        self.d_mu = info['d_mu']
-        self.std = info['std']
-        self.scores = self.d_mu / self.std
+        self.age_scaler = change_dist['age_scaler']
+        self.mu = change_dist['mu']
+        self.single_std = change_dist['std']
+        self.d_mu = cube['d_mu']
+        self.pair_std = cube['std']
+        self.scores = self.d_mu / self.pair_std
 
         self.baseline = self.baseline_distribution_all_pairs(100, 10000)
 
@@ -58,8 +85,8 @@ class RegionPairTiming(object):
         pval = z_score_to_p_value(z)
 
         pathway_d_mu = self.d_mu[pathway_ig,ir1,ir2]
-        pathway_std = self.std[pathway_ig,ir1,ir2]
-        weights = 1/pathway_std
+        pathway_pair_std = self.pair_std[pathway_ig,ir1,ir2]
+        weights = 1/pathway_pair_std
         valid = ~np.isnan(pathway_d_mu) # needed for the PFC region from colantuoni which doesn't contain all genes\
         weights, pathway_d_mu = weights[valid], pathway_d_mu[valid]
         weighted_delta = np.dot(weights, pathway_d_mu) / sum(weights)
@@ -129,35 +156,9 @@ class RegionPairTiming(object):
         sigma = x.std() * np.sqrt(sample_size)
         return mu,sigma
 
-    def read_timing_info(self):
-        filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime.pkl')
-        print 'loading timing d-prime info for all genes and region pairs from {}'.format(filename)
-        with open(filename) as f:
-            info = pickle.load(f)
-        return info
-
-    @staticmethod
-    def pathway_lists():
-        return listdir(pathway_lists_dir())
-
-    def read_all_pathways(self, listname='all'):
-        if listname == 'all':
-            pathway_names = [f[:-4] for f in listdir(pathways_dir()) if f.endswith('.txt')]
-        else:
-            listfile = join(pathway_lists_dir(),listname)
-            with open(listfile) as f:
-                lines = f.readlines()
-            pathway_names = [x.strip() for x in lines] # remove newlines
-            pathway_names = [x for x in pathway_names if x] # rmeove empty strings
-        return {pathway: self.read_gene_names(pathway) for pathway in pathway_names}
-    
-    def read_gene_names(self, pathway):
-        filename = join(pathways_dir(), pathway + '.txt')
-        with open(filename) as f:
-            lines = f.readlines()
-        genes = [x.strip() for x in lines] # remove newlines
-        return [x for x in genes if x] # rmeove empty strings
-
+##############################################################
+# TimingResults
+##############################################################
 class TimingResults(object):
     @staticmethod
     def fromResultsDct(dct_res, listname, pathways):
@@ -257,6 +258,9 @@ class TimingResults(object):
                 logpval = -np.log10(x.pval)
                 print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 
+##############################################################
+# RegionOrdering
+##############################################################
 class RegionOrdering(object):
     def __init__(self, timing_results):
         self.timing = timing_results
@@ -294,6 +298,9 @@ class RegionOrdering(object):
                 ordered_regions = ' '.join(ordered_regions)
                 print >>f, '{pathway:<60}{pathway_size:<7}{ordered_regions}'.format(**locals())
 
+##############################################################
+# Misc analyses
+##############################################################
 def timing_against_region_order(timing):
     from scipy.stats import spearmanr
     import matplotlib.pyplot as plt
@@ -334,9 +341,12 @@ def timing_against_region_order(timing):
                 pathway = pathway[:55] + '...'
             print >>f, '{pathway:<60}{pathway_size:<7}{logpval:<15.3g}{pval:<10.3g}{sr:<10.3g}'.format(**locals())
 
+##############################################################
+# main
+##############################################################
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--list', help='Pathways list name. Default=brain_go_num_genes_min_15', default='brain_go_num_genes_min_15', choices=['all'] + RegionPairTiming.pathway_lists())
+    parser.add_argument('--list', help='Pathways list name. Default=brain_go_num_genes_min_15', default='brain_go_num_genes_min_15', choices=['all'] + all_pathway_lists())
     parser.add_argument('--include', help='whitespace separated list of regions to include (region pair included if at least one of the regions is in the list). Default=all')
     parser.add_argument('--both', help='whitespace separated list of regions to include (region pair included if BOTH of the regions are in the list). Default=all')
     parser.add_argument('--exclude', default='PFC', help='whitespace separated list of regions to exclude. Default=PFC')
