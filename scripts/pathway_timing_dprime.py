@@ -11,6 +11,7 @@ from sklearn.datasets.base import Bunch
 from project_dirs import cache_dir, pathways_dir, pathway_lists_dir, results_dir
 from utils.misc import z_score_to_p_value, cache
 from utils.formats import list_of_strings_to_matlab_cell_array
+from load_data import load_kang_tree_distances
 
 class RegionPairTiming(object):
     def __init__(self, listname='all'):
@@ -206,6 +207,12 @@ class TimingResults(object):
             else:
                 exclude = self.exclude | set(exclude)
         return TimingResults(self.res, self.listname, self.pathways, include=include, include_both=include_both, exclude=exclude)            
+
+    def get_by_pathway(self):
+        d = defaultdict(list)
+        for x in self.res:
+            d[x.pathway].append(x)
+        return d
         
     def save_to_mat(self):
         filename = join(cache_dir(), 'both', 'dprime-all-pathways-and-regions-{}.mat'.format(self._filename_suffix))
@@ -273,10 +280,10 @@ class RegionOrdering(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--list', help='Pathways list name. Default=all pathways', default='all', choices=['all'] + RegionPairTiming.pathway_lists())
+    parser.add_argument('--list', help='Pathways list name. Default=brain_go_num_genes_min_15', default='brain_go_num_genes_min_15', choices=['all'] + RegionPairTiming.pathway_lists())
     parser.add_argument('--include', help='whitespace separated list of regions to include (region pair included if at least one of the regions is in the list). Default=all')
     parser.add_argument('--both', help='whitespace separated list of regions to include (region pair included if BOTH of the regions are in the list). Default=all')
-    parser.add_argument('--exclude', help='whitespace separated list of regions to exclude. Default=None')
+    parser.add_argument('--exclude', default='PFC', help='whitespace separated list of regions to exclude. Default=PFC')
     parser.add_argument('-f', '--force', help='Force recomputation of pathway dprime measures', action='store_true')
     parser.add_argument('--mat', help='Export analysis to mat file', action='store_true')
     args = parser.parse_args()
@@ -289,6 +296,7 @@ if __name__ == '__main__':
     
     timing = RegionPairTiming(args.list)
     res = timing.analyze_all_pathways(force=args.force).filter_regions(exclude=args.exclude, include=args.include, include_both=args.both)
+    d = res.get_by_pathway()
     if args.mat:
         res.save_to_mat()
     res.save_top_results()
