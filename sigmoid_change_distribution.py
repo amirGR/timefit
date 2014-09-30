@@ -37,19 +37,6 @@ def change_distribution_spread_cumsum(bin_centers, weights, threshold=0.8):
     x_median = bin_centers[i_median]
     return x_median, x_from, x_to
 
-def aggregate_change_distribution(fits, R2_threshold=None, b_normalize=False):
-    bin_centers = fits.change_distribution_params.bin_centers
-    for i,fit in enumerate(iterate_fits(fits, R2_threshold=R2_threshold)):
-        if i == 0:
-            weights = fit.change_distribution_weights
-        else:
-            weights =+ fit.change_distribution_weights
-    n_fits = i + 1
-    weights /= n_fits
-    if b_normalize:
-        weights /= sum(weights)
-    return bin_centers, weights, n_fits
-
 def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
     """ Compute a histogram of "strength of transition" at different ages.
         The histogram is computed for each (gene,region) in fits and is added to the fit objects.

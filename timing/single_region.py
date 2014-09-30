@@ -22,6 +22,9 @@ class SingleRegion(object):
         self.age_scaler = self.change_dist.age_scaler
         self.mu = self.change_dist.mu
         self.std = self.change_dist.std
+        self.bin_edges = self.change_dist.bin_edges
+        self.bin_centers = self.change_dist.bin_centers
+        self.weights = self.change_dist.weights
 
     def region_timings_per_pathway(self):
         def mean_age(pathway_genes, r):

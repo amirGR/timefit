@@ -72,6 +72,20 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
     fig.suptitle('Gene {}'.format(g))
     return fig
 
+def add_age_ticks(ax, age_scaler, fontsize=None):
+    if fontsize is None:
+        fontsize = cfg.fontsize
+        
+    # set the development stages as x labels
+    stages = [stage.scaled(age_scaler) for stage in dev_stages]
+    ax.set_xticks([stage.central_age for stage in stages])
+    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=fontsize, fontstretch='condensed', rotation=90)    
+    
+    # mark birth time with a vertical line
+    ymin, ymax = ax.get_ylim()
+    birth_age = scalers.unify(age_scaler).scale(0)
+    ax.plot([birth_age, birth_age], [ymin, ymax], '--', color='0.85')
+    
 def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, minimal_annotations=False, ax=None):
     x = series.ages
     y = series.single_expression
@@ -88,16 +102,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
         ax.set_ylabel('expression level', fontsize=fontsize)
         ax.set_xlabel('age', fontsize=fontsize)
     ttl = '{}@{}'.format(series.gene_name, series.region_name)
-
-    # set the development stages as x labels
-    stages = [stage.scaled(series.age_scaler) for stage in dev_stages]
-    ax.set_xticks([stage.central_age for stage in stages])
-    ax.set_xticklabels([stage.short_name for stage in stages], fontsize=fontsize, fontstretch='condensed', rotation=90)    
-    
-    # mark birth time with a vertical line
-    ymin, ymax = ax.get_ylim()
-    birth_age = scalers.unify(series.age_scaler).scale(0)
-    ax.plot([birth_age, birth_age], [ymin, ymax], '--', color='0.85')
+    add_age_ticks(ax, series.age_scaler, fontsize)
 
     # plot change distribution if provided
     if change_distribution:
