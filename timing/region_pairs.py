@@ -14,6 +14,8 @@ from single_region import SingleRegion
 # RegionPairTiming
 ##############################################################
 class RegionPairTiming(object):
+    cube_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl')
+    
     def __init__(self, listname='all'):
         self.listname = listname
         self.single = SingleRegion(listname)
@@ -26,10 +28,7 @@ class RegionPairTiming(object):
         self.mu = self.single.mu
         self.single_std = self.single.std
 
-        cube = load_pickle(
-            filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl'), 
-            name='timing d-prime info for all genes and region pairs'
-        )
+        cube = load_pickle(RegionPairTiming.cube_filename, name='timing d-prime info for all genes and region pairs')
         self.d_mu = cube.d_mu
         self.pair_std = cube.std
         self.scores = self.d_mu / self.pair_std

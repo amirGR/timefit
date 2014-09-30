@@ -8,6 +8,7 @@ def unify(scaler):
         return scaler
 
 class NopScaler(object):
+    def cache_name(self): return 'none'
     def scale(self, x): return x
     def unscale(self, sx): return sx
 
