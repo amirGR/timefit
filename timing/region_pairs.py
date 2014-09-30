@@ -213,10 +213,13 @@ class TimingResults(object):
         filename = join(results_dir(), 'dprime-top-results-{}.txt'.format(self.filename_suffix))
         print 'Saving top {} results to {}'.format(n,filename)
         with open(filename,'w') as f:
-            header = '{:<55}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
+            header = '{:<60}{:<7}{:<5}{:<5}{:<15}{:<10}{:<10}{:<10}{:<10}{:<10}'.format('pathway', 'nGenes', 'r1', 'r2', '-log10(pval)', 'score', 'delta', 'w-delta', 'mu1 yrs', 'mu2 yrs')
             print >>f, header
             print >>f, '-'*len(header)
             for x in self.res[:n]:
                 logpval = -np.log10(x.pval)
-                print >>f, '{x.pathway:<55}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
+                pathway = x.pathway
+                if len(pathway) > 55:
+                    pathway = pathway[:55] + '...'
+                print >>f, '{pathway:<60}{x.pathway_size:<7}{x.r1:<5}{x.r2:<5}{logpval:<15.3g}{x.score:<10.3g}{x.delta:<10.3g}{x.weighted_delta:<10.3g}{x.mu1_years:<10.3g}{x.mu2_years:<10.3g}'.format(**locals())
 

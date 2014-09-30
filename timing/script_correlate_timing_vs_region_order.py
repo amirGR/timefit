@@ -100,7 +100,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.cortex_only:
-        order = 'V1C S1C M1C DFC OFC'.split()
+        order = 'V1C A1C S1C M1C DFC MFC OFC'.split()
     else:
         order = 'MD STR V1C OFC'.split()
 
