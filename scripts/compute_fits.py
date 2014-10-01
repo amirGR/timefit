@@ -8,7 +8,6 @@ from fit_score import loo_score
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
 from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, compute_timing_info_for_all_fits, compute_fraction_of_change
-from dev_stages import get_stage_by_name
 
 
 def do_fits(data, fitter, k_of_n):
@@ -55,16 +54,19 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         def get_change_distribution_info(fit):
             a,h,mu,w = fit.theta            
             x_median, x_from, x_to = fit.change_distribution_spread
-            stage = get_stage_by_name('Adolescence')
+            childhood = [0,12]
+            adolescence = [12,24]
             if data.age_scaler is None:
                 age = x_median
             else:
                 age = data.age_scaler.unscale(x_median)
                 x_from = data.age_scaler.unscale(x_from)
                 x_to = data.age_scaler.unscale(x_to)
-                stage = stage.scaled(data.age_scaler)
-            pct_of_change = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, stage.from_age, stage.to_age)
-            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_of_change:.2g}%] </small>'.format(**locals())
+                childhood = [data.age_scaler.scale(x) for x in childhood]
+                adolescence = [data.age_scaler.scale(x) for x in adolescence]
+            pct_childhood = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *childhood)
+            pct_adolescence = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *adolescence)
+            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_childhood:.2g}%, {pct_adolescence:.2g}%] </small>'.format(**locals())
             if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
                 cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
             else:
@@ -74,7 +76,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         top_text = """\
 All onset times are in years. <br/>
 The main number is the median age. The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. </br>
-The percentage in square brackets is the fraction of the change that happens during adolescence. </br>
+The two percentages in square brackets are the fraction of the change that happens during ages 0-12 years and during adolescence (12-24 years) respectively. </br>
 The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
 </p>
 <p>
