@@ -106,6 +106,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
 
     # plot change distribution if provided
     if change_distribution:
+        ymin, ymax = ax.get_ylim()
         centers = change_distribution.centers
         width = centers[1] - centers[0]
         weights = change_distribution.weights
