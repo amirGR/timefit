@@ -42,6 +42,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         html_kw = dict(
             extra_top_links = [ 
                 ('onsets.html','Onset Times'),
+                ('onsets-tooltips.html','Onset Times (with tooltips)'),
             ],
         )
     else:
@@ -49,56 +50,61 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
     save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
 
     if show_onsets:
-        bin_edges = fits.change_distribution_params.bin_edges
-        R2_color_threshold = 0.2
-        def get_change_distribution_info(fit):
-            a,h,mu,w = fit.theta            
-            x_median, x_from, x_to = fit.change_distribution_spread
-            childhood = [0,12]
-            adolescence = [12,24]
-            if data.age_scaler is None:
-                age = x_median
-            else:
-                age = data.age_scaler.unscale(x_median)
-                x_from = data.age_scaler.unscale(x_from)
-                x_to = data.age_scaler.unscale(x_to)
-                childhood = [data.age_scaler.scale(x) for x in childhood]
-                adolescence = [data.age_scaler.scale(x) for x in adolescence]
-            pct_childhood = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *childhood)
-            pct_adolescence = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *adolescence)
-            txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_childhood:.2g}%, {pct_adolescence:.2g}%] </small>'.format(**locals())
-            if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
-                cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
-            else:
-                cls = ''
-            return txt,cls
-
-        top_text = """\
-All onset times are in years. <br/>
-The main number is the median age. The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. </br>
-The two percentages in square brackets are the fraction of the change that happens during ages 0-12 years and during adolescence (12-24 years) respectively. </br>
-The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
-</p>
-<p>
-red = strong positive transition (R2 > {R2_color_threshold} and expression level increases with age) </br>
-blue = strong negative transition (R2 > {R2_color_threshold} and expression level decreases with age) </br>
-(for assessing transition strength, R2 above is LOO R2 without using correlations between genes)
-</p>
-""".format(**locals())
-        if use_correlations:
-            top_text += """
-<p>Click on a region name to see the correlation matrix for that region.</p>
-"""
-
-        html_kw = dict(
-            filename = 'onsets',
-            ttl = 'Onset times',
-            top_text = top_text,
-            show_R2 = False,
-            extra_fields_per_fit = [get_change_distribution_info],
-            b_R2_dist = False, 
-        )
-        save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)
+        for tooltips in [False, True]:
+            bin_edges = fits.change_distribution_params.bin_edges
+            R2_color_threshold = 0.2
+            def get_change_distribution_info(fit):
+                a,h,mu,w = fit.theta            
+                x_median, x_from, x_to = fit.change_distribution_spread
+                childhood = [0,12]
+                adolescence = [12,24]
+                if data.age_scaler is None:
+                    age = x_median
+                else:
+                    age = data.age_scaler.unscale(x_median)
+                    x_from = data.age_scaler.unscale(x_from)
+                    x_to = data.age_scaler.unscale(x_to)
+                    childhood = [data.age_scaler.scale(x) for x in childhood]
+                    adolescence = [data.age_scaler.scale(x) for x in adolescence]
+                pct_childhood = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *childhood)
+                pct_adolescence = 100.0 * compute_fraction_of_change(fit.change_distribution_weights, bin_edges, *adolescence)
+                if tooltips:
+                    txt = '<div title="0-12 years: {pct_childhood:.2g}%\n12-24 years: {pct_adolescence:.2g}%">{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g})</small></div>'.format(**locals())
+                else:
+                    txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_childhood:.2g}%, {pct_adolescence:.2g}%] </small>'.format(**locals())
+                if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
+                    cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
+                else:
+                    cls = ''
+                return txt,cls
+    
+            percentage_location = 'tooltips for cell entries' if tooltips else 'square brackets'
+            top_text = """\
+    All onset times are in years. <br/>
+    The main number is the median age. The two numbers (age1,age2) beneath the onset age are the range where most of the transition occurs. </br>
+    The two percentages in {percentage_location} are the fraction of the change that happens during ages 0-12 years and during adolescence (12-24 years) respectively. </br>
+    The onset age and range are estimated using bootstrap samples and may differ from the onset and width of the single best fit as displayed in the figure. 
+    </p>
+    <p>
+    red = strong positive transition (R2 > {R2_color_threshold} and expression level increases with age) </br>
+    blue = strong negative transition (R2 > {R2_color_threshold} and expression level decreases with age) </br>
+    (for assessing transition strength, R2 above is LOO R2 without using correlations between genes)
+    </p>
+    """.format(**locals())
+            if use_correlations:
+                top_text += """
+    <p>Click on a region name to see the correlation matrix for that region.</p>
+    """
+    
+            html_kw = dict(
+                filename = 'onsets-tooltips' if tooltips else 'onsets',
+                ttl = 'Onset times',
+                top_text = top_text,
+                show_R2 = False,
+                extra_fields_per_fit = [get_change_distribution_info],
+                b_R2_dist = False, 
+            )
+            save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)
 
 def save_mat_file(data, fitter, fits, has_change_distributions):
     print """

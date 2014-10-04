@@ -411,7 +411,7 @@ def create_html(data, fitter, fits,
     </P>
 {% endif %}
 {% for href,txt in extra_top_links %}
-    <a href={{href}}>{{txt}}</a>
+    <a href={{href}}>{{txt}}</a><br/>
 {% endfor %}
 {% if top_text %}
 {{ top_text }}
