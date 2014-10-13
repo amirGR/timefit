@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import config as cfg
 from utils.misc import disable_all_warnings, ensure_dir
 from project_dirs import results_dir
-from all_fits import get_all_fits
+from all_fits import get_all_fits, iterate_fits
 from command_line import get_common_parser, process_common_inputs, get_data_from_args, get_fitter_from_args
 from shapes.shape import allowed_shape_names
 from shapes.priors import get_allowed_priors
@@ -12,25 +12,19 @@ from scalers import allowed_scaler_names
 from plots import save_figure
 
 def print_diff_points(data1, fitter1, fits1, data2, fitter2, fits2, n):
-    diffs = [(fits1[k].LOO_score-fits2[k].LOO_score, k) for k in fits1.iterkeys()]
+    diffs = [(fit1.LOO_score-fit2.LOO_score, g,r, fit1.LOO_score, fit2.LOO_score) for dsname,g,r,fit1,fit2 in iterate_fits(fits1,fits2, return_keys=True)]
     diffs.sort()
     
     print 'Top {} fits where {} > {}:'.format(n, fitter1.shape, fitter2.shape)
-    for diff,k in diffs[-n:]:
-        g,r = k
-        score1 = fits1[k].LOO_score
-        score2 = fits2[k].LOO_score
+    for diff,g,r,score1,score2 in diffs[-n:]:
         print '\t{}@{}: diff={:.2g}, {}={:.2g}, {}={:.2g}'.format(g,r,diff,fitter1.shape,score1,fitter2.shape,score2)
 
     print 'Top {} fits where {} < {}:'.format(n, fitter1.shape, fitter2.shape)
-    for diff,k in diffs[:n]:
-        g,r = k
-        score1 = fits1[k].LOO_score
-        score2 = fits2[k].LOO_score
+    for diff,g,r,score1,score2 in diffs[:n]:
         print '\t{}@{}: diff={:.2g}, {}={:.2g}, {}={:.2g}'.format(g,r,diff,fitter1.shape,score1,fitter2.shape,score2)
 
 def plot_comparison_scatter(data1, fitter1, fits1, data2, fitter2, fits2):
-    pairs = [(fits1[k].LOO_score, fits2[k].LOO_score) for k in fits1.iterkeys()]
+    pairs = [(fit1.LOO_score, fit2.LOO_score) for fit1,fit2 in iterate_fits(fits1,fits2)]
     scores1,scores2 = zip(*pairs)
     
     fig = plt.figure()
@@ -57,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--ndiffs', type=int, default=5, help='Number of top diffs to show. Default=5.')
     args = parser.parse_args()
     data1, fitter1 = process_common_inputs(args)    
-    data2 = get_data_from_args(args.dataset, args.pathway, args.postnatal, args.scaling2)
+    data2 = get_data_from_args(args.dataset, args.pathway, args.from_age, args.scaling2, args.shuffle)
     fitter2 = get_fitter_from_args(args.shape2, args.priors2, args.sigma_prior2)
 
     fits1 = get_all_fits(data1,fitter1)
@@ -71,7 +65,6 @@ if __name__ == '__main__':
     if filename is None:
         ensure_dir(results_dir())
         filename = join(results_dir(), 'shape_comparison.png')
-    print 'Saving figure to {}'.format(filename)
     save_figure(fig, filename)    
 
     if args.show:
