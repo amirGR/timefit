@@ -54,7 +54,6 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
             bin_edges = fits.change_distribution_params.bin_edges
             R2_color_threshold = 0.2
             def get_change_distribution_info(fit):
-                a,h,mu,w = fit.theta            
                 x_median, x_from, x_to = fit.change_distribution_spread
                 childhood = [0,12]
                 adolescence = [12,24]
@@ -73,7 +72,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
                 else:
                     txt = '{age:.2g} </br> <small>({x_from:.2g},{x_to:.2g}) <br/> [{pct_childhood:.2g}%, {pct_adolescence:.2g}%] </small>'.format(**locals())
                 if fit.LOO_score > R2_color_threshold: # don't use correlations even if we have them. we want to know if the transition itself is significant in explaining the data
-                    cls = 'positiveTransition' if h*w > 0 else 'negativeTransition'
+                    cls = 'positiveTransition' if fitter.shape.is_positive_transition(fit.theta) > 0 else 'negativeTransition'
                 else:
                     cls = ''
                 return txt,cls
@@ -166,6 +165,7 @@ if __name__ == '__main__':
     if args.part is not None and args.mat:
         print '--mat cannot be used with --part'
         sys.exit(-1)
+    is_sigmoid = args.shape in ['sigmoid','sigslope']
     if args.correlations:
         if args.part:
             print '--correlations cannot be used with --part'
@@ -176,10 +176,10 @@ if __name__ == '__main__':
         if args.html == NOT_USED:
             print '--correlations only currently makes sense with --html (since fits are not saved)'
             sys.exit(-1)
-    if args.onset and args.shape != 'sigmoid':
+    if args.onset and not is_sigmoid:
         print '--onset can only be used with sigmoid fits'
         sys.exit(-1)
-    if args.timing_dprime and args.shape != 'sigmoid':
+    if args.timing_dprime and not is_sigmoid:
         print '--timing_dprime can only be used with sigmoid fits'
         sys.exit(-1)
     if args.onset and args.html == NOT_USED:
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         fits, correlations = add_predictions_using_correlations(data, fitter, fits)
     else:
         correlations = None
-    has_change_distributions = fitter.shape.cache_name() == 'sigmoid'
+    has_change_distributions = is_sigmoid
     if has_change_distributions:
         print 'Computing change distributions...'
         add_change_distributions(data, fitter, fits)

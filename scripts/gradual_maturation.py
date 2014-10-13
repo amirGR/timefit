@@ -61,7 +61,7 @@ def create_top_correlations_html(data, fitter, fits, scores, regions, n_top=None
     top_pvals = {g:pval for g,r,pval,lst_R2 in scores[:n_top]}
     
     def get_onset_time(fit):
-        a,h,mu,w = fit.theta
+        a,h,mu,_ = fit.theta
         age = age_scaler.unscale(mu)
         txt = 'onset = {:.3g} years'.format(age)
         cls = ''
@@ -87,7 +87,7 @@ def get_gene_correlation(fits, gene, regions):
     ds_fits = fits['kang2011'] 
     def get_onset_time(r):
         fit = ds_fits[(gene,r)]
-        a,h,mu,w = fit.theta
+        a,h,mu,_ = fit.theta
         return mu,fit.LOO_score
     lst_mu_R2 = [get_onset_time(r) for r in regions]
     onset_times, lst_R2 = zip(*lst_mu_R2)

@@ -58,6 +58,9 @@ class Shape(object):
             return self.n_params() * [(None,None)]        
         return [pr.bounds() for pr in self.priors]
 
+    def canonical_form(self, theta):
+        return theta
+
     def log_prob_theta(self, theta):
         # NOTE: This assumes the priors for different parameters are independent
         return sum(pr.log_prob(t) for pr,t in zip(self.priors,theta))
@@ -90,13 +93,16 @@ class Shape(object):
 # Building shape from command line input
 #####################################################
 def allowed_shape_names():
-    return ['sigmoid', 'poly0', 'poly1', 'poly2', 'poly3', 'spline']
+    return ['sigmoid', 'sigslope', 'poly0', 'poly1', 'poly2', 'poly3', 'spline']
 
 def get_shape_by_name(shape_name, priors):
     import re
     if shape_name == 'sigmoid':
         from sigmoid import Sigmoid
         return Sigmoid(priors)
+    if shape_name == 'sigslope':
+        from sigslope import Sigslope
+        return Sigslope(priors)
     elif shape_name.startswith('poly'):
         m = re.match('poly(\d)',shape_name)
         assert m, 'Illegal polynomial shape name'

@@ -45,7 +45,7 @@ one sided t-test: {regions[0]} < {regions[1]}
 """.format(**locals())
     
     def get_onset_time(fit):
-        a,h,mu,w = fit.theta
+        a,h,mu,_ = fit.theta
         age = age_scaler.unscale(mu)
         return 'onset = {:.3g} years'.format(age)
         

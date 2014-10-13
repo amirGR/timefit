@@ -19,7 +19,7 @@ def plot_bootstrap_histograms(data, fit, n_bins, n_samples):
     bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
 
     def calc_changes(theta):
-        a,h,mu,w = theta
+        a,h,mu,_ = theta
         edge_vals = shape.f(theta,bin_edges)
         changes = np.abs(edge_vals[1:] - edge_vals[:-1])
         changes /= abs(h) # ignore change magnitude per gene - take only distribution of change times
@@ -95,12 +95,12 @@ def plot_bootstrap_fits(data, fit, n_bins, n_samples):
 def plot_bootstrap_onset_variance(data, fits):
     mu_and_std = []
     for fit in iterate_fits(fits):
-        a,h,mu_global,w = fit.theta
+        a,h,mu_global,_ = fit.theta
         
         nParams, nSamples = fit.theta_samples.shape
         mu_bootstrap = np.empty(nSamples)
         for i in xrange(nSamples):
-            a,h,mu_i,w = fit.theta_samples[:,i]
+            a,h,mu_i,_ = fit.theta_samples[:,i]
             mu_bootstrap[i] = mu_i
         mu_std = np.std(mu_bootstrap)
         mu_and_std.append( (mu_global, mu_std) )

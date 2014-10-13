@@ -1,0 +1,6 @@
+{
+  'baseline': NormalPrior(mu=0, sigma=1),
+  'height' : NormalPrior(mu=1, sigma=1),
+  'onset' : NormalPrior(mu=0, sigma=1),
+  'slope' : NormalPrior(mu=0, sigma=5),
+}

@@ -7,7 +7,7 @@ from project_dirs import cache_dir, fit_results_relative_path
 from utils.misc import cache, init_array
 
 def calc_change_distribution(shape, theta, bin_edges):
-    a,h,mu,w = theta
+    a,h,mu,_ = theta
     edge_vals = shape.f(theta,bin_edges)
     changes = np.abs(edge_vals[1:] - edge_vals[:-1])
     return changes / abs(h) # ignore change magnitude per gene - take only distribution of change times
@@ -44,7 +44,7 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
         relies on monotonicity, etc. It is probably not too hard to generalize it to other shapes.
     """
     shape = fitter.shape
-    assert shape.cache_name() == 'sigmoid' # the function currently works only for sigmoid fits
+    assert shape.cache_name() in ['sigmoid','sigslope'] # the function currently works only for sigmoid/sigslope fits
 
     if age_range is None:
         age_range = data.age_range

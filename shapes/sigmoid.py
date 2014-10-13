@@ -33,6 +33,16 @@ class Sigmoid(Shape):
     def cache_name(self):
         return 'sigmoid'
 
+    def canonical_form(self, theta):
+        a,h,mu,w = theta
+        if w < 0:
+            theta = (a+h,-h,mu,-w) # this is an equivalent sigmoid, with w now positive
+        return theta
+
+    def is_positive_transition(self, theta):
+        a,h,mu,w = theta
+        return h*w > 0
+
     def f(self,theta,x):
         a,h,mu,w = theta
         return a + h/(1+np.exp(-(x-mu)/w))
