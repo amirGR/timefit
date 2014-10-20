@@ -229,7 +229,8 @@ class OneDataset(object):
     def __init__(self, expression, gene_names, region_names, genders, ages, name):
         n_ages, n_genes, n_regions = expression.shape
         assert len(ages) == n_ages
-        assert len(genders) == n_ages
+        if genders is not None:
+            assert len(genders) == n_ages
         assert len(gene_names) == n_genes
         assert len(region_names) == n_regions
         self.expression = expression
@@ -260,7 +261,10 @@ class OneDataset(object):
         ages = np.array(mat['ages'].flat)
         gene_names = np.array(matlab_cell_array_to_list_of_strings(mat['gene_names']))
         region_names = np.array(matlab_cell_array_to_list_of_strings(mat['region_names']))
-        genders = np.array(matlab_cell_array_to_list_of_strings(mat['genders']))        
+        if 'genders' in mat:
+            genders = np.array(matlab_cell_array_to_list_of_strings(mat['genders']))        
+        else:
+            genders = None
         expression = mat['expression']
         if expression.ndim == 2: # extend shape to represent a single region name
             expression.shape = list(expression.shape)+[1]
@@ -280,7 +284,7 @@ class OneDataset(object):
         # make sure ages are sorted (for colantuoni there are 2 datapoints that aren't)
         inds = np.argsort(ages)
         ages = ages[inds]
-        genders = genders[inds]
+        genders = genders[inds] if genders is not None else None
         expression = expression[inds,:,:]
         
         return OneDataset(
@@ -314,7 +318,8 @@ class OneDataset(object):
             to_age = self.age_scaler.scale(to_age)
         valid = ((self.ages>=from_age) & (self.ages<=to_age))
         self.ages = self.ages[valid]
-        self.genders = self.genders[valid]
+        if self.genders is not None:
+            self.genders = self.genders[valid]
         self.expression = self.expression[valid,:,:]
         self.age_restriction = restriction_name
         return self    
