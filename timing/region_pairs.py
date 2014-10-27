@@ -14,7 +14,7 @@ from single_region import SingleRegion
 # RegionPairTiming
 ##############################################################
 class RegionPairTiming(object):
-    cube_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-dprime-cube.pkl')
+    cube_filename = join(cache_dir(), 'both', 'fits-log-all-sigslope-theta-sigslope80-sigma-normal-dprime-cube.pkl')
     
     def __init__(self, listname='all'):
         self.listname = listname

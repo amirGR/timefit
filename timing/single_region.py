@@ -6,7 +6,7 @@ from utils.misc import load_pickle
 import pathway_lists 
 
 class SingleRegion(object):    
-    change_dist_filename = join(cache_dir(), 'both', 'fits-log-all-sigmoid-theta-sigmoid_wide-sigma-normal-change-dist.pkl')
+    change_dist_filename = join(cache_dir(), 'both', 'fits-log-all-sigslope-theta-sigslope80-sigma-normal-change-dist.pkl')
     
     def __init__(self, listname='all'):
         self.listname = listname
