@@ -1,11 +1,13 @@
 import setup
 from os import listdir
-from os.path import join
+from os.path import join, isfile
 from project_dirs import pathways_dir, pathway_lists_dir
 
 
 def all_pathway_lists():
-    return listdir(pathway_lists_dir())
+    d = pathway_lists_dir()
+    def is_ok(listname): return isfile(join(d,listname))
+    return [x for x in listdir(d) if is_ok(x)]
 
 def read_all_pathways(listname='all'):
     pathway_names = list_to_pathway_names(listname)
