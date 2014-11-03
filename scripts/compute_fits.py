@@ -21,7 +21,7 @@ def do_fits(data, fitter, k_of_n):
     fits = get_all_fits(data, fitter, k_of_n)    
     return fits
     
-def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions):
+def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions, no_legend):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -29,6 +29,9 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
 ==============================================================================================
 ==============================================================================================
 """
+    figure_kw = dict(
+        show_legend = not no_legend,
+    )
     basic_kw = dict(
         fits = fits,
         basedir = html_dir, 
@@ -47,7 +50,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         )
     else:
         html_kw = None
-    save_fits_and_create_html(data, fitter, html_kw=html_kw, **basic_kw)
+    save_fits_and_create_html(data, fitter, html_kw=html_kw, figure_kw=figure_kw, **basic_kw)
 
     if show_onsets:
         for tooltips in [False, True]:
@@ -103,7 +106,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
                 extra_fields_per_fit = [get_change_distribution_info],
                 b_R2_dist = False, 
             )
-            save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, **basic_kw)
+            save_fits_and_create_html(data, fitter, only_main_html=True, html_kw=html_kw, figure_kw=figure_kw, **basic_kw)
 
 def save_mat_file(data, fitter, fits, has_change_distributions):
     print """
@@ -160,7 +163,8 @@ if __name__ == '__main__':
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
     parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
-    parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't Show change distribution in the figures (only relevant for sigmoids and together with --html)")
+    parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't show change distribution in the figures (only relevant for sigmoids and together with --html)")
+    parser.add_argument('--no_legend', action='store_true', help="Don't show the legend in the figures (only relevant together with --html)")
     parser.add_argument('--timing_dprime', action='store_true', help='Compute measures for timing differences between all regions (sigmoid only)')
     args = parser.parse_args()
     if args.part is not None and args.mat:
@@ -207,6 +211,7 @@ if __name__ == '__main__':
                     correlations=correlations, 
                     show_onsets=args.onset,
                     show_change_distributions = has_change_distributions and not args.dont_show_change_dist,
+                    no_legend = args.no_legend,
                     )
     if args.mat:
         save_mat_file(data, fitter, fits, has_change_distributions)

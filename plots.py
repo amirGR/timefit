@@ -86,7 +86,7 @@ def add_age_ticks(ax, age_scaler, fontsize=None):
     birth_age = scalers.unify(age_scaler).scale(0)
     ax.plot([birth_age, birth_age], [ymin, ymax], '--', color='0.85')
     
-def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, minimal_annotations=False, ax=None):
+def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change_distribution=None, minimal_annotations=False, ax=None, show_legend=True):
     x = series.ages
     y = series.single_expression
     b_subplot = ax is not None
@@ -135,7 +135,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
                 label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0 else None
                 ax.plot([xi, xi], [yi, y_loo], '-', color='0.5', label=label)
                 ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
-        if not minimal_annotations:
+        if show_legend and not minimal_annotations:
             ax.legend(fontsize=fontsize, frameon=False)
         
     if not minimal_annotations:
@@ -186,7 +186,7 @@ def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
         fig = _plot_gene_inner(gene, region_series_fits, change_distribution_bin_centers=bin_centers)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions):
+def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions, figure_kw=None):
     ensure_dir(dirname)
     to_plot = []
     for dsfits in fits.itervalues():
@@ -203,7 +203,7 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show
                 )
             else:
                 change_distribution = None
-            to_plot.append((series,fit,filename,use_correlations, change_distribution))
+            to_plot.append((series,fit,filename,use_correlations, change_distribution, figure_kw))
     if cfg.parallel_run_locally:
         for args in to_plot:
             _plot_series_job(*args)
@@ -211,14 +211,16 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show
         pool = Parallel(_plot_series_job)
         pool(pool.delay(*args) for args in to_plot)
 
-def _plot_series_job(series, fit, filename, use_correlations, change_distribution):
+def _plot_series_job(series, fit, filename, use_correlations, change_distribution, figure_kw):
+    if figure_kw is None:
+        figure_kw = {}
     with interactive(False):
         print 'Saving figure for {}@{}'.format(series.gene_name, series.region_name)
         if use_correlations:
             preds = fit.with_correlations.LOO_predictions
         else:
             preds = fit.LOO_predictions
-        fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds, change_distribution=change_distribution)
+        fig = plot_one_series(series, fit.fitter.shape, fit.theta, preds, change_distribution=change_distribution, **figure_kw)
         save_figure(fig, filename, b_close=True)
 
 def get_scores_from_fits(fits, use_correlations):
@@ -571,13 +573,18 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
                               k_of_n=None, 
                               use_correlations=False, correlations=None,
                               show_change_distributions=False,
-                              html_kw=None):
+                              html_kw=None,
+                              figure_kw=None):
     if fits is None:
         fits = get_all_fits(data,fitter,k_of_n)
     if basedir is None:
         basedir = join(results_dir(), fit_results_relative_path(data,fitter))
         if use_correlations:
             basedir = join(basedir,'with-correlations')
+    if html_kw is None:
+        html_kw = {}
+    if figure_kw is None:
+        figure_kw = {}
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
@@ -587,7 +594,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir), show_change_distributions)
     if do_series and not only_main_html:
-        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions)
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, figure_kw)
     if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
@@ -599,8 +606,6 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
         data_genes = set(data.gene_names)
         missing = pathway_genes - data_genes
         b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
-        if html_kw is None:
-            html_kw = {}
         create_html(
             data, fitter, fits, basedir, gene_dir, series_dir, scores_dir, correlations_dir=correlations_dir,
             use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
