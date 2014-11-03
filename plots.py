@@ -376,7 +376,7 @@ def create_html(data, fitter, fits,
         create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_unique=True)
         create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations=use_correlations, b_unique=False)
 
-    n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
+    n_ranks = 3 # actually we'll have ranks of 0 to n_ranks
     flat_fits = {} # (gene,region) -> fit (may be None)
     for g in gene_names:
         for r in region_names:
@@ -499,7 +499,7 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
 
     dct_pathways = load_17_pathways_breakdown(b_unique)
 
-    n_ranks = 5 # actually we'll have ranks of 0 to n_ranks
+    n_ranks = 3 # actually we'll have ranks of 0 to n_ranks
     flat_fits = {} # (gene,region) -> fit (may be None)
     for g in data.gene_names:
         for r in data.region_names:
