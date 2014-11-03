@@ -160,6 +160,7 @@ if __name__ == '__main__':
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
     parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
+    parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't Show change distribution in the figures (only relevant for sigmoids and together with --html)")
     parser.add_argument('--timing_dprime', action='store_true', help='Compute measures for timing differences between all regions (sigmoid only)')
     args = parser.parse_args()
     if args.part is not None and args.mat:
@@ -201,6 +202,11 @@ if __name__ == '__main__':
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
             compute_timing_info_for_all_fits(data, fitter, fits)
     if args.html != NOT_USED:
-        create_html(data, fitter, fits, args.html, k_of_n, use_correlations=args.correlations, correlations=correlations, show_onsets=args.onset, show_change_distributions=has_change_distributions)
+        create_html(data, fitter, fits, args.html, k_of_n, 
+                    use_correlations=args.correlations, 
+                    correlations=correlations, 
+                    show_onsets=args.onset,
+                    show_change_distributions = has_change_distributions and not args.dont_show_change_dist,
+                    )
     if args.mat:
         save_mat_file(data, fitter, fits, has_change_distributions)
