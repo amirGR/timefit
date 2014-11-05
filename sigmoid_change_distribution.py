@@ -168,7 +168,7 @@ The scaling used for ages (i.e. 'log' means x' = log(x + 38/52))
         bin_centers = change_dist.bin_centers,
         weights = change_dist.weights,
     )
-    filename = join(cache_dir(), 'both', fit_results_relative_path(data,fitter) + '-change-dist.mat')
+    filename = join(cache_dir(), fit_results_relative_path(data,fitter) + '-change-dist.mat')
     save_matfile(mdict, filename)
 
 def compute_fraction_of_change(weights, bin_edges, x_from, x_to, normalize=False):
