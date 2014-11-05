@@ -7,6 +7,7 @@ import os.path
 import cPickle as pickle
 import numpy as np
 import scipy.stats
+import scipy.io
 import matplotlib.pyplot as plt
 import config as cfg
 
@@ -111,3 +112,9 @@ def load_pickle(filename, name='data'):
     print 'loading {} from {}'.format(name, filename)
     with open(filename) as f:
         return pickle.load(f)
+
+def save_matfile(mdict, filename):
+    ensure_dir(os.path.dirname(filename))
+    print 'Saving to {}'.format(filename)
+    scipy.io.savemat(filename, mdict, oned_as='column')
+

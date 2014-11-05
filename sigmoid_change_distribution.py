@@ -4,7 +4,9 @@ import numpy as np
 from sklearn.datasets.base import Bunch
 from all_fits import iterate_fits
 from project_dirs import cache_dir, fit_results_relative_path
-from utils.misc import cache, init_array
+from utils.misc import cache, init_array, save_matfile
+from utils.formats import list_of_strings_to_matlab_cell_array
+import scalers
 
 def calc_change_distribution(shape, theta, bin_edges):
     a,h,mu,_ = theta
@@ -121,6 +123,53 @@ def compute_timing_info_for_all_fits(data, fitter, fits):
         regions=regions, 
         age_scaler=data.age_scaler,
     )
+
+def export_timing_info_for_all_fits(data, fitter, fits):
+    change_dist = compute_timing_info_for_all_fits(data, fitter, fits)
+    README = """\
+mu:
+The mean age of the change distribution for given gene and region.
+Dimensions: <n-genes> X <n-regions>
+
+std:
+The standard deviation of the change distribution for given gene and region.
+Dimensions: <n-genes> X <n-regions>
+
+genes: 
+Gene names for the genes represented in other arrays
+
+weights:
+The change distributions for each gene and region.
+Dimensions: <n-genes> X <n-regions> X <n-bins>
+
+bin_centers:
+The ages for the center of each bin used in calculating the histogram in "weights".
+Dimensions: <n-bins> X 1
+
+bin_edges:
+The edges of the bins used in calculating the change histogram.
+(centers can be calculated from the bin_edges, but it's convenient to have it pre-calculated)
+Dimensions: <n-bins + 1> X 1
+
+regions: 
+Region names for the regions represented in other arrays
+
+age_scaler: 
+The scaling used for ages (i.e. 'log' means x' = log(x + 38/52))
+"""
+    mdict = dict(
+        README_CHANGE_DISTRIBUTIONS = README,
+        genes = list_of_strings_to_matlab_cell_array(change_dist.genes),
+        regions = list_of_strings_to_matlab_cell_array(change_dist.regions),
+        age_scaler = scalers.unify(change_dist.age_scaler).cache_name(),
+        mu = change_dist.mu,
+        std = change_dist.std,
+        bin_edges = change_dist.bin_edges,
+        bin_centers = change_dist.bin_centers,
+        weights = change_dist.weights,
+    )
+    filename = join(cache_dir(), 'both', fit_results_relative_path(data,fitter) + '-change-dist.mat')
+    save_matfile(mdict, filename)
 
 def compute_fraction_of_change(weights, bin_edges, x_from, x_to, normalize=False):
     total = 0
