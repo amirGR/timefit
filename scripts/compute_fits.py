@@ -165,7 +165,7 @@ if __name__ == '__main__':
     parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
     parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't show change distribution in the figures (only relevant for sigmoids and together with --html)")
     parser.add_argument('--no_legend', action='store_true', help="Don't show the legend in the figures (only relevant together with --html)")
-    parser.add_argument('--timing_dprime', action='store_true', help='Compute measures for timing differences between all regions (sigmoid only)')
+    parser.add_argument('--change_dist', action='store_true', help='Compute change distributions and related measures (sigmoid only)')
     args = parser.parse_args()
     if args.part is not None and args.mat:
         print '--mat cannot be used with --part'
@@ -184,8 +184,8 @@ if __name__ == '__main__':
     if args.onset and not is_sigmoid:
         print '--onset can only be used with sigmoid fits'
         sys.exit(-1)
-    if args.timing_dprime and not is_sigmoid:
-        print '--timing_dprime can only be used with sigmoid fits'
+    if args.change_dist and not is_sigmoid:
+        print '--change_dist can only be used with sigmoid fits'
         sys.exit(-1)
     if args.onset and args.html == NOT_USED:
         print '--onset should only be used with --html'
@@ -202,7 +202,7 @@ if __name__ == '__main__':
         print 'Computing change distributions...'
         add_change_distributions(data, fitter, fits)
         print 'Computing region pair timing measures...'
-        if args.timing_dprime:
+        if args.change_dist:
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
             export_timing_info_for_all_fits(data, fitter, fits)
     if args.html != NOT_USED:
