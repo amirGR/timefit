@@ -15,8 +15,7 @@ def do_one_fit(series, fitter, loo, filename, b_show):
     if filename is None:
         ensure_dir(results_dir())
         filename = join(results_dir(), 'fit.png')
-    print 'Saving figure to {}'.format(filename)
-    save_figure(fig, filename)
+    save_figure(fig, filename, print_filename=True)
     if b_show:
         plt.show(block=True)
 
