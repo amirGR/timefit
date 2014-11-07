@@ -30,7 +30,7 @@ def get_common_parser(include_pathway=True):
     if include_pathway:
         parser.add_argument('--pathway', default='serotonin', help='Default: serotonin') #, choices=['all'] + cfg.pathways.keys())
     parser.add_argument('--from_age', help='Use only data points with larger ages than this. Default: all ages', choices=dct_ages.keys())
-    parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', choices=allowed_scaler_names())
+    parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', default='none', choices=allowed_scaler_names())
     parser.add_argument('--shuffle', help='Shuffle the y-values of the data', action='store_true')
     parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigslope', default='sigslope', choices=allowed_shape_names())
     parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: None', choices=get_allowed_priors(is_sigma=True))
@@ -50,8 +50,8 @@ def get_data_from_args(dataset, pathway, from_age, scaling, shuffle):
         restriction_name = from_age
         from_age = dct_ages[from_age]
         data.restrict_ages(restriction_name,from_age=from_age)
-    if scaling is not None:
-        scaler = build_scaler(scaling,data)
+    scaler = build_scaler(scaling,data)
+    if scaler is not None:
         data.scale_ages(scaler)
     if shuffle:
         data.shuffle()

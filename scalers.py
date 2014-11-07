@@ -51,11 +51,11 @@ class LinearScaler(object):
 # Building scaler from command line input
 ##########################################################
 def allowed_scaler_names():
-    return ['linear', 'log']
+    return ['none', 'log']
 
 def build_scaler(name, data):
-    if name == 'linear':
-        return LinearScaler.fromData(data.ages)
+    if name == 'none':
+        return None
     elif name == 'log':
         return LogScaler()
     else:
