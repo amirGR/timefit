@@ -32,7 +32,7 @@ def get_common_parser(include_pathway=True):
     parser.add_argument('--from_age', help='Use only data points with larger ages than this. Default: all ages', choices=dct_ages.keys())
     parser.add_argument('--scaling', help='What scaling to use for ages. Default: none', choices=allowed_scaler_names())
     parser.add_argument('--shuffle', help='Shuffle the y-values of the data', action='store_true')
-    parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigmoid', default='sigmoid', choices=allowed_shape_names())
+    parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigslope', default='sigslope', choices=allowed_shape_names())
     parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: None', choices=get_allowed_priors(is_sigma=True))
     parser.add_argument('--priors', help='Priors to use for theta when fitting. Default: None', choices=get_allowed_priors())
     return parser
