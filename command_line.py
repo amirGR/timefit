@@ -21,12 +21,14 @@ dct_ages = {
     'EF3' : PCW(10),
 }
 
+known_datasets = ['kang2011', 'colantuoni2011', 'both', 'harris2009', 'somel2010-human', 'brainSpan2012']
+
 def get_common_parser(include_pathway=True):
     parser = MyParser(fromfile_prefix_chars='@')
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbose", action="count", default=0, help="increase output verbosity")    
     group.add_argument("-q", "--quiet", action="count", default=0, help="decrease output verbosity")    
-    parser.add_argument('--dataset', default='both', help='Default: both', choices=['kang2011', 'colantuoni2011', 'both', 'harris2009', 'somel2010-human'])  
+    parser.add_argument('--dataset', default='both', help='Default: both', choices=known_datasets)  
     if include_pathway:
         parser.add_argument('--pathway', default='serotonin', help='Default: serotonin') #, choices=['all'] + cfg.pathways.keys())
     parser.add_argument('--from_age', help='Use only data points with larger ages than this. Default: all ages', choices=dct_ages.keys())
