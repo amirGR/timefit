@@ -8,7 +8,7 @@ from load_data import GeneData
 from all_fits import get_all_fits, iterate_fits
 from fitter import Fitter
 from shapes.sigmoid import Sigmoid
-from bootstrap import bootstrap
+from utils.bootstrap import bootstrap
 from scalers import LogScaler
 from plots import save_figure
 
