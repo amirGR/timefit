@@ -50,10 +50,11 @@ sorted_regions = {
         'AMY', 'CBC','HIP', 'MD','STR',
     ],
     'colantuoni2011' : ['PFC'],
-    'brainSpan2012': [
-        'URL', 'VFC', 'DFC', 'LGE', 'ITC', 'STC', 'AMY', 'MFC', 'HIP',
-        'CGE', 'Ocx', 'DTH', 'M1C-S1C', 'MGE', 'OFC', 'PCx', 'TCx', 'M1C',
-        'STR', 'IPC', 'A1C', 'V1C', 'S1C', 'CB', 'MD', 'CBC',
+    'brainSpan2014': [
+        'DFC','OFC','VFC','MFC',
+        'M1C','S1C','IPC',
+        'ITC','STC','A1C','V1C',
+        'AMY', 'CBC','HIP', 'MD','STR',
     ],
 }
 
