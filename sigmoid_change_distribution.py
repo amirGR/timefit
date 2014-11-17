@@ -8,6 +8,14 @@ from utils.misc import cache, init_array, save_matfile
 from utils.formats import list_of_strings_to_matlab_cell_array
 import scalers
 
+def get_bins(data, age_range=None, n_bins=50):
+    if age_range is None:
+        age_range = data.age_range
+    from_age, to_age = age_range
+    bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    return bin_edges, bin_centers
+
 def calc_change_distribution(shape, theta, bin_edges):
     a,h,mu,_ = theta
     edge_vals = shape.f(theta,bin_edges)
@@ -48,11 +56,7 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
     shape = fitter.shape
     assert shape.cache_name() in ['sigmoid','sigslope'] # the function currently works only for sigmoid/sigslope fits
 
-    if age_range is None:
-        age_range = data.age_range
-    from_age, to_age = age_range
-    bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    bin_edges, bin_centers = get_bins(data, age_range, n_bins)
     fits.change_distribution_params = Bunch(
         bin_edges = bin_edges,
         bin_centers = bin_centers,
