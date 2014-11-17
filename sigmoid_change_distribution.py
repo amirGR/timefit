@@ -8,12 +8,15 @@ from utils.misc import cache, init_array, save_matfile
 from utils.formats import list_of_strings_to_matlab_cell_array
 import scalers
 
+def bin_edges_to_centers(bin_edges):
+    return (bin_edges[:-1] + bin_edges[1:])/2
+
 def get_bins(data, age_range=None, n_bins=50):
     if age_range is None:
         age_range = data.age_range
     from_age, to_age = age_range
     bin_edges, bin_size = np.linspace(from_age, to_age, n_bins+1, retstep=True)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    bin_centers = bin_edges_to_centers(bin_edges)
     return bin_edges, bin_centers
 
 def calc_change_distribution(shape, theta, bin_edges):
@@ -63,15 +66,19 @@ def add_change_distributions(data, fitter, fits, age_range=None, n_bins=50):
     )
 
     for dsname,g,r,fit in iterate_fits(fits, return_keys=True):
-        thetas = fit.theta_samples # bootstrap samples of theta values
-        n_params, n_samples = thetas.shape
-        weights = np.zeros(n_bins)
-        for i in xrange(n_samples):
-            weights += calc_change_distribution(shape, thetas[:,i], bin_edges)
-        weights /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
+        weights = calc_bootstrap_change_distribution(shape, fit.theta_samples, bin_edges)
         fit.change_distribution_weights = weights
         fit.change_distribution_spread = change_distribution_spread_cumsum(bin_centers, weights)
         fit.change_distribution_mean_std = change_distribution_mean_and_std(bin_centers, weights)
+
+def calc_bootstrap_change_distribution(shape, theta_samples, bin_edges):
+    bin_centers = bin_edges_to_centers(bin_edges)
+    n_params, n_samples = theta_samples.shape
+    weights = np.zeros(bin_centers.shape)
+    for i in xrange(n_samples):
+        weights += calc_change_distribution(shape, theta_samples[:,i], bin_edges)
+    weights /= n_samples # now values are in fraction of total change (doesn't have to sum up to 1 if ages don't cover the whole transition range)
+    return weights
 
 @cache(lambda data, fitter, fits: join(cache_dir(), fit_results_relative_path(data,fitter) + '-dprime-cube.pkl'))
 def compute_dprime_measures_for_all_pairs(data, fitter, fits):

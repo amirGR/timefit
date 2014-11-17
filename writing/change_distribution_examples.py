@@ -8,7 +8,7 @@ from fitter import Fitter
 from scalers import LogScaler
 from dev_stages import dev_stages
 from plots import save_figure
-from sigmoid_change_distribution import get_bins, calc_change_distribution
+from sigmoid_change_distribution import get_bins, calc_change_distribution, calc_bootstrap_change_distribution
 
 fontsize = 30
 xtick_fontsize = 30
@@ -83,7 +83,15 @@ GRs = [
 for g,r,yrange in GRs:
     print 'Doing {}@{}...'.format(g,r)
     series = data.get_one_series(g,r)
-    theta,_,_,_ = fitter.fit(series.ages, series.single_expression)
+    theta,sigma,_,_ = fitter.fit(series.ages, series.single_expression)
     weights = calc_change_distribution(shape, theta, bin_edges)
     fig = plot_one_series(series, shape, theta, bin_centers, weights, yrange)
     save_figure(fig,'RP/fit-examples-{}-{}.png'.format(g,r), under_results=True)
+    
+    # now with bootstrap estimate of change distribution
+    print 'Doing bootstrap...'
+    theta_samples = fitter.parametric_bootstrap(series.ages, theta, sigma)
+    weights = calc_bootstrap_change_distribution(shape, theta_samples, bin_edges)
+    fig = plot_one_series(series, shape, theta, bin_centers, weights, yrange)
+    save_figure(fig,'RP/fit-examples-{}-{}-bootstrap.png'.format(g,r), under_results=True)
+    
