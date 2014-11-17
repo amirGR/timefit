@@ -92,6 +92,21 @@ class Fitter(object):
             test_fits = None
         return t0, s0, test_preds, test_fits
 
+    def parametric_bootstrap(self, x, theta, sigma):
+        fit_predictions = self.shape.f(theta,x)    
+        nSamples = cfg.n_parameter_estimate_bootstrap_samples
+        dtype = self.shape.parameter_type()
+        theta_samples = np.empty((len(theta),nSamples), dtype=dtype)
+        rng = np.random.RandomState(cfg.random_seed)
+        for iSample in range(nSamples):
+            idx = np.floor(rng.rand(len(x))*len(x)).astype(int)
+            x2 = x[idx]
+            noise = rng.normal(0,sigma,x.shape)
+            y2 = fit_predictions[idx] + noise
+            theta_i, _, _,_ = self.fit(x2, y2)
+            theta_samples[:,iSample] = theta_i
+        return theta_samples
+
     def fit_multiple_series_with_cache(self, x, y, cache):
         """The fit for a single series (with or without LOO) is retrieved 
            from the cache by calling cache(iy, ix) to get the fit theta for

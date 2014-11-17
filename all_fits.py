@@ -72,21 +72,10 @@ def _compute_fit(series, fitter):
     if theta is None:
         print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
         fit_predictions = None
+        theta_samples = None
     else:
         fit_predictions = fitter.shape.f(theta,x)
-        
-        # create bootstrap estimates of the parameters: resample points + add gaussian noise
-        nSamples = cfg.n_parameter_estimate_bootstrap_samples
-        dtype = fitter.shape.parameter_type()
-        theta_samples = np.empty((len(theta),nSamples), dtype=dtype)
-        rng = np.random.RandomState(cfg.random_seed)
-        for iSample in range(nSamples):
-            idx = np.floor(rng.rand(len(x))*len(x)).astype(int)
-            x2 = x[idx]
-            noise = rng.normal(0,sigma,x.shape)
-            y2 = fit_predictions[idx] + noise
-            theta_i, _, _,_ = fitter.fit(x2, y2)
-            theta_samples[:,iSample] = theta_i
+        theta_samples = fitter.parametric_bootstrap(x, theta, sigma)
     
     return Bunch(
         fitter = fitter,
