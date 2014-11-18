@@ -162,11 +162,16 @@ def restrict_genes(fits, genes):
     return new_fits
     
 def iterate_fits(fits, fits2=None, R2_threshold=None, allow_no_theta=False, return_keys=False):
+    def fit_ok(fit):
+        if not allow_no_theta and fit.theta is None:
+            return False
+        if R2_threshold is not None and fit.LOO_score < R2_threshold:
+            return False
+        return True
+        
     for dsname,dsfits in fits.iteritems():
         for (g,r),fit in dsfits.iteritems():
-            if R2_threshold is not None and fit.LOO_score < R2_threshold:
-                continue
-            if not allow_no_theta and fit.theta is None:
+            if not fit_ok(fit):
                 continue
             if fits2 is None:
                 if return_keys:
@@ -175,6 +180,8 @@ def iterate_fits(fits, fits2=None, R2_threshold=None, allow_no_theta=False, retu
                     yield fit
             else:
                 fit2 = fits2[dsname][(g,r)]
+                if not fit_ok(fit2):
+                    continue
                 if return_keys:
                     yield dsname,g,r,fit,fit2
                 else:
