@@ -16,9 +16,9 @@ import scipy.stats
 fontsize = 30
 
 def plot_comparison_bar(scores_no_correlations, scores_with_correlations):
-    t, pval = scipy.stats.ttest_ind(scores_no_correlations, scores_with_correlations, equal_var=False)
-    pval_one_side = pval/2
-    print '*** t-test (non-equal variance, one sided) t={}, pval={:.3g}'.format(t,pval_one_side)
+    _, pval = scipy.stats.wilcoxon(scores_no_correlations, scores_with_correlations)
+    pval = pval/2  # one sided p-value
+    print '*** wilcoxon signed rank p-value (one sided) = {:.3g}'.format(pval)
     
     mu = np.empty(2)
     se = np.empty(2)

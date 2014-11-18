@@ -80,23 +80,24 @@ def plot_comparison_scatter(data, shape1, fits1, shape2, fits2):
     ax.set_ylabel('$R^2$ for {}'.format(shape2), fontsize=fontsize)
     return fig
 
-def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
-    nShapes = len(shapes)
+def plot_comparison_bar(data, shapes, all_fits):
+    n = len(shapes)
+    assert len(all_fits) == n
+    assert n == 2
 
-    mu = np.empty(nShapes)
-    se = np.empty(nShapes)
-    all_scores = []
-    for i,fits in enumerate(all_fits):
-        scores = np.array([f.LOO_score for f in iterate_fits(fits, R2_threshold=-1)])
-        if threshold_percentile is not None:
-            threshold_score = np.percentile(scores, 50)
-            scores = scores[scores > threshold_score]
+    score_pairs = [(f1.LOO_score, f2.LOO_score) for f1,f2 in iterate_fits(all_fits[0], all_fits[1], R2_threshold=-1)]
+    scores1, scores2 = zip(*score_pairs)
+    all_scores = [scores1, scores2]
+    
+    _, pval = scipy.stats.wilcoxon(scores1, scores2)
+    pval = pval/2  # one sided p-value
+    print '*** wilcoxon signed rank p-value (one sided) = {:.3g}'.format(pval)
+    
+    mu = np.empty(n)
+    se = np.empty(n)
+    for i,scores in enumerate(all_scores):
         mu[i] = np.mean(scores)
         se[i] = scipy.stats.sem(scores)
-        all_scores.append(scores)
-    t, pval = scipy.stats.ttest_ind(all_scores[0], all_scores[1], equal_var=False)
-    pval_one_side = pval/2
-    print '*** t-test (non-equal variance, one sided) t={}, pval={:.3g}'.format(t,pval_one_side)
     
     # reorder by mean score
     idx = np.argsort(mu)[::-1]
@@ -104,7 +105,7 @@ def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
     se = se[idx]
     shapes = [shapes[i] for i in idx]
 
-    index = np.arange(nShapes)
+    index = np.arange(n)
     bar_width = 0.8
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
