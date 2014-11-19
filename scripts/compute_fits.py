@@ -201,8 +201,8 @@ if __name__ == '__main__':
     if has_change_distributions:
         print 'Computing change distributions...'
         add_change_distributions(data, fitter, fits)
-        print 'Computing region pair timing measures...'
         if args.change_dist:
+            print 'Computing region pair timing measures...'
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
             export_timing_info_for_all_fits(data, fitter, fits)
     if args.html != NOT_USED:
