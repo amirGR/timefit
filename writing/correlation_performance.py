@@ -32,7 +32,6 @@ def plot_comparison_bar(scores_no_correlations, scores_with_correlations):
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
     ax.bar(index, mu, yerr=se, width=bar_width, color='b', error_kw = {'ecolor': '0.3', 'linewidth': 2})  
-    ax.set_xlabel('shape', fontsize=fontsize)
     ax.set_ylabel('Mean $R^2$', fontsize=fontsize)
     ax.set_xticks(index + bar_width/2)
     ax.set_xticklabels(['Basic fit', 'Using correlations'], fontsize=fontsize)
@@ -48,7 +47,7 @@ def plot_comparison_scatter(R2_pairs, pathway):
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
     ax.scatter(basic, multi, alpha=0.8, label='data')
-    ax.plot(np.mean(basic), np.mean(multi), 'rx', markersize=8, markeredgewidth=2, label='mean')
+    ax.plot(np.mean(basic), np.mean(multi), 'rx', markersize=12, markeredgewidth=3, label='mean')
     ax.plot([-1, 1], [-1, 1],'k--')
     ax.set_xlim(-1,1)
     ax.set_ylim(-1,1)
@@ -58,7 +57,7 @@ def plot_comparison_scatter(R2_pairs, pathway):
     ax.set_xticklabels([str(t) for t in ticks], fontsize=fontsize)
     ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
     ax.set_xlabel('$R^2$ for single gene fits', fontsize=fontsize)
-    ax.set_ylabel('multi gene $R^2$', fontsize=fontsize)
+    ax.set_ylabel('$R^2$ using correlations', fontsize=fontsize)
     ax.legend(fontsize=fontsize, frameon=False, loc='upper left')
     return fig
 
