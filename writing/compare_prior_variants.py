@@ -7,7 +7,7 @@ import config as cfg
 from load_data import GeneData
 from all_fits import get_all_fits, iterate_fits
 from fitter import Fitter
-from shapes.sigmoid import Sigmoid
+from shapes.sigslope import Sigslope
 from utils.bootstrap import bootstrap
 from scalers import LogScaler
 from plots import save_figure
@@ -88,8 +88,8 @@ def plot_pctiles(variations, min_q, show_title=False):
     return fig
 
 def plot_theta_diff_scatter(show_title=False):
-    yFitter = Fitter(Sigmoid(priors_name))
-    nFitter = Fitter(Sigmoid())
+    yFitter = Fitter(Sigslope(priors_name),'normal')
+    nFitter = Fitter(Sigslope())
     yFits = get_all_fits(data,yFitter)
     nFits = get_all_fits(data,nFitter)
     pairs = [(nFit.LOO_score,yFit.LOO_score) for nFit,yFit in iterate_fits(nFits,yFits)]
@@ -111,8 +111,8 @@ def plot_theta_diff_scatter(show_title=False):
     
 def analyze_variant(theta,sigma):
     theta_priors = priors_name if theta else None
-    sigma_prior = priors_name if sigma else None
-    shape = Sigmoid(theta_priors)
+    sigma_prior = 'normal' if sigma else None
+    shape = Sigslope(theta_priors)
     fitter = Fitter(shape,sigma_prior)
     fits = get_all_fits(data,fitter,allow_new_computation=False)
     LOO_scores = [f.LOO_score for f in iterate_fits(fits) if f.LOO_score is not None]
@@ -127,9 +127,9 @@ def analyze_variant(theta,sigma):
 
 cfg.verbosity = 1
 age_scaler = LogScaler()
-pathway = 'serotonin'
+pathway = '17full'
 data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
-priors_name = 'sigmoid_empirical_serotonin'
+priors_name = 'sigslope80'
 variations = [analyze_variant(t,s) for t,s in product([False,True],[False,True])]
 
 fig = plot_bar(variations)
