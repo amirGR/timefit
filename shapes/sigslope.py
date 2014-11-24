@@ -28,6 +28,9 @@ class Sigslope(Shape):
     def cache_name(self):
         return 'sigslope'
 
+    def display_name(self):
+        return 'sigmoid'
+
     def canonical_form(self, theta):
         a,h,mu,b = theta
         if b < 0:

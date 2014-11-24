@@ -4,7 +4,7 @@ import scipy.stats
 import matplotlib.pyplot as plt
 import config as cfg
 from load_data import GeneData
-from shapes.sigmoid import Sigmoid
+from shapes.sigslope import Sigslope
 from shapes.poly import Poly
 from shapes.spline import Spline
 from fitter import Fitter
@@ -13,6 +13,7 @@ from scalers import LogScaler
 from plots import save_figure
 
 fontsize = 30
+larger_fontsize = 48
 
 def plot_comparison_scatter(data, shape1, fits1, shape2, fits2):
     pairs = [(f1.LOO_score, f2.LOO_score) for f1,f2 in iterate_fits(fits1,fits2)]
@@ -29,8 +30,8 @@ def plot_comparison_scatter(data, shape1, fits1, shape2, fits2):
     ax.set_xticks(ticks)
     ax.set_xticklabels([str(t) for t in ticks], fontsize=fontsize)
     ax.set_yticklabels([str(t) for t in ticks], fontsize=fontsize)
-    ax.set_xlabel('$R^2$ for {}'.format(shape1), fontsize=fontsize)
-    ax.set_ylabel('$R^2$ for {}'.format(shape2), fontsize=fontsize)
+    ax.set_xlabel('$R^2$ for {}'.format(shape1), fontsize=larger_fontsize)
+    ax.set_ylabel('$R^2$ for {}'.format(shape2), fontsize=larger_fontsize)
     return fig
 
 def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
@@ -57,10 +58,9 @@ def plot_comparison_bar(data, shapes, all_fits, threshold_percentile=None):
     fig = plt.figure()
     ax = fig.add_axes([0.12,0.12,0.8,0.8])
     ax.bar(index, mu, yerr=se, width=bar_width, color='b', error_kw = {'ecolor': '0.3', 'linewidth': 2})  
-    ax.set_xlabel('shape', fontsize=fontsize)
     ax.set_ylabel('Mean $R^2$', fontsize=fontsize)
     ax.set_xticks(index + bar_width/2)
-    ax.set_xticklabels([s.cache_name() for s in shapes], fontsize=fontsize)
+    ax.set_xticklabels([s.display_name() for s in shapes], fontsize=fontsize)
     yticks = [0, 0.1, 0.2, 0.3]
     ax.set_yticks(yticks)
     ax.set_yticklabels(['{:g}'.format(t) for t in yticks], fontsize=fontsize)
@@ -79,7 +79,7 @@ def plot_comparison_over_R2_score(data, shapes, all_fits, zoom=None, nbins=50):
         xpos = (bins[:-1] + bins[1:])/2
         zoom_data = h[(xpos>=zoom[0]) & (xpos<=zoom[1])]
         zoom_max = max(max(zoom_data),zoom_max)
-        ax.plot(xpos,h, linewidth=3, label=shape.cache_name())        
+        ax.plot(xpos,h, linewidth=3, label=shape.display_name())        
     ax.set_xlim(*zoom)
     ax.set_ylim(0,zoom_max*1.1)
     ax.legend(loc='best', fontsize=fontsize, frameon=False)
@@ -93,7 +93,7 @@ age_scaler = LogScaler()
 pathway = '17full'
 data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
 
-sigmoid = Sigmoid(priors='sigmoid_wide')
+sigmoid = Sigslope(priors='sigslope80')
 spline = Spline()
 poly1 = Poly(1,priors='poly1')
 poly2 = Poly(2,priors='poly2')
@@ -119,4 +119,4 @@ for i in xrange(1,len(shapes)):
     fig = plot_comparison_scatter(data,shapes[0],fits[0],shapes[i],fits[i])
     save_figure(fig,'RP/scatter-{}-{}-{}.png'.format(shapes[0],shapes[i],pathway), under_results=True)
 
-#plt.close('all')
+plt.close('all')

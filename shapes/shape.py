@@ -35,7 +35,10 @@ class Shape(object):
         self.priors = priors            
 
     def __str__(self):
-        return self.cache_name().capitalize()
+        return self.display_name().capitalize()
+        
+    def display_name(self):
+        return self.cache_name()
         
     def n_params(self):
         return len(self.param_names())
