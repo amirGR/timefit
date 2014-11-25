@@ -77,7 +77,8 @@ bin_edges, bin_centers = get_bins(data)
 
 GRs = [
     ('GLRA2','STC', (5, 12)), 
-    ('ADCY6','IPC', (6, 8)), 
+    ('HTR2B','MD', (3.5, 6)), 
+    ('SLC18A2','HIP', (3.5, 5.5)), 
 ]
 
 for g,r,yrange in GRs:

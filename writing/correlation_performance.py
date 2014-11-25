@@ -34,7 +34,7 @@ def plot_comparison_bar(scores_no_correlations, scores_with_correlations):
     ax.bar(index, mu, yerr=se, width=bar_width, color='b', error_kw = {'ecolor': '0.3', 'linewidth': 2})  
     ax.set_ylabel('Mean $R^2$', fontsize=fontsize)
     ax.set_xticks(index + bar_width/2)
-    ax.set_xticklabels(['Basic fit', 'Using correlations'], fontsize=fontsize)
+    ax.set_xticklabels(['assuming\nindependence', 'using\ncorrelations'], fontsize=fontsize)
     yticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
     ax.set_yticks(yticks)
     ax.set_yticklabels(['{:g}'.format(t) for t in yticks], fontsize=fontsize)
