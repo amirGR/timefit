@@ -141,11 +141,11 @@ def analyze_paired_scores_with_and_without_priors(n_best=10):
     print '*** wilcoxon signed rank p-value (one sided) = {:.3g}'.format(pval)
     
     # find examples of best improvements
-    diffs = [(f2.LOO_score-f1.LOO_score, g, r) for dsname,g,r,f1,f2 in iterate_fits(nFits, yFits, R2_threshold=-1, return_keys=True)]
+    diffs = [(f2.LOO_score-f1.LOO_score, f1.LOO_score, f2.LOO_score, g, r) for dsname,g,r,f1,f2 in iterate_fits(nFits, yFits, R2_threshold=-1, return_keys=True)]
     diffs.sort(reverse=True)
     print 'Gene/Regions for which priors produce best R2 improvement:'
-    for i,(delta,g,r) in enumerate(diffs[:10]):
-        print '{i}) {g}@{r}, delta-R2={delta:.3g}'.format(**locals())
+    for i,(delta,R2_without, R2_with, g,r) in enumerate(diffs[:10]):
+        print '{i}) {g}@{r}, delta-R2={delta:.3g}. R2_without={R2_without:.3g}, R2_with={R2_with:.3g}'.format(**locals())
 
 
 cfg.verbosity = 1
