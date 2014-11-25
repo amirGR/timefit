@@ -1,6 +1,7 @@
 import setup
 from itertools import product
 import numpy as np
+import scipy.stats
 import matplotlib.pyplot as plt
 from sklearn.datasets.base import Bunch
 import config as cfg
@@ -19,13 +20,13 @@ def sign(b):
     
 def latex_label(theta,sigma):
     if (theta,sigma) == (False,False):
-        return 'None'
+        return 'none'
     elif (theta,sigma) == (False,True):
         return r'$\sigma$'
     elif (theta,sigma) == (True,False):    
         return r'$\theta$'
     elif (theta,sigma) == (True,True):    
-        return r'Both'
+        return r'both'
 
 def plot_bar(variations, q=None, show_title=False):
     index = np.arange(len(variations))
@@ -125,19 +126,41 @@ def analyze_variant(theta,sigma):
         sem = sem,
     )
 
+def analyze_paired_scores_with_and_without_priors(n_best=10):
+    nFitter = Fitter(Sigslope())
+    yFitter = Fitter(Sigslope(priors_name), 'normal')
+
+    nFits = get_all_fits(data,nFitter,allow_new_computation=False)
+    yFits = get_all_fits(data,yFitter,allow_new_computation=False)
+
+    score_pairs = [(f1.LOO_score, f2.LOO_score) for f1,f2 in iterate_fits(nFits, yFits)]
+    nScores, yScores = zip(*score_pairs)
+    
+    _, pval = scipy.stats.wilcoxon(nScores, yScores)
+    pval = pval/2  # one sided p-value
+    print '*** wilcoxon signed rank p-value (one sided) = {:.3g}'.format(pval)
+    
+    # find examples of best improvements
+    diffs = [(f2.LOO_score-f1.LOO_score, g, r) for dsname,g,r,f1,f2 in iterate_fits(nFits, yFits, R2_threshold=-1, return_keys=True)]
+    diffs.sort(reverse=True)
+    print 'Gene/Regions for which priors produce best R2 improvement:'
+    for i,(delta,g,r) in enumerate(diffs[:10]):
+        print '{i}) {g}@{r}, delta-R2={delta:.3g}'.format(**locals())
+
+
 cfg.verbosity = 1
 age_scaler = LogScaler()
 pathway = '17full'
 data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
 priors_name = 'sigslope80'
-variations = [analyze_variant(t,s) for t,s in product([False,True],[False,True])]
 
+analyze_paired_scores_with_and_without_priors()
+
+variations = [analyze_variant(t,s) for t,s in product([False,True],[False,True])]
 fig = plot_bar(variations)
 save_figure(fig,'RP/prior-variations-bar.png', under_results=True)
 fig = plot_pctiles(variations, min_q=5)
 save_figure(fig,'RP/prior-variations-percentiles.png', under_results=True)
-fig = plot_theta_diff_scatter()
-save_figure(fig,'RP/prior-variations-scatter.png', under_results=True)
+#fig = plot_theta_diff_scatter()
+#save_figure(fig,'RP/prior-variations-scatter.png', under_results=True)
 
-#plot_bar(variations,q=95)
-#plot_pctiles(variations, min_q=80)
