@@ -62,9 +62,20 @@ cfg.verbosity = 1
 age_scaler = LogScaler()
 data = GeneData.load('both').scale_ages(age_scaler)
 
+#0) GABRA2@HIP, delta-R2=0.669
+#1) GPR50@DFC, delta-R2=0.573
+#2) UCHL1@V1C, delta-R2=0.571
+#3) GRIN2B@HIP, delta-R2=0.548
+#4) SSTR1@A1C, delta-R2=0.533
+#5) GRM7@DFC, delta-R2=0.531
+#6) GRM7@STC, delta-R2=0.525
+#7) TOMM40L@VFC, delta-R2=0.514
+#8) CREB5@DFC, delta-R2=0.496
+#9) GRM7@S1C, delta-R2=0.474
+
 GRs = [
-    ('HTR5A','S1C', (6, 10)), 
-    ('HTR1A','V1C', (4, 10)), 
+    ('HTR5A','S1C', (6, 10)),  # example of extreme parameter values without priors
+    ('GABRA2','HIP', (4, 12)),  # delta-R2=0.669 (not actual trend in data)
 ]
 fitters = [
     Fitter(Sigmoid()), 
