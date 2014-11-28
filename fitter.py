@@ -117,10 +117,14 @@ class Fitter(object):
         assert y.shape[0] == len(x)
         nx, ny = y.shape
         
-        test_preds = np.empty(y.shape)
-        test_fits = np.empty(y.shape, dtype=object)        
         theta0 = [cache(iy,None) for iy in xrange(ny)]
         sigma0 = self._calc_covariance_matrix(theta0,x,y)
+        
+        # LOO fits and predictions:
+        # for each point (ix,iy) find sigma, theta and predicted y value for fits done
+        # with the point y[ix,iy] missing from the training.
+        test_preds = np.empty(y.shape)  # LOO predictions for y
+        test_fits = np.empty(y.shape, dtype=object)  # LOO fits - pairs of (theta,sigma) for each left out point in y
         for ix in xrange(nx):
             for iy in xrange(ny):
                 y_train = np.copy(y)
