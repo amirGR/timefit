@@ -62,7 +62,7 @@ class Fitter(object):
                 
             for i,(train,test) in enumerate(train_test_split):
                 if cfg.verbosity >= 2:
-                    print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i,n_batches)
+                    print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i+1,n_batches)
                 if n_series == 1:
                     theta,sigma = self._fit(x[train],y[train])
                     for idxTest in test:
