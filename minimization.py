@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import minimize
+import scipy.optimize
 import config as cfg
 
 class RecordingCallback(object):
@@ -13,14 +13,22 @@ class RecordingCallback(object):
             self.best_val = val
             self.best_P = P
 
+def _minimize(f, f_grad, P0, bounds, cb):
+    if bounds is None or bounds == len(bounds)*[(None,None)]:
+        scipy.optimize.minimize(f, P0, method='BFGS', jac=f_grad, callback=cb, tol=cfg.minimization_tol)
+    else:
+        scipy.optimize.minimize(f, P0, method='TNC', jac=f_grad, bounds=bounds, callback=cb, tol=cfg.minimization_tol)
+    
 def minimize_with_restarts(f, f_grad, f_get_P0, bounds=None, n_restarts=None):
     if n_restarts is None:
         n_restarts = cfg.n_optimization_restarts
     cb = RecordingCallback(f)
     for i in xrange(n_restarts):
         P0 = f_get_P0(i)
-        if bounds is None or bounds == len(bounds)*[(None,None)]:
-            minimize(f, P0, method='BFGS', jac=f_grad, callback=cb, tol=cfg.minimization_tol)
-        else:
-            minimize(f, P0, method='TNC', jac=f_grad, bounds=bounds, callback=cb, tol=cfg.minimization_tol)
+        _minimize(f, f_grad, P0, bounds, cb)
+    return cb.best_P
+
+def minimize(f, f_grad, P0, bounds=None):
+    cb = RecordingCallback(f)
+    _minimize(f, f_grad, P0, bounds, cb)
     return cb.best_P
