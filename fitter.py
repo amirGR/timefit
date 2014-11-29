@@ -1,7 +1,8 @@
 from functools import partial
 import config as cfg
 import numpy as np
-from minimization import minimize_with_restarts
+from numpy import matrix as mat
+from minimization import minimize_with_restarts, minimize
 from sklearn.cross_validation import LeaveOneOut, KFold
 from shapes.priors import get_prior
 from numpy import linalg
@@ -107,8 +108,9 @@ class Fitter(object):
             theta_samples[:,iSample] = theta_i
         return theta_samples
 
-    def fit_multiple_series_with_cache(self, x, y, cache):
-        """The fit for a single series (with or without LOO) is retrieved 
+    def fit_multiple_series_with_cache(self, x, y, theta_cache, n_iterations=1):
+        """Computes multi-gene sigma and test predictions given theta via the parameter theta_cache.
+           The previously fit theta for a single series (with or without LOO) is retrieved 
            from the cache by calling cache(iy, ix) to get the fit theta for
            series number iy, with possible leaving out of series item ix (if ix is not None)
         """
@@ -117,8 +119,14 @@ class Fitter(object):
         assert y.shape[0] == len(x)
         nx, ny = y.shape
         
-        theta0 = [cache(iy,None) for iy in xrange(ny)]
-        sigma0 = self._calc_covariance_matrix(theta0,x,y)
+        basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]
+
+        # fit whole data (no LOO)
+        theta0 = basic_theta[:]
+        sigma0,L0 = self._multi_series_sigma_step(x,y,theta0)
+        for _ in xrange(n_iterations-1):
+            theta0 = self._multi_series_theta_step(x,y,L0,theta0)
+            sigma0,L0 = self._multi_series_sigma_step(x,y,theta0)
         
         # LOO fits and predictions:
         # for each point (ix,iy) find sigma, theta and predicted y value for fits done
@@ -127,20 +135,68 @@ class Fitter(object):
         test_fits = np.empty(y.shape, dtype=object)  # LOO fits - pairs of (theta,sigma) for each left out point in y
         for ix in xrange(nx):
             for iy in xrange(ny):
+                if cfg.verbosity >= 2:
+                    print 'Multi-series fitting LOO ix={}/{}, iy={}/{}'.format(ix+1,nx,iy+1,ny)
                 y_train = np.copy(y)
                 y_train[ix,iy] = np.NaN # remove information for LOO point
-                theta = theta0[:]
-                theta[iy] = cache(iy,ix)
-                sigma = self._calc_covariance_matrix(theta,x,y_train)
+                
+                theta = basic_theta[:]
+                theta[iy] = theta_cache(iy,ix)
+                
+                sigma,L = self._multi_series_sigma_step(x,y_train,theta)
+                for _ in xrange(n_iterations-1):
+                    theta = self._multi_series_theta_step(x,y_train,L,theta)
+                    sigma,L = self._multi_series_sigma_step(x,y_train,theta)
+                
                 test_fits[ix,iy] = (theta,sigma)
-                if theta is None:
-                    test_preds[ix,iy] = np.NaN
-                else:
-                    L = linalg.pinv(sigma)
-                    y_other = np.copy(y[ix,:])
-                    y_other[iy] = np.NaN
-                    test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_other, iy)
-        return test_preds, test_fits, sigma0
+                test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_train[ix], iy)
+        return theta0, sigma0, test_preds, test_fits
+
+    def _multi_series_sigma_step(self, x, y, theta):
+        """Computes multi-gene sigma given theta.
+           the parameter y may contain NaN values for held out data.
+        """
+        sigma = self._calc_covariance_matrix(theta,x,y)
+        L = linalg.pinv(sigma)
+        return sigma,L
+        
+    def _multi_series_theta_step(self, x, y, L, last_theta):
+        """Computes multi-gene theta given lambda (inverse sigma).
+           the parameter y may contain NaN values for held out data.
+        """
+        n,m = y.shape
+        p = self.shape.n_params()
+        last_theta = np.array(last_theta)
+        assert last_theta.shape == (m,p)
+        
+        L = mat(L)
+        y = mat(y)
+        invalid = np.isnan(y)
+        
+        def E(P):
+            theta = P.reshape(m,p)
+            R = y - mat([self.shape.f(t,x) for t in theta]).T
+            R[invalid] = 0  # ignores contribution of positions where y is unknown
+            res = np.trace(R * L * R.T)
+            return res
+            
+        def E_grad(P):
+            theta = P.reshape(m,p)
+            R = y - mat([self.shape.f(t,x) for t in theta]).T
+            R[invalid] = 0  # ignores contribution of positions where y is unknown            
+            DR = np.array(-2*L*R.T)
+            grad = np.empty(theta.shape)
+            for k,t in enumerate(theta):
+                Dk = self.shape.f_grad(t,x)
+                for j,Dkj in enumerate(Dk):
+                    grad[k,j] = np.dot(DR[k], Dkj)
+            res = grad.reshape(m*p)
+            return res
+        
+        P0 = last_theta.reshape(1,m*p) 
+        P = minimize(E, E_grad, P0)
+        theta = P.reshape(m,p)
+        return theta
         
     def _predict_with_covariance(self, theta, L, x, y_other, k):
         """Predicts value for series number k at value x (both scalars).

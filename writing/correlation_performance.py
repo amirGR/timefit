@@ -76,7 +76,7 @@ def analyze_one_region(data, fitter, fits, region):
             return theta    
     x = series.ages
     y = series.expression
-    multi_gene_preds,_,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
+    _,_,multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
     
     R2_pairs = {}
     for i,g in enumerate(series.gene_names):

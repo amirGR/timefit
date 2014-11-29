@@ -132,7 +132,7 @@ def add_predictions_using_correlations(data, fitter, fits):
             else:
                 theta,sigma = fit.LOO_fits[ix]
                 return theta    
-        preds,_,sigma = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
+        _,sigma,preds,_ = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
         correlations[r] = covariance_to_correlation(sigma)
         for iy,g in enumerate(series.gene_names):
             fit = ds_fits[(g,r)]

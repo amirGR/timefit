@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets.base import Bunch
 from load_data import SeveralGenesOneRegion
 from plots import plot_series
-from shapes.sigmoid import Sigmoid
+from shapes.sigslope import Sigslope
 from fitter import Fitter
 from fit_score import loo_score
 
@@ -14,7 +14,7 @@ cfg.xtick_fontsize = 18
 cfg.ytick_fontsize = 18
 
 def get_fitter():
-    shape = Sigmoid(priors='sigmoid_wide')
+    shape = Sigslope(priors='sigslope80')
     fitter = Fitter(shape, sigma_prior='normal')
     return fitter    
 
@@ -24,11 +24,11 @@ def get_series():
     x = np.linspace(0,100,n) + rng.normal(0,0.1,size=n)
     x.sort()
     
-    sigmoid = Sigmoid()
-    t1 = (-1,4,50,5)
-    y1 = sigmoid.f(t1,x)
-    t2 = (1,3,25,2)
-    y2 = sigmoid.f(t2,x)
+    shape = Sigslope()
+    t1 = (-1,4,50,0.2)
+    y1 = shape.f(t1,x)
+    t2 = (1,3,25,0.5)
+    y2 = shape.f(t2,x)
     c = -0.95
     sigma = [[1, c], [c, 1]]
     noise = rng.multivariate_normal([0,0],sigma,n)
@@ -67,18 +67,19 @@ if __name__ == '__main__':
     fitter = get_fitter()
     series = get_series()
     
-    ##############################################################
-    # check regular fitting of multi series
-    ##############################################################
-    theta, sigma, LOO_predictions,_ = fitter.fit(series.ages, series.expression, loo=True)
-    print 'sigma:\n{}'.format(sigma)
-    plot_series(series, fitter.shape, theta, LOO_predictions)
+#    ##############################################################
+#    # check regular fitting of multi series
+#    ##############################################################
+#    theta, sigma, LOO_predictions,_ = fitter.fit(series.ages, series.expression, loo=True)
+#    print 'sigma:\n{}'.format(sigma)
+#    plot_series(series, fitter.shape, theta, LOO_predictions)
 
     ##############################################################
     # check fit_multiple_series_with_cache
     ##############################################################
     fits = []
     for i,g in enumerate(series.gene_names):
+        print 'Fitting series {}...'.format(i+1)
         x = series.ages
         y = series.expression[:,i]
         theta, sigma, LOO_predictions, LOO_fits = fitter.fit(x,y,loo=True)
@@ -96,10 +97,11 @@ if __name__ == '__main__':
         else:
             theta,sigma = fit.LOO_fits[ix]
             return theta    
-    
+
+    print 'Fitting with correlations...'    
     x = series.ages
     y = series.expression
-    multi_gene_preds,_,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
+    _,_,multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2)
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):

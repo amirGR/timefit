@@ -51,7 +51,7 @@ class Sigmoid(Shape):
         a,h,mu,w = theta
         e = np.exp(-(x-mu)/w)
         ie = np.exp((x-mu)/w)
-        d_a = 1
+        d_a = np.exp(0*x)  # this evaluates to the correct type for x which is either a scalar or an array
         d_h = 1/(1+e)
         d_mu = -h/(w*(1+e)*(1+ie))
         d_w = -h*(x-mu)/(w**2 * (1+e) * (1+ie))

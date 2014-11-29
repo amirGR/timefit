@@ -49,7 +49,7 @@ class Sigslope(Shape):
         a,h,mu,b = theta
         e = np.exp(-(x-mu)*b)
         ie = np.exp((x-mu)*b)
-        d_a = 1
+        d_a = np.exp(0*x)  # this evaluates to the correct type for x which is either a scalar or an array
         d_h = 1/(1+e)
         d_mu = -h*b/((1+e)*(1+ie))
         d_b = h*(x-mu)/((1+e)*(1+ie))
