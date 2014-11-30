@@ -1,4 +1,5 @@
 from functools import partial
+from itertools import product, chain
 import config as cfg
 import numpy as np
 from numpy import matrix as mat
@@ -121,35 +122,37 @@ class Fitter(object):
         
         basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]
 
-        # fit whole data (no LOO)
-        theta0 = basic_theta[:]
-        sigma0,L0 = self._multi_series_sigma_step(x,y,theta0)
-        for _ in xrange(n_iterations-1):
-            theta0 = self._multi_series_theta_step(x,y,L0,theta0)
-            sigma0,L0 = self._multi_series_sigma_step(x,y,theta0)
-        
         # LOO fits and predictions:
         # for each point (ix,iy) find sigma, theta and predicted y value for fits done
         # with the point y[ix,iy] missing from the training.
         test_preds = np.empty(y.shape)  # LOO predictions for y
         test_fits = np.empty(y.shape, dtype=object)  # LOO fits - pairs of (theta,sigma) for each left out point in y
-        for ix in xrange(nx):
-            for iy in xrange(ny):
-                if cfg.verbosity >= 2:
+        for ix,iy in chain([(None,None)], product(xrange(nx),xrange(ny))):
+            is_LOO = ix is not None
+            
+            if cfg.verbosity >= 2:
+                if is_LOO:
                     print 'Multi-series fitting LOO ix={}/{}, iy={}/{}'.format(ix+1,nx,iy+1,ny)
-                y_train = np.copy(y)
+                else:
+                    print 'Multi-series fitting global fit'
+            y_train = np.copy(y)
+            theta = basic_theta[:]
+
+            if is_LOO:
                 y_train[ix,iy] = np.NaN # remove information for LOO point
-                
-                theta = basic_theta[:]
                 theta[iy] = theta_cache(iy,ix)
-                
+            
+            sigma,L = self._multi_series_sigma_step(x,y_train,theta)
+            for _ in xrange(n_iterations-1):
+                theta = self._multi_series_theta_step(x,y_train,L,theta)
                 sigma,L = self._multi_series_sigma_step(x,y_train,theta)
-                for _ in xrange(n_iterations-1):
-                    theta = self._multi_series_theta_step(x,y_train,L,theta)
-                    sigma,L = self._multi_series_sigma_step(x,y_train,theta)
-                
+
+            if is_LOO:            
                 test_fits[ix,iy] = (theta,sigma)
                 test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_train[ix], iy)
+            else:
+                theta0 = theta
+                sigma0 = sigma
         return theta0, sigma0, test_preds, test_fits
 
     def _multi_series_sigma_step(self, x, y, theta):

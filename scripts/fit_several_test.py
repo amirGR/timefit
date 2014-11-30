@@ -101,7 +101,10 @@ if __name__ == '__main__':
     print 'Fitting with correlations...'    
     x = series.ages
     y = series.expression
-    _,_,multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2)
+    theta, sigma, multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2)
+    print 'Got theta='
+    for ti in theta:
+        print '\t{}'.format(ti)
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):
