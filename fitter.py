@@ -212,6 +212,8 @@ class Fitter(object):
             R = y - mat([self.shape.f(t,x) for t in theta]).T
             R[invalid] = 0  # ignores contribution of positions where y is unknown
             res = np.trace(R * L * R.T)
+            if self.shape.priors is not None:
+                res = res - sum([self.shape.log_prob_theta(t) for t in theta])
             return res
             
         def E_grad(P):
@@ -224,10 +226,13 @@ class Fitter(object):
                 Dk = self.shape.f_grad(t,x)
                 for j,Dkj in enumerate(Dk):
                     grad[k,j] = np.dot(DR[k], Dkj)
+                if self.shape.priors is not None:
+                    grad[k,:] = grad[k,:] - self.shape.d_log_prob_theta(t)                    
             res = grad.reshape(m*p)
             return res
         
-        P0 = last_theta.reshape(1,m*p) 
+        P0 = last_theta.reshape(1,m*p)
+        assert not self.shape.has_bounds(), "Multi-series optimization doesn't support priors with bounds yet (should be easy to add, but I haven't done it yet)"
         P = minimize(E, E_grad, P0)
         theta = P.reshape(m,p)
         return theta

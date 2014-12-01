@@ -61,6 +61,9 @@ class Shape(object):
             return self.n_params() * [(None,None)]        
         return [pr.bounds() for pr in self.priors]
 
+    def has_bounds(self):
+        return self.bounds() != self.n_params() * [(None,None)]
+
     def canonical_form(self, theta):
         return theta
 
