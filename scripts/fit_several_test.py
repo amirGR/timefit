@@ -19,18 +19,18 @@ def get_fitter():
     return fitter    
 
 def get_series():
-    n = 100
+    n = 10
     rng = np.random.RandomState(cfg.random_seed)
     x = np.linspace(0,100,n) + rng.normal(0,0.1,size=n)
     x.sort()
     
     shape = Sigslope()
-    t1 = (-1,4,50,0.2)
+    t1 = (-1,40,50,0.2)
     y1 = shape.f(t1,x)
-    t2 = (1,3,25,0.5)
+    t2 = (1,30,25,0.5)
     y2 = shape.f(t2,x)
     c = -0.95
-    sigma = [[1, c], [c, 1]]
+    sigma = 100*np.array([[1, c], [c, 1]])
     noise = rng.multivariate_normal([0,0],sigma,n)
     y = np.c_[y1,y2] + noise
      
@@ -96,15 +96,17 @@ if __name__ == '__main__':
             return fit.theta
         else:
             theta,sigma = fit.LOO_fits[ix]
-            return theta    
+            return theta
 
     print 'Fitting with correlations...'    
     x = series.ages
     y = series.expression
-    theta, sigma, multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2)
-    print 'Got theta='
+    theta, sigma, multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2, loo=True)
+    print 'Theta:'
     for ti in theta:
-        print '\t{}'.format(ti)
+        print '  {}'.format(ti)
+    print 'Sigma:'
+    print sigma
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):

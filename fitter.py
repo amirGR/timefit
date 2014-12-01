@@ -109,7 +109,7 @@ class Fitter(object):
             theta_samples[:,iSample] = theta_i
         return theta_samples
 
-    def fit_multiple_series_with_cache(self, x, y, theta_cache, n_iterations=1):
+    def fit_multiple_series_with_cache(self, x, y, theta_cache, n_iterations=1, loo=True):
         """Computes multi-gene sigma and test predictions given theta via the parameter theta_cache.
            The previously fit theta for a single series (with or without LOO) is retrieved 
            from the cache by calling cache(iy, ix) to get the fit theta for
@@ -119,40 +119,66 @@ class Fitter(object):
         assert y.ndim == 2, "cache doesn't make sense and is not meant to be used for single series fitting"
         assert y.shape[0] == len(x)
         nx, ny = y.shape
-        
-        basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]
 
-        # LOO fits and predictions:
-        # for each point (ix,iy) find sigma, theta and predicted y value for fits done
+        unscaled_x = x
+        unscaled_y = y
+        x,sx = self._scale(x)
+        y,sy = self._scale(y)
+        isx = self._inverse_scaling(sx)
+        isy = self._inverse_scaling(sy)
+        
+        orig_cache = theta_cache
+        def theta_cache(iy,ix):
+            t = orig_cache(iy,ix)
+            return self.shape.adjust_for_scaling(t,isx,isy)
+        
+        basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]   
+
+        # fits and predictions:
+        # If we are doing LOO, then for each point (ix,iy) find sigma, theta and predicted y value for fits done
         # with the point y[ix,iy] missing from the training.
-        test_preds = np.empty(y.shape)  # LOO predictions for y
-        test_fits = np.empty(y.shape, dtype=object)  # LOO fits - pairs of (theta,sigma) for each left out point in y
-        for ix,iy in chain([(None,None)], product(xrange(nx),xrange(ny))):
-            is_LOO = ix is not None
-            
+        test_preds = np.empty(y.shape)  # predictions for y
+        test_fits = np.empty(y.shape, dtype=object) if loo else None # LOO fits - pairs of (theta,sigma) for each left out point in y
+        pairs = [(None,None)]  # this represents the global fit, no point is left out
+        if loo:
+            pairs += list(product(xrange(nx),xrange(ny)))
+        for ix,iy in pairs:
+            is_LOO_iteration = ix is not None
             if cfg.verbosity >= 2:
-                if is_LOO:
+                if is_LOO_iteration:
                     print 'Multi-series fitting LOO ix={}/{}, iy={}/{}'.format(ix+1,nx,iy+1,ny)
                 else:
                     print 'Multi-series fitting global fit'
+                    
             y_train = np.copy(y)
             theta = basic_theta[:]
-
-            if is_LOO:
+            if is_LOO_iteration:
                 y_train[ix,iy] = np.NaN # remove information for LOO point
                 theta[iy] = theta_cache(iy,ix)
-            
+
             sigma,L = self._multi_series_sigma_step(x,y_train,theta)
             for _ in xrange(n_iterations-1):
                 theta = self._multi_series_theta_step(x,y_train,L,theta)
                 sigma,L = self._multi_series_sigma_step(x,y_train,theta)
 
-            if is_LOO:            
+            # adjust theta, sigma and L to compensate for the scaling
+            sigma = sigma / (sy[0]**2)  # The covariance matrix scales quadratically with the y axis.
+            L = L * (sy[0]**2)
+            theta = [self.shape.adjust_for_scaling(t,sx,sy) for t in theta]
+
+            if is_LOO_iteration:            
                 test_fits[ix,iy] = (theta,sigma)
-                test_preds[ix,iy] = self._predict_with_covariance(theta, L, x[ix], y_train[ix], iy)
+                other_y = unscaled_y[ix].copy()
+                other_y[iy] = np.NaN  # remove information for the predicted point
+                test_preds[ix,iy] = self._predict_with_covariance(theta, L, unscaled_x[ix], other_y, iy)
             else:
                 theta0 = theta
                 sigma0 = sigma
+                if not loo:
+                    for ix2,iy2 in product(xrange(nx),xrange(ny)):
+                        other_y = unscaled_y[ix2].copy()
+                        other_y[iy2] = np.NaN  # remove information for the predicted point
+                        test_preds[ix2,iy2] = self._predict_with_covariance(theta, L, unscaled_x[ix2], other_y, iy2)
         return theta0, sigma0, test_preds, test_fits
 
     def _multi_series_sigma_step(self, x, y, theta):
@@ -313,7 +339,11 @@ class Fitter(object):
 
     @staticmethod
     def _scale(vals):
-        vLow,vHigh = np.percentile(vals, cfg.fitter_scaling_percentiles)
+        """This method should work with both single and multi dimensional vals.
+           The returned scaledVals will have the same shape as vals.
+        """
+        tmp = vals[~np.isnan(vals)]
+        vLow,vHigh = np.percentile(tmp, cfg.fitter_scaling_percentiles)
         vRange = vHigh - vLow
         vCenter = 0.5 * (vHigh + vLow)
         b = vCenter
