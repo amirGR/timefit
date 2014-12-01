@@ -101,7 +101,8 @@ if __name__ == '__main__':
     print 'Fitting with correlations...'    
     x = series.ages
     y = series.expression
-    theta, sigma, multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2, loo=True)
+    theta, sigma, multi_gene_preds,_ = \
+        fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2, loo=True)
     print 'Theta:'
     for ti in theta:
         print '  {}'.format(ti)

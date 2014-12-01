@@ -1,5 +1,5 @@
 from functools import partial
-from itertools import product, chain
+from itertools import product, izip
 import config as cfg
 import numpy as np
 from numpy import matrix as mat
@@ -123,14 +123,17 @@ class Fitter(object):
         unscaled_x = x
         unscaled_y = y
         x,sx = self._scale(x)
-        y,sy = self._scale(y)
-        isx = self._inverse_scaling(sx)
-        isy = self._inverse_scaling(sy)
+        sy = ny*[None]
+        y = np.empty(y.shape)
+        for iy in xrange(ny):
+            y[:,iy], sy[iy] = self._scale(unscaled_y[:,iy])
         
         orig_cache = theta_cache
+        isx = self._inverse_scaling(sx)
+        isy = [self._inverse_scaling(syi) for syi in sy]
         def theta_cache(iy,ix):
             t = orig_cache(iy,ix)
-            return self.shape.adjust_for_scaling(t,isx,isy)
+            return self.shape.adjust_for_scaling(t,isx,isy[iy])
         
         basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]   
 
@@ -162,9 +165,11 @@ class Fitter(object):
                 sigma,L = self._multi_series_sigma_step(x,y_train,theta)
 
             # adjust theta, sigma and L to compensate for the scaling
-            sigma = sigma / (sy[0]**2)  # The covariance matrix scales quadratically with the y axis.
-            L = L * (sy[0]**2)
-            theta = [self.shape.adjust_for_scaling(t,sx,sy) for t in theta]
+            y_stretch = np.array([syi[0] for syi in sy])
+            covariance_stretch = np.outer(y_stretch,y_stretch)
+            sigma = np.divide(sigma, covariance_stretch) # use np.divide and np.multiple to ensure elementwise operation just in case one of the items is a matrix type
+            L = np.multiply(L, covariance_stretch)
+            theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(theta,sy)]
 
             if is_LOO_iteration:            
                 test_fits[ix,iy] = (theta,sigma)
