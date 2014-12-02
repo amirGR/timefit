@@ -14,6 +14,7 @@ class RecordingCallback(object):
             self.best_P = P
 
 def _minimize(f, f_grad, P0, bounds, cb):
+    cb(P0)
     if bounds is None or bounds == len(bounds)*[(None,None)]:
         scipy.optimize.minimize(f, P0, method='BFGS', jac=f_grad, callback=cb, tol=cfg.minimization_tol)
     else:
