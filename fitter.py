@@ -5,6 +5,7 @@ import numpy as np
 from numpy import matrix as mat
 from minimization import minimize_with_restarts, minimize
 from sklearn.cross_validation import LeaveOneOut, KFold
+from sklearn.datasets.base import Bunch
 from shapes.priors import get_prior
 from numpy import linalg
 
@@ -46,6 +47,8 @@ class Fitter(object):
         assert y.ndim <= 2
         assert y.shape[0] == len(x)
         n_series = y.shape[1] if y.ndim == 2 else 1
+        if n_series > 1:
+            raise Exception('Multi-series fitting is only currently supported through all_fits.get_all_fits()')
         
         t0,s0 = self._fit(x,y)
         if loo:            
@@ -65,30 +68,13 @@ class Fitter(object):
             for i,(train,test) in enumerate(train_test_split):
                 if cfg.verbosity >= 2:
                     print 'LOO fit: computing prediction for points {} (batch {}/{})'.format(list(test),i+1,n_batches)
-                if n_series == 1:
-                    theta,sigma = self._fit(x[train],y[train])
-                    for idxTest in test:
-                        test_fits[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
-                    if theta is None:
-                        test_preds[test] = np.nan
-                    else:
-                        test_preds[test] = self.shape.f(theta,x[test])
+                theta,sigma = self._fit(x[train],y[train])
+                for idxTest in test:
+                    test_fits[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
+                if theta is None:
+                    test_preds[test] = np.nan
                 else:
-                    y_train = np.copy(y)
-                    y_train.ravel()[test] = np.NaN # remove information for test-set points
-                    theta,sigma = self._fit(x,y_train)
-                    for idxTest in test:
-                        test_fits.ravel()[idxTest] = (theta,sigma) # assigning tuple to list of indices does something different (not sure what...)
-                    if theta is None:
-                        test_preds.ravel()[test] = np.NaN
-                    else:
-                        L = linalg.pinv(sigma)
-                        for idx_test in test:
-                            idx_x = int(idx_test / n_series)
-                            idx_y = idx_test % n_series
-                            y_other = np.copy(y[idx_x,:])
-                            y_other[idx_y] = np.NaN
-                            test_preds.ravel()[idx_test] = self._predict_with_covariance(theta, L, x[idx_x], y_other, idx_y)
+                    test_preds[test] = self.shape.f(theta,x[test])
         else:
             test_preds = None
             test_fits = None
@@ -109,82 +95,45 @@ class Fitter(object):
             theta_samples[:,iSample] = theta_i
         return theta_samples
 
-    def fit_multiple_series_with_cache(self, x, y, theta_cache, n_iterations=1, loo=True):
-        """Computes multi-gene sigma and test predictions given theta via the parameter theta_cache.
-           The previously fit theta for a single series (with or without LOO) is retrieved 
-           from the cache by calling cache(iy, ix) to get the fit theta for
-           series number iy, with possible leaving out of series item ix (if ix is not None)
-        """
+    def fit_multiple_series_with_cache(self, x, y, basic_theta, loo_point, n_iterations):
         assert x.ndim == 1
         assert y.ndim == 2, "cache doesn't make sense and is not meant to be used for single series fitting"
         assert y.shape[0] == len(x)
         nx, ny = y.shape
+        
+        if loo_point is not None:
+            assert np.isnan(y[loo_point])
 
-        unscaled_x = x
-        unscaled_y = y
+        # scale data and apply same scaling to basic_theta
         x,sx = self._scale(x)
         sy = ny*[None]
+        unscaled_y = y
         y = np.empty(y.shape)
         for iy in xrange(ny):
             y[:,iy], sy[iy] = self._scale(unscaled_y[:,iy])
-        
-        orig_cache = theta_cache
         isx = self._inverse_scaling(sx)
         isy = [self._inverse_scaling(syi) for syi in sy]
-        def theta_cache(iy,ix):
-            t = orig_cache(iy,ix)
-            return self.shape.adjust_for_scaling(t,isx,isy[iy])
-        
-        basic_theta = [theta_cache(iy,None) for iy in xrange(ny)]   
+        basic_theta = [self.shape.adjust_for_scaling(t,isx,isy[iy]) for iy,t in enumerate(basic_theta)]   
 
-        # fits and predictions:
-        # If we are doing LOO, then for each point (ix,iy) find sigma, theta and predicted y value for fits done
-        # with the point y[ix,iy] missing from the training.
-        test_preds = np.empty(y.shape)  # predictions for y
-        test_fits = np.empty(y.shape, dtype=object) if loo else None # LOO fits - pairs of (theta,sigma) for each left out point in y
-        pairs = [(None,None)]  # this represents the global fit, no point is left out
-        if loo:
-            pairs += list(product(xrange(nx),xrange(ny)))
-        for ix,iy in pairs:
-            is_LOO_iteration = ix is not None
-            if cfg.verbosity >= 2:
-                if is_LOO_iteration:
-                    print 'Multi-series fitting LOO ix={}/{}, iy={}/{}'.format(ix+1,nx,iy+1,ny)
-                else:
-                    print 'Multi-series fitting global fit'
-                    
-            y_train = np.copy(y)
-            theta = basic_theta[:]
-            if is_LOO_iteration:
-                y_train[ix,iy] = np.NaN # remove information for LOO point
-                theta[iy] = theta_cache(iy,ix)
+        # optimize theta and lambda iteratively
+        levels = []
+        theta, sigma, L = basic_theta, None, None
+        for i in xrange(n_iterations):
+            if i>0:
+                theta = self._multi_series_theta_step(x,y,L,theta)
+            sigma,L = self._multi_series_sigma_step(x,y,theta)
+            levels.append(Bunch(theta=theta, sigma=sigma, L=L))
 
-            sigma,L = self._multi_series_sigma_step(x,y_train,theta)
-            for _ in xrange(n_iterations-1):
-                theta = self._multi_series_theta_step(x,y_train,L,theta)
-                sigma,L = self._multi_series_sigma_step(x,y_train,theta)
+        # adjust theta, sigma and L to compensate for the scaling
+        y_stretch = np.array([syi[0] for syi in sy])
+        covariance_stretch = np.outer(y_stretch,y_stretch)
+        for lvl in levels:
+            # use np.divide and np.multiple to ensure elementwise operation just in case one of the items is a matrix type
+            lvl.sigma = np.divide(lvl.sigma, covariance_stretch)
+            lvl.L = np.multiply(lvl.L, covariance_stretch)
+            lvl.theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(lvl.theta,sy)]
 
-            # adjust theta, sigma and L to compensate for the scaling
-            y_stretch = np.array([syi[0] for syi in sy])
-            covariance_stretch = np.outer(y_stretch,y_stretch)
-            sigma = np.divide(sigma, covariance_stretch) # use np.divide and np.multiple to ensure elementwise operation just in case one of the items is a matrix type
-            L = np.multiply(L, covariance_stretch)
-            theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(theta,sy)]
-
-            if is_LOO_iteration:            
-                test_fits[ix,iy] = (theta,sigma)
-                other_y = unscaled_y[ix].copy()
-                other_y[iy] = np.NaN  # remove information for the predicted point
-                test_preds[ix,iy] = self._predict_with_covariance(theta, L, unscaled_x[ix], other_y, iy)
-            else:
-                theta0 = theta
-                sigma0 = sigma
-                if not loo:
-                    for ix2,iy2 in product(xrange(nx),xrange(ny)):
-                        other_y = unscaled_y[ix2].copy()
-                        other_y[iy2] = np.NaN  # remove information for the predicted point
-                        test_preds[ix2,iy2] = self._predict_with_covariance(theta, L, unscaled_x[ix2], other_y, iy2)
-        return theta0, sigma0, test_preds, test_fits
+        return levels
 
     def _multi_series_sigma_step(self, x, y, theta):
         """Computes multi-gene sigma given theta.
@@ -237,7 +186,7 @@ class Fitter(object):
         theta = P.reshape(m,p)
         return theta
         
-    def _predict_with_covariance(self, theta, L, x, y_other, k):
+    def predict_with_covariance(self, theta, L, x, y_other, k):
         """Predicts value for series number k at value x (both scalars).
            Theta contains a set of fit parameters for each series.
            L is the precision matrix (inverse of the covariance matrix) showing the covariance
@@ -289,13 +238,8 @@ class Fitter(object):
             return self._gradient_fit(x,y)
             
     def _gradient_fit(self,x,y):
-        if y.ndim == 1:
-            return self._gradient_fit_single_series(x,y)
-        n_series = y.shape[1]
-        theta_sigma_pairs = [self._gradient_fit_single_series(x,y[:,i]) for i in xrange(n_series)]
-        theta = [t for t,s in theta_sigma_pairs]
-        sigma = self._calc_covariance_matrix(theta,x,y)
-        return theta,sigma
+        assert y.ndim == 1, "Multi-series fits not supported in this flow yet"
+        return self._gradient_fit_single_series(x,y)
         
     def _calc_covariance_matrix(self,theta,x,y):
         """Maximum likelihood for the covariance matrix is just the empirical covariance

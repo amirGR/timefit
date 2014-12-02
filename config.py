@@ -24,9 +24,7 @@ if b_minimal_restarts:
     n_optimization_restarts = 2
 else:
     n_optimization_restarts = 10
-job_batch_size = 16
-job_big_key_size = 10000
-job_big_batch_size = 128
+job_batch_size = 128
 parallel_n_jobs = -2 #1
 parallel_run_locally = False # disable parallelization for debugging
 

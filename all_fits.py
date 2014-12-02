@@ -7,7 +7,7 @@ from sklearn.datasets.base import Bunch
 from fit_score import loo_score
 import config as cfg
 from project_dirs import cache_dir, fit_results_relative_path
-from utils.misc import init_array
+from utils.misc import init_array, covariance_to_correlation
 from utils.formats import list_of_strings_to_matlab_cell_array
 from utils import job_splitting
 import scalers
@@ -18,12 +18,12 @@ class Fits(dict):
     # For now the inheritance from dict just allows adding additinal fields, like change_distribution_params 
     pass 
 
-def get_all_fits(data, fitter, k_of_n=None, allow_new_computation=True):
+def get_all_fits(data, fitter, k_of_n=None, n_correlation_iterations=0, correlations_k_of_n=None, allow_new_computation=True):
     """Returns { dataset_name -> {(gene,region) -> fit} } for all datasets in 'data'.
     """
-    return Fits({ds.name : _get_dataset_fits(data,ds,fitter,k_of_n,allow_new_computation) for ds in data.datasets})
+    return Fits({ds.name : _get_dataset_fits(data, ds, fitter, k_of_n, n_correlation_iterations, correlations_k_of_n, allow_new_computation) for ds in data.datasets})
 
-def _get_dataset_fits(data, dataset, fitter, k_of_n=None, allow_new_computation=True):
+def _get_dataset_fits(data, dataset, fitter, k_of_n, n_correlation_iterations, correlations_k_of_n, allow_new_computation):
     def arg_mapper(gr,f_proxy):
         g,r = gr
         series = dataset.get_one_series(g,r)
@@ -44,8 +44,113 @@ def _get_dataset_fits(data, dataset, fitter, k_of_n=None, allow_new_computation=
         base_filename = fit_results_relative_path(dataset,fitter),
         allow_new_computation = allow_new_computation,
     )
-    _add_scores(dataset, dataset_fits)  
+    
+    if n_correlation_iterations > 0:
+        # The problem is that if we're using a shard for the basic fits we won't have theta for all genes in a region
+        # which is necessary for computing correlations in that region.
+        assert k_of_n is None, "Can't perform correlation computations when sharding is enabled at the basic fit level" 
+        _add_dataset_correlation_fits(dataset, fitter, dataset_fits, n_correlation_iterations, correlations_k_of_n, allow_new_computation)
+
+    _add_scores(dataset, dataset_fits)
+    
     return dataset_fits
+
+def _add_dataset_correlation_fits(dataset, fitter, ds_fits, n_iterations, k_of_n, allow_new_computation):
+    def arg_mapper(key, f_proxy):
+        ir, loo_point = key
+        r = dataset.region_names[ir]
+        series = dataset.get_several_series(dataset.gene_names,r)
+        basic_theta = [ds_fits[(g,r)].theta for g in dataset.gene_names]
+        return f_proxy(series, fitter, basic_theta, loo_point, n_iterations)
+        
+    all_keys = []
+    for ir,r in enumerate(dataset.region_names):
+        all_keys.append((ir,None))
+        series = dataset.get_several_series(dataset.gene_names,r)
+        for iy,g in enumerate(dataset.gene_names):
+            for ix in xrange(len(series.ages)):
+                loo_point = (ix,iy)
+                all_keys.append((ir,loo_point))
+        
+    def f_sharding_key(key): # keep all x points in the same shard for same r,iy
+        r, loo_point = key
+        if loo_point is None:
+            return (r,None)
+        else:
+            ix,iy = loo_point
+            return (r,iy)
+        
+    dct_results = job_splitting.compute(
+        name = 'fits-correlations',
+        f = _compute_fit_with_correlations,
+        arg_mapper = arg_mapper,
+        all_keys = all_keys,
+        f_sharding_key = f_sharding_key,
+        k_of_n = k_of_n,
+        base_filename = fit_results_relative_path(dataset,fitter) + '-correlations-{}'.format(n_iterations),
+        allow_new_computation = allow_new_computation,
+    )
+    _add_dataset_correlation_fits_from_results_dictionary(dataset, ds_fits, dct_results)
+    
+def _add_dataset_correlation_fits_from_results_dictionary(dataset, ds_fits, dct_results):
+    """This function converts the results of the job_splitting which is a flat dictionary to structures which 
+       are easier to use and integrated into the dataset fits
+    """
+    region_to_ix_original_inds = {}
+    for ir,r in enumerate(dataset.region_names):
+        series = dataset.get_several_series(dataset.gene_names,r)
+        region_to_ix_original_inds[r] = series.original_inds
+        
+    for (ir,loo_point), levels in dct_results.iteritems():
+        n_iterations = len(levels)
+        r = dataset.region_names[ir]
+        if loo_point is None:
+            # Global fit - collect the parameters (theta, sigma, L) and compute a correlation matrix for the region
+            # the (None,r) hack below can be removed if/when dataset fits is changed from a dictionary to a class with several fields
+            k = (None,r)
+            if k not in ds_fits:
+                ds_fits[k] = n_iterations*[None]
+            for iLevel, level in enumerate(levels):
+                ds_fits[k][iLevel] = level
+                level.correlations = covariance_to_correlation(level.sigma)
+        else:
+            # LOO point - collect the predictions
+            ix,iy = loo_point
+            g = dataset.gene_names[iy]
+            fit = ds_fits[(g,r)]
+            if not hasattr(fit, 'with_correlations'):
+                fit.with_correlations = [
+                    Bunch(LOO_predictions=init_array(np.NaN, len(dataset.ages)))  # NOTE: we place the predictions at the original indexes (before NaN were removed by the get_series)
+                    for _ in xrange(n_iterations)
+                ]
+            for iLevel, level in enumerate(levels):
+                orig_ix = region_to_ix_original_inds[r][ix]
+                fit.with_correlations[iLevel].LOO_predictions[orig_ix] = level.LOO_prediction
+    
+
+def _compute_fit_with_correlations(series, fitter, basic_theta, loo_point, n_iterations):
+    if cfg.verbosity > 0:
+        print 'Computing fit with correlations ({n_iterations} iterations) for LOO point {loo_point} at {series.region_name} using {fitter}'.format(**locals())
+
+    # prepare the data and do the fit
+    x = series.ages
+    y = series.expression
+    if loo_point is not None:
+        ix,iy = loo_point
+        y = y.copy()
+        y[ix,iy] = np.NaN
+        t, _, _, _ = fitter.fit(x,y[:,iy],loo=False)
+        basic_theta[iy] = t
+    levels = fitter.fit_multiple_series_with_cache(x, y, basic_theta, loo_point, n_iterations)
+    
+    # add LOO prediction if indicated
+    if loo_point is not None:
+        ix, iy = loo_point
+        for lvl in levels:
+            other_y = y[ix].copy()
+            other_y[iy] = np.NaN  # remove information for the predicted point
+            lvl.LOO_prediction = fitter.predict_with_covariance(lvl.theta, lvl.L, x[ix], other_y, iy)            
+    return levels
 
 def _add_scores(dataset,dataset_fits):
     for (g,r),fit in dataset_fits.iteritems():
@@ -61,8 +166,17 @@ def _add_scores(dataset,dataset_fits):
             fit.LOO_score = loo_score(series.single_expression, fit.LOO_predictions)
         except:
             fit.LOO_score = None
+            
+        # add score for correlation LOO fits
+        correlation_levels = getattr(fit, 'with_correlations', None)
+        if correlation_levels is not None:
+            for level in correlation_levels:
+                y_real = series.single_expression
+                y_pred = level.LOO_predictions[series.original_inds] # match the predictions to the indices of the single series after NaN are removed from it
+                level.LOO_score = loo_score(y_real, y_pred)
+            
     return dataset_fits
-   
+
 def _compute_fit(series, fitter):
     if cfg.verbosity > 0:
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
@@ -186,6 +300,15 @@ def iterate_fits(fits, fits2=None, R2_threshold=None, allow_no_theta=False, retu
                     yield dsname,g,r,fit,fit2
                 else:
                     yield fit,fit2
+
+def iterate_region_fits(data, fits, allow_missing=False):
+    for region in data.region_names:
+        ds_fits = fits[data.get_dataset_for_region(region)]
+        rfit = ds_fits.get( (None,region) )
+        if rfit is None:
+            assert allow_missing, "Data for region (correlation) fit is missing for region {}".format(region)
+            continue
+        yield region, rfit
     
 def convert_format(filename, f_convert):
     """Utility function for converting the format of cached fits.

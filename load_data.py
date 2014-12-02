@@ -366,14 +366,14 @@ class OneDataset(object):
             return None
         expression = self.expression[:,genes,iRegion]
         ages = self.ages
-        valid = ~np.all(np.isnan(expression),axis=1) # remove subjects where we don't have data for any gene
+        valid = ~np.all(np.isnan(expression),axis=1) # remove subjects where we don't have data for any gene (i.e. all the gene values are NaN)
         ages, expression = ages[valid], expression[valid,:]
         return SeveralGenesOneRegion(
             expression = expression,
             ages = ages,
             gene_names = self.gene_names[genes],
             region_name = self.region_names[iRegion],
-            original_inds = valid.nonzero(),
+            original_inds = valid.nonzero()[0],
             age_scaler = self.age_scaler,
         )
         

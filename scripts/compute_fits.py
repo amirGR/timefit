@@ -1,16 +1,15 @@
 import setup
 import re
 import sys
-from sklearn.datasets.base import Bunch
-from utils.misc import disable_all_warnings, covariance_to_correlation
-from all_fits import get_all_fits, save_as_mat_files
-from fit_score import loo_score
+from utils.misc import disable_all_warnings
+from all_fits import get_all_fits, iterate_region_fits, save_as_mat_files
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
 from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, export_timing_info_for_all_fits, compute_fraction_of_change
 
 
-def do_fits(data, fitter, k_of_n):
+def do_fits(data, fitter, k_of_n, add_correlations, correlations_k_of_n):
+    n_correlation_iterations = 4 if add_correlations else 0
     print """
 ==============================================================================================
 ==============================================================================================
@@ -18,7 +17,7 @@ def do_fits(data, fitter, k_of_n):
 ==============================================================================================
 ==============================================================================================
 """.format(fitter)
-    fits = get_all_fits(data, fitter, k_of_n)    
+    fits = get_all_fits(data, fitter, k_of_n, n_correlation_iterations=n_correlation_iterations, correlations_k_of_n=correlations_k_of_n)    
     return fits
     
 def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions, no_legend):
@@ -118,32 +117,6 @@ def save_mat_file(data, fitter, fits, has_change_distributions):
 """
     save_as_mat_files(data, fitter, fits, has_change_distributions)
 
-def add_predictions_using_correlations(data, fitter, fits):
-    correlations = {} # {region -> sigma}
-    for r in data.region_names:
-        print 'Analyzing correlations for region {}...'.format(r)
-        series = data.get_several_series(data.gene_names,r)
-        ds_fits = fits[data.get_dataset_for_region(r)]
-        def cache(iy,ix):
-            g = series.gene_names[iy]
-            fit = ds_fits[(g,r)]
-            if ix is None:
-                return fit.theta
-            else:
-                theta,sigma = fit.LOO_fits[ix]
-                return theta    
-        _,sigma,preds,_ = fitter.fit_multiple_series_with_cache(series.ages, series.expression, cache)
-        correlations[r] = covariance_to_correlation(sigma)
-        for iy,g in enumerate(series.gene_names):
-            fit = ds_fits[(g,r)]
-            y_real = series.expression[:,iy]
-            y_preds = preds[:,iy]
-            fit.with_correlations = Bunch(
-                LOO_predictions = y_preds,
-                LOO_score = loo_score(y_real, y_preds),
-            )
-    return fits, correlations
-
 def parse_k_of_n(s):
     """Parse a string that looks like "3/5" and return tuple (3,5)"""
     if s is None:
@@ -154,6 +127,10 @@ def parse_k_of_n(s):
         sys.exit(-1)
     return tuple(int(x) for x in m.groups())
 
+def abort(msg):
+    print msg
+    sys.exit(-1)
+        
 if __name__ == '__main__':
     disable_all_warnings()
     NOT_USED = (None,)
@@ -162,41 +139,36 @@ if __name__ == '__main__':
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
+    parser.add_argument('--correlations_part', help='Compute only part of the correlations. format: <k>/<n> e.g. 1/4. (k=1..n)')
     parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
     parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't show change distribution in the figures (only relevant for sigmoids and together with --html)")
     parser.add_argument('--no_legend', action='store_true', help="Don't show the legend in the figures (only relevant together with --html)")
     parser.add_argument('--change_dist', action='store_true', help='Compute change distributions and related measures (sigmoid only)')
     args = parser.parse_args()
+    
     if args.part is not None and args.mat:
-        print '--mat cannot be used with --part'
-        sys.exit(-1)
+        abort('--mat cannot be used with --part')
     is_sigmoid = args.shape in ['sigmoid','sigslope']
     if args.correlations:
         if args.part:
-            print '--correlations cannot be used with --part'
-            sys.exit(-1)
+            abort('--correlations cannot be used with --part')
         if args.mat:
-            print '--correlations not compatible with --mat'
-            sys.exit(-1)
-        if args.html == NOT_USED:
-            print '--correlations only currently makes sense with --html (since fits are not saved)'
-            sys.exit(-1)
+            abort('--correlations not compatible with --mat')
+    if args.correlations_part:
+        if not args.correlations:
+            abort('--correlations_part cannot should not used with also specifying --correlations')
+        if args.html != NOT_USED:
+            abort('--correlations_part cannot should not used with --html')
     if args.onset and not is_sigmoid:
-        print '--onset can only be used with sigmoid fits'
-        sys.exit(-1)
+        abort('--onset can only be used with sigmoid fits')
     if args.change_dist and not is_sigmoid:
-        print '--change_dist can only be used with sigmoid fits'
-        sys.exit(-1)
+        abort('--change_dist can only be used with sigmoid fits')
     if args.onset and args.html == NOT_USED:
-        print '--onset should only be used with --html'
-        sys.exit(-1)
+        abort('--onset should only be used with --html')
     k_of_n = parse_k_of_n(args.part)
+    correlations_k_of_n = parse_k_of_n(args.correlations_part)
     data, fitter = process_common_inputs(args)
-    fits = do_fits(data, fitter, k_of_n)
-    if args.correlations:
-        fits, correlations = add_predictions_using_correlations(data, fitter, fits)
-    else:
-        correlations = None
+    fits = do_fits(data, fitter, k_of_n, args.correlations, correlations_k_of_n)
     has_change_distributions = is_sigmoid
     if has_change_distributions:
         print 'Computing change distributions...'
@@ -206,6 +178,10 @@ if __name__ == '__main__':
             compute_dprime_measures_for_all_pairs(data, fitter, fits)
             export_timing_info_for_all_fits(data, fitter, fits)
     if args.html != NOT_USED:
+        if args.correlations:
+            correlations = {r: rfits[-1].correlations for r,rfits in iterate_region_fits(data, fits)}
+        else:
+            correlations = None
         create_html(data, fitter, fits, args.html, k_of_n, 
                     use_correlations=args.correlations, 
                     correlations=correlations, 

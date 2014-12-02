@@ -35,7 +35,7 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         def arg_mapper(key,f_proxy):
             return f_proxy(key)
     if batch_size is None:
-        batch_size = cfg.job_batch_size if len(all_keys) < cfg.job_big_key_size else cfg.job_big_batch_size
+        batch_size = cfg.job_batch_size
      
     keys = _get_shard(all_keys, k_of_n, f_sharding_key, all_sharding_keys)
     dct_res, found_keys_not_in_main_file = _read_all_cache_files(base_filename, k_of_n, keys)
