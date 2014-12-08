@@ -6,7 +6,7 @@ import config as cfg
 from utils.misc import disable_all_warnings
 from all_fits import get_all_fits
 from fit_score import loo_score
-from plots import save_figure
+from plots import save_figure, plot_gene_correlations_single_region
 from load_data import GeneData
 from shapes.sigslope import Sigslope
 from fitter import Fitter
@@ -15,30 +15,44 @@ import scipy.stats
 
 fontsize = 30
 
-def plot_comparison_bar(scores_no_correlations, scores_with_correlations):
+def plot_comparison_bar(tuples, several_levels=False):
+    levels = zip(*tuples)
+    if not several_levels:
+        levels = levels[:2]
+        
+    scores_no_correlations, scores_with_correlations = levels[0], levels[1]
     _, pval = scipy.stats.wilcoxon(scores_no_correlations, scores_with_correlations)
     pval = pval/2  # one sided p-value
     print '*** wilcoxon signed rank p-value (one sided) = {:.3g}'.format(pval)
     
-    mu = np.empty(2)
-    se = np.empty(2)
-    all_scores = [scores_no_correlations, scores_with_correlations]
-    for i,scores in enumerate(all_scores):
+    mu = np.empty(len(levels))
+    se = np.empty(len(levels))
+    for i,scores in enumerate(levels):
         mu[i] = np.mean(scores)
         se[i] = scipy.stats.sem(scores)
     
-    index = np.arange(2)
+    index = np.arange(len(levels))
     bar_width = 0.8
     fig = plt.figure()
-    ax = fig.add_axes([0.12,0.12,0.8,0.8])
+    if several_levels:
+        ax = fig.add_axes([0.12,0.15,0.8,0.8])
+    else:
+        ax = fig.add_axes([0.12,0.12,0.8,0.8])
     ax.bar(index, mu, yerr=se, width=bar_width, color='b', error_kw = {'ecolor': '0.3', 'linewidth': 2})  
     ax.set_ylabel('Mean $R^2$', fontsize=fontsize)
     ax.set_xticks(index + bar_width/2)
-    ax.set_xticklabels(['assuming\nindependence', 'using\ncorrelations'], fontsize=fontsize)
+    if several_levels:
+        labels = range(len(levels))
+        labels[0] = 'assuming\nindependence'
+        ax.set_xticklabels(labels, fontsize=fontsize)
+        ax.set_xlabel('Number of optimization iterations', fontsize=fontsize)
+    else:
+        ax.set_xticklabels(['assuming\nindependence', 'using\ncorrelations'], fontsize=fontsize)
     yticks = [0, 0.1, 0.2, 0.3, 0.4, 0.5]
     ax.set_yticks(yticks)
     ax.set_yticklabels(['{:g}'.format(t) for t in yticks], fontsize=fontsize)
     return fig
+
 
 def plot_comparison_scatter(R2_pairs, pathway):
     basic = np.array([b for b,m in R2_pairs])
@@ -67,31 +81,37 @@ def analyze_one_region(data, fitter, fits, region):
     ds_fits = fits[data.get_dataset_for_region(region)]
     y = series.expression
     
-    correlation_level = 1
-    R2_pairs = {}
+    R2_tuples = {}
     for i,g in enumerate(series.gene_names):
         fit = ds_fits[(g,region)]
         y_real = y[:,i]
         y_basic = fit.LOO_predictions
-        y_multi_gene = fit.with_correlations[correlation_level].LOO_predictions[series.original_inds]
         basic_R2 = loo_score(y_real,y_basic)
-        multi_gene_R2 = loo_score(y_real,y_multi_gene)
-        if basic_R2 < -1 or multi_gene_R2 < -1:
+        scores = [basic_R2]
+        for level in fit.with_correlations:
+            y_multi_gene = level.LOO_predictions[series.original_inds]
+            R2 = loo_score(y_real,y_multi_gene)
+            scores.append(R2)
+        if (np.array(scores) < -1).any():
             continue
-        R2_pairs[(g,region)] = (basic_R2, multi_gene_R2)
-    return R2_pairs
+        R2_tuples[(g,region)] = tuple(scores)
+        
+    region_fits = ds_fits[(None,region)]
+    correlations = region_fits[0].correlations # get correlations after one optimization iteration
+    return R2_tuples, correlations
 
-def print_best_improvements(dct_pairs):
+def print_best_improvements(dct_scores, level=1):
     min_score = 0.25
-    def one_diff(gr,score_pair):
+    def one_diff(gr,score_tuple):
         g,r = gr
-        s_basic, s_with = score_pair
+        s_basic = score_tuple[0]
+        s_with = score_tuple[level]
         d = s_with - s_basic
         if s_basic > min_score and s_with > min_score:
             return d,g,r
         else:
             return None
-    diffs = [one_diff(gr,pair) for gr,pair in dct_pairs.iteritems()]
+    diffs = [one_diff(gr,scores) for gr,scores in dct_scores.iteritems()]
     diffs = filter(None, diffs)
     diffs.sort(reverse=True)
     for diff in diffs[:10]:
@@ -101,20 +121,27 @@ def analyze_pathway(pathway, data, fitter, fits, html_only=False):
     print 80 * '='
     print 'Analyzing pathway {}'.format(pathway)
     print 80 * '='
-    dct_pairs = {}
+    dct_tuples = {}
     for region in data.region_names:
-        dct_pairs.update( analyze_one_region(data, fitter, fits, region) )
+        dct_region_tuples, region_correlations = analyze_one_region(data, fitter, fits, region)
+        fig = plot_gene_correlations_single_region(region_correlations, region, data.gene_names)
+        filename = join('RP','correlation-heat-map-{}-{}.png'.format(region,pathway))
+        save_figure(fig, filename, b_close=True, under_results=True)
+        dct_tuples.update(dct_region_tuples)
         
-    print_best_improvements(dct_pairs)
+    print_best_improvements(dct_tuples)
     
-    pairs = dct_pairs.values()
+    tuples = dct_tuples.values()
+    pairs = [(x[0],x[1]) for x in tuples]
     fig = plot_comparison_scatter(pairs,pathway)
     filename = join('RP','correlation-diff-scatter-{}.png'.format(pathway))
     save_figure(fig, filename, b_close=True, under_results=True)
 
-    scores_no_correlations, scores_with_correlations = zip(*pairs)
-    fig = plot_comparison_bar(scores_no_correlations, scores_with_correlations)
+    fig = plot_comparison_bar(tuples)
     filename = join('RP','correlation-diff-bar-{}.png'.format(pathway))
+    save_figure(fig, filename, b_close=True, under_results=True)
+    fig = plot_comparison_bar(tuples, several_levels=True)
+    filename = join('RP','correlation-diff-bar-several-levels-{}.png'.format(pathway))
     save_figure(fig, filename, b_close=True, under_results=True)
 
 disable_all_warnings()

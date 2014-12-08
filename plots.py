@@ -336,10 +336,13 @@ def create_score_distribution_html(fits, use_correlations, dirname):
 def plot_and_save_all_gene_correlations(data, correlations, dirname):
     ensure_dir(dirname)
     for region in data.region_names:
-        sigma = correlations[region]        
-        ttl = 'Gene expression correlations at {}'.format(region)
-        fig = plot_corr(sigma, xnames=data.gene_names, normcolor=True, title=ttl)
+        fig = plot_gene_correlations_single_region(correlations[region], region, data.gene_names)
         save_figure(fig, join(dirname,'{}.png'.format(region)), b_close=True)
+
+def plot_gene_correlations_single_region(sigma, region, gene_names):
+    ttl = 'Gene expression correlations at {}'.format(region)
+    fig = plot_corr(sigma, xnames=gene_names, normcolor=True, title=ttl)
+    return fig
 
 def create_html(data, fitter, fits, 
                 basedir, gene_dir, series_dir, scores_dir,
