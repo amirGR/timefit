@@ -96,7 +96,7 @@ class Fitter(object):
             for ix in xrange(len(x)):
                 for iy in xrange(n_series):
                     y_pred_levels = self.fit_multiple_series_with_cache(x, y, basic_theta, loo_point=(ix,iy), n_iterations=n_iterations)
-                    for i,y_pred in y_pred_levels:
+                    for i,y_pred in enumerate(y_pred_levels):
                         levels[i].LOO_predictions[ix,iy] = y_pred
         return levels
         
@@ -117,6 +117,8 @@ class Fitter(object):
         return theta_samples
 
     def fit_multiple_series_with_cache(self, x, y, basic_theta, loo_point, n_iterations):
+        if cfg.verbosity >= 2:
+            print 'fit_multiple_series_with_cache called for loo_point={loo_point} using {self}'.format(**locals())
         assert x.ndim == 1
         assert y.ndim == 2, "cache doesn't make sense and is not meant to be used for single series fitting"
         assert y.shape[0] == len(x)
@@ -162,7 +164,11 @@ class Fitter(object):
                 unscaled_theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(theta,sy)]
                 level_result = Bunch(theta=unscaled_theta, sigma=unscaled_sigma, L=unscaled_L)
             else:
-                level_result = self.predict_with_covariance(theta, L, x[ix], y[ix], iy)
+                ix,iy = loo_point
+                y_pred = self.predict_with_covariance(theta, L, x[ix], y[ix], iy)
+                a,b = isy[iy]
+                unscaled_y_pred = a*(y_pred-b)
+                level_result = unscaled_y_pred
             levels.append(level_result)
 
         return levels

@@ -70,13 +70,6 @@ if __name__ == '__main__':
     x = series.ages
     y = series.expression
     
-#    ##############################################################
-#    # check regular fitting of multi series
-#    ##############################################################
-#    theta, sigma, LOO_predictions,_ = fitter.fit(series.ages, series.expression, loo=True)
-#    print 'sigma:\n{}'.format(sigma)
-#    plot_series(series, fitter.shape, theta, LOO_predictions)
-
     ##############################################################
     # check fit_multiple_series_with_cache
     ##############################################################
@@ -98,6 +91,7 @@ if __name__ == '__main__':
         print '  {}'.format(ti)
     print 'Sigma:'
     print res.sigma
+    plot_series(series, fitter.shape, res.theta, res.LOO_predictions)
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):
