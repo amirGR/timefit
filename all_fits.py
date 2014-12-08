@@ -269,6 +269,8 @@ def iterate_fits(fits, fits2=None, R2_threshold=None, allow_no_theta=False, retu
         
     for dsname,dsfits in fits.iteritems():
         for (g,r),fit in dsfits.iteritems():
+            if g is None:
+                continue  # skip region fits
             if not fit_ok(fit):
                 continue
             if fits2 is None:
