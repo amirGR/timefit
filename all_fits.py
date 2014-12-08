@@ -131,30 +131,8 @@ def _add_dataset_correlation_fits_from_results_dictionary(dataset, ds_fits, dct_
 def _compute_fit_with_correlations(series, fitter, basic_theta, loo_point, n_iterations):
     if cfg.verbosity > 0:
         print 'Computing fit with correlations ({n_iterations} iterations) for LOO point {loo_point} at {series.region_name} using {fitter}'.format(**locals())
+    return fitter.fit_multiple_series_with_cache(series.ages, series.expression, basic_theta, loo_point, n_iterations)
 
-    # prepare the data and do the fit
-    x = series.ages
-    y = series.expression
-    if loo_point is not None:
-        ix,iy = loo_point
-        y = y.copy()
-        y[ix,iy] = np.NaN
-        t, _, _, _ = fitter.fit(x,y[:,iy],loo=False)
-        basic_theta[iy] = t
-    levels = fitter.fit_multiple_series_with_cache(x, y, basic_theta, loo_point, n_iterations)
-
-    if loo_point is None:
-        return levels  # return the fit parameters for the global fit
-    else:
-        # it's a LOO point - compute and return just the fit prediction per level
-        ix, iy = loo_point
-        level_predictions = []
-        for lvl in levels:
-            other_y = y[ix].copy()
-            other_y[iy] = np.NaN  # remove information for the predicted point
-            prediction = fitter.predict_with_covariance(lvl.theta, lvl.L, x[ix], other_y, iy)
-            level_predictions.append(prediction)
-        return level_predictions
 
 def _add_scores(dataset,dataset_fits):
     for (g,r),fit in dataset_fits.iteritems():

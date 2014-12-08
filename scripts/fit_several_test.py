@@ -8,6 +8,7 @@ from plots import plot_series
 from shapes.sigslope import Sigslope
 from fitter import Fitter
 from fit_score import loo_score
+from utils.misc import init_array
 
 cfg.fontsize = 18
 cfg.xtick_fontsize = 18
@@ -66,6 +67,8 @@ if __name__ == '__main__':
     cfg.verbosity = 2
     fitter = get_fitter()
     series = get_series()
+    x = series.ages
+    y = series.expression
     
 #    ##############################################################
 #    # check regular fitting of multi series
@@ -80,40 +83,27 @@ if __name__ == '__main__':
     fits = []
     for i,g in enumerate(series.gene_names):
         print 'Fitting series {}...'.format(i+1)
-        x = series.ages
-        y = series.expression[:,i]
-        theta, sigma, LOO_predictions, LOO_fits = fitter.fit(x,y,loo=True)
+        theta, sigma, LOO_predictions,_ = fitter.fit(x,y[:,i],loo=True)
         fit = Bunch(
             theta = theta,
             LOO_predictions = LOO_predictions,
-            LOO_fits = LOO_fits,
         )
         fits.append(fit)
             
-    def cache(iy,ix):
-        fit = fits[iy]
-        if ix is None:
-            return fit.theta
-        else:
-            theta,sigma = fit.LOO_fits[ix]
-            return theta
-
-    print 'Fitting with correlations...'    
-    x = series.ages
-    y = series.expression
-    theta, sigma, multi_gene_preds,_ = \
-        fitter.fit_multiple_series_with_cache(x,y,cache, n_iterations=2, loo=True)
+    print 'Fitting with correlations...'
+    levels = fitter.fit_multi(x, y, loo=True, n_iterations=2)
+    res = levels[-1]
     print 'Theta:'
-    for ti in theta:
+    for ti in res.theta:
         print '  {}'.format(ti)
     print 'Sigma:'
-    print sigma
+    print res.sigma
     
     R2_pairs = []
     for i,g in enumerate(series.gene_names):
         y_real = y[:,i]
-        y_basic = fits[i].LOO_predictions
-        y_multi_gene = multi_gene_preds[:,i]        
+        y_basic = fits[i].LOO_predictions        
+        y_multi_gene = res.LOO_predictions[:,i]  # no NANs in the generated data, so no need to handle the original_inds mess
         basic_R2 = loo_score(y_real,y_basic)
         multi_gene_R2 = loo_score(y_real,y_multi_gene)
         R2_pairs.append( (basic_R2, multi_gene_R2) )

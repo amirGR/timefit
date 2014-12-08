@@ -48,7 +48,7 @@ class Fitter(object):
         assert y.shape[0] == len(x)
         n_series = y.shape[1] if y.ndim == 2 else 1
         if n_series > 1:
-            raise Exception('Multi-series fitting is only currently supported through all_fits.get_all_fits()')
+            raise Exception('for Multi-series fitting use fit_multi(). Please note the difference in interface')
         
         t0,s0 = self._fit(x,y)
         if loo:            
@@ -80,6 +80,27 @@ class Fitter(object):
             test_fits = None
         return t0, s0, test_preds, test_fits
 
+    def fit_multi(self, x, y, loo=False, n_iterations=4):
+        assert x.ndim == 1
+        assert y.ndim <= 2
+        assert y.shape[0] == len(x)
+        n_series = y.shape[1] if y.ndim == 2 else 1
+        if n_series <= 1:
+            raise Exception('for Single series fitting use fit()')
+            
+        basic_theta = [self.fit(x,y[:,iy],loo=False)[0] for iy in xrange(n_series)]
+        levels = self.fit_multiple_series_with_cache(x, y, basic_theta, loo_point=None, n_iterations=n_iterations)
+        for lvl in levels:
+            lvl.LOO_predictions = np.empty(y.shape) if loo else None
+        if loo:
+            for ix in xrange(len(x)):
+                for iy in xrange(n_series):
+                    y_pred_levels = self.fit_multiple_series_with_cache(x, y, basic_theta, loo_point=(ix,iy), n_iterations=n_iterations)
+                    for i,y_pred in y_pred_levels:
+                        levels[i].LOO_predictions[ix,iy] = y_pred
+        return levels
+        
+
     def parametric_bootstrap(self, x, theta, sigma):
         fit_predictions = self.shape.f(theta,x)    
         nSamples = cfg.n_parameter_estimate_bootstrap_samples
@@ -102,7 +123,12 @@ class Fitter(object):
         nx, ny = y.shape
         
         if loo_point is not None:
-            assert np.isnan(y[loo_point])
+            ix,iy = loo_point
+            y = y.copy()
+            y[ix,iy] = np.NaN
+            basic_theta = basic_theta[:]
+            t, _, _, _ = self.fit(x,y[:,iy],loo=False)
+            basic_theta[iy] = t
 
         # scale data and apply same scaling to basic_theta
         x,sx = self._scale(x)
@@ -111,6 +137,8 @@ class Fitter(object):
         y = np.empty(y.shape)
         for iy in xrange(ny):
             y[:,iy], sy[iy] = self._scale(unscaled_y[:,iy])
+        y_stretch = np.array([syi[0] for syi in sy])
+        covariance_stretch = np.outer(y_stretch,y_stretch)
         isx = self._inverse_scaling(sx)
         isy = [self._inverse_scaling(syi) for syi in sy]
         basic_theta = [self.shape.adjust_for_scaling(t,isx,isy[iy]) for iy,t in enumerate(basic_theta)]   
@@ -122,16 +150,20 @@ class Fitter(object):
             if i>0:
                 theta = self._multi_series_theta_step(x,y,L,theta)
             sigma,L = self._multi_series_sigma_step(x,y,theta)
-            levels.append(Bunch(theta=theta, sigma=sigma, L=L))
-
-        # adjust theta, sigma and L to compensate for the scaling
-        y_stretch = np.array([syi[0] for syi in sy])
-        covariance_stretch = np.outer(y_stretch,y_stretch)
-        for lvl in levels:
-            # use np.divide and np.multiple to ensure elementwise operation just in case one of the items is a matrix type
-            lvl.sigma = np.divide(lvl.sigma, covariance_stretch)
-            lvl.L = np.multiply(lvl.L, covariance_stretch)
-            lvl.theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(lvl.theta,sy)]
+            
+            # save the appropriate results for the current level
+            # for a LOO point this is the predicted y value
+            # for a global fit this is the fit parameters
+            if loo_point is None:
+                # adjust theta, sigma and L to compensate for the scaling
+                # use np.divide and np.multiple to ensure elementwise operation just in case one of the items is a matrix type
+                unscaled_sigma = np.divide(sigma, covariance_stretch)
+                unscaled_L = np.multiply(L, covariance_stretch)
+                unscaled_theta = [self.shape.adjust_for_scaling(t,sx,syi) for t,syi in izip(theta,sy)]
+                level_result = Bunch(theta=unscaled_theta, sigma=unscaled_sigma, L=unscaled_L)
+            else:
+                level_result = self.predict_with_covariance(theta, L, x[ix], y[ix], iy)
+            levels.append(level_result)
 
         return levels
 

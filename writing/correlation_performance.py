@@ -65,24 +65,15 @@ def analyze_one_region(data, fitter, fits, region):
     print 'Analyzing region {}...'.format(region)
     series = data.get_several_series(data.gene_names,region)
     ds_fits = fits[data.get_dataset_for_region(region)]
-    
-    def cache(iy,ix):
-        g = series.gene_names[iy]
-        fit = ds_fits[(g,region)]
-        if ix is None:
-            return fit.theta
-        else:
-            theta,sigma = fit.LOO_fits[ix]
-            return theta    
-    x = series.ages
     y = series.expression
-    _,_,multi_gene_preds,_ = fitter.fit_multiple_series_with_cache(x,y,cache)
     
+    correlation_level = 1
     R2_pairs = {}
     for i,g in enumerate(series.gene_names):
+        fit = ds_fits[(g,region)]
         y_real = y[:,i]
-        y_basic = ds_fits[(g,region)].LOO_predictions
-        y_multi_gene = multi_gene_preds[:,i]        
+        y_basic = fit.LOO_predictions
+        y_multi_gene = fit.with_correlations[correlation_level].LOO_predictions[series.original_inds]
         basic_R2 = loo_score(y_real,y_basic)
         multi_gene_R2 = loo_score(y_real,y_multi_gene)
         if basic_R2 < -1 or multi_gene_R2 < -1:
@@ -135,6 +126,6 @@ fitter = Fitter(shape, sigma_prior='normal')
 pathways = ['cannabinoids', 'serotonin']
 for pathway in pathways:
     data = GeneData.load('both').restrict_pathway(pathway).scale_ages(age_scaler)
-    fits = get_all_fits(data, fitter, allow_new_computation=False)
+    fits = get_all_fits(data, fitter, n_correlation_iterations=4, allow_new_computation=False)
     analyze_pathway(pathway, data, fitter, fits)
 
