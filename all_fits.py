@@ -123,9 +123,9 @@ def _add_dataset_correlation_fits_from_results_dictionary(dataset, ds_fits, dct_
                     Bunch(LOO_predictions=init_array(np.NaN, len(dataset.ages)))  # NOTE: we place the predictions at the original indexes (before NaN were removed by the get_series)
                     for _ in xrange(n_iterations)
                 ]
-            for iLevel, level in enumerate(levels):
+            for iLevel, level_prediction in enumerate(levels):
                 orig_ix = region_to_ix_original_inds[r][ix]
-                fit.with_correlations[iLevel].LOO_predictions[orig_ix] = level.LOO_prediction
+                fit.with_correlations[iLevel].LOO_predictions[orig_ix] = level_prediction
     
 
 def _compute_fit_with_correlations(series, fitter, basic_theta, loo_point, n_iterations):
@@ -142,15 +142,19 @@ def _compute_fit_with_correlations(series, fitter, basic_theta, loo_point, n_ite
         t, _, _, _ = fitter.fit(x,y[:,iy],loo=False)
         basic_theta[iy] = t
     levels = fitter.fit_multiple_series_with_cache(x, y, basic_theta, loo_point, n_iterations)
-    
-    # add LOO prediction if indicated
-    if loo_point is not None:
+
+    if loo_point is None:
+        return levels  # return the fit parameters for the global fit
+    else:
+        # it's a LOO point - compute and return just the fit prediction per level
         ix, iy = loo_point
+        level_predictions = []
         for lvl in levels:
             other_y = y[ix].copy()
             other_y[iy] = np.NaN  # remove information for the predicted point
-            lvl.LOO_prediction = fitter.predict_with_covariance(lvl.theta, lvl.L, x[ix], other_y, iy)            
-    return levels
+            prediction = fitter.predict_with_covariance(lvl.theta, lvl.L, x[ix], other_y, iy)
+            level_predictions.append(prediction)
+        return level_predictions
 
 def _add_scores(dataset,dataset_fits):
     for (g,r),fit in dataset_fits.iteritems():
@@ -198,7 +202,6 @@ def _compute_fit(series, fitter):
         sigma = sigma,
         fit_predictions = fit_predictions,
         LOO_predictions = LOO_predictions,
-        LOO_fits = LOO_fits,
         theta_samples = theta_samples,
     )
 
