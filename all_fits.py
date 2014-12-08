@@ -106,7 +106,7 @@ def _add_dataset_correlation_fits_from_results_dictionary(dataset, ds_fits, dct_
         r = dataset.region_names[ir]
         if loo_point is None:
             # Global fit - collect the parameters (theta, sigma, L) and compute a correlation matrix for the region
-            # the (None,r) hack below can be removed if/when dataset fits is changed from a dictionary to a class with several fields
+            # the hack of using the key (None,r) to store these results can be removed if/when dataset fits is changed from a dictionary to a class with several fields
             k = (None,r)
             if k not in ds_fits:
                 ds_fits[k] = n_iterations*[None]
@@ -136,6 +136,9 @@ def _compute_fit_with_correlations(series, fitter, basic_theta, loo_point, n_ite
 
 def _add_scores(dataset,dataset_fits):
     for (g,r),fit in dataset_fits.iteritems():
+        if g is None:
+            continue  # it's a region fit
+            
         series = dataset.get_one_series(g,r)
         try:
             if fit.fit_predictions is None:
