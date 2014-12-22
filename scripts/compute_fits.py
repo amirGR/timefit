@@ -2,7 +2,7 @@ import setup
 import re
 import sys
 from utils.misc import disable_all_warnings
-from all_fits import get_all_fits, iterate_region_fits, save_as_mat_files
+from all_fits import get_all_fits, iterate_region_fits, save_as_mat_files, save_theta_text_files
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
 from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, export_timing_info_for_all_fits, compute_fraction_of_change
@@ -117,6 +117,18 @@ def save_mat_file(data, fitter, fits, has_change_distributions):
 """
     save_as_mat_files(data, fitter, fits, has_change_distributions)
 
+
+def save_text_file(data, fitter, fits):
+    print """
+==============================================================================================
+==============================================================================================
+==== Saving theta text file(s)
+==============================================================================================
+==============================================================================================
+"""
+    save_theta_text_files(data, fitter, fits)
+
+
 def parse_k_of_n(s):
     """Parse a string that looks like "3/5" and return tuple (3,5)"""
     if s is None:
@@ -138,6 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--part', help='Compute only part of the genes. format: <k>/<n> e.g. 1/4. (k=1..n)')
     parser.add_argument('--html', nargs='?', metavar='DIR', default=NOT_USED, help='Create html for the fits. Optionally override output directory.')
     parser.add_argument('--mat', action='store_true', help='Save the fits also as matlab .mat file.')
+    parser.add_argument('--text', action='store_true', help='Save the theta parameters also to a text file (spline only).')
     parser.add_argument('--correlations', action='store_true', help='Use correlations between genes for prediction')
     parser.add_argument('--correlations_part', help='Compute only part of the correlations. format: <k>/<n> e.g. 1/4. (k=1..n)')
     parser.add_argument('--onset', action='store_true', help='Show onset times and not R2 scores in HTML table (sigmoid only)')
@@ -165,6 +178,8 @@ if __name__ == '__main__':
         abort('--change_dist can only be used with sigmoid fits')
     if args.onset and args.html == NOT_USED:
         abort('--onset should only be used with --html')
+    if args.text and args.shape != 'spline':
+        abort('--text only supported for splines at the moment')
     k_of_n = parse_k_of_n(args.part)
     correlations_k_of_n = parse_k_of_n(args.correlations_part)
     data, fitter = process_common_inputs(args)
@@ -191,3 +206,5 @@ if __name__ == '__main__':
                     )
     if args.mat:
         save_mat_file(data, fitter, fits, has_change_distributions)
+    if args.text:
+        save_text_file(data, fitter, fits)

@@ -252,6 +252,29 @@ def save_as_mat_files(data, fitter, fits, has_change_distributions):
             change_distribution_weights = change_distribution_weights,
         )
         savemat(filename, mdict, oned_as='column')
+
+def save_theta_text_files(data, fitter, fits):
+    assert fitter.shape.cache_name() == 'spline', "save to text is only supported for splines at the moment"
+    for dataset in data.datasets:
+        filename = join(cache_dir(), fit_results_relative_path(dataset,fitter) + '.txt')
+        dataset_fits = fits[dataset.name]    
+        print 'Saving text file to {}'.format(filename)
+        with open(filename, 'w') as f:
+            for (g,r),fit in dataset_fits.iteritems():
+                if fit.theta is None:
+                    continue
+                knots, coeffs, degree = fit.theta[0]
+                knots = list(knots)
+                coeffs = list(coeffs)
+                gr_text = """\
+Gene symbol: {g}
+Region: {r}
+Spline knots: {knots}
+Spline coefficients: {coeffs}
+Spline degree: {degree}
+""".format(**locals())
+                print >>f, gr_text
+
     
 def restrict_genes(fits, genes):
     if genes is None:
