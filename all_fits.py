@@ -174,7 +174,10 @@ def _compute_fit(series, fitter):
         theta_samples = None
     else:
         fit_predictions = fitter.shape.f(theta,x)
-        theta_samples = fitter.parametric_bootstrap(x, theta, sigma)
+        if fitter.shape.parameter_type() == object:
+            theta_samples = None
+        else:
+            theta_samples = fitter.parametric_bootstrap(x, theta, sigma)
     
     return Bunch(
         fitter = fitter,
