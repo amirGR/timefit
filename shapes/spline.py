@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, splev
 import config as cfg
 from shape import Shape
 
@@ -20,8 +20,10 @@ class Spline(Shape):
         return 'spline'
 
     def f(self,theta,x):
-        spline = theta[0]
-        return spline(x)
+        if isinstance(theta, UnivariateSpline): # for backward compatibility with when we saved the UnivariateSpline objects
+            theta = [theta._eval_args]
+        tck = theta[0]
+        return splev(x,tck)
 
     def fit(self,x,y):
         inds = np.argsort(x)
@@ -40,9 +42,9 @@ class Spline(Shape):
             w = w/2
         else:
             raise Exception('Failed to fit spline')
-        #spline = UnivariateSpline(x, y)
 
-        return [spline]
+        tck = spline._eval_args
+        return [tck]
     
     @staticmethod
     def _estimate_std(y):
