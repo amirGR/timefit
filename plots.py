@@ -111,7 +111,7 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
         width = centers[1] - centers[0]
         weights = change_distribution.weights
         weights *= 0.9 * (ymax - ymin) / weights.max()
-        ax.bar(centers, weights, width=width, bottom=ymin, color='g', alpha=0.1)
+        ax.bar(centers, weights, width=width, bottom=ymin, color='g', alpha=0.5)
 
     if shape is not None and theta is not None:
         # add fit parameters to title
