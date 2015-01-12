@@ -4,7 +4,7 @@ I'm assuming you're running on cortex. If not, you should make sure to have the 
 * git (on windows I recommend gitextensions)
 * python 2.7+ with the following libraries: numpy, scipy, matplotlib, sklearn, jinja2
  (on windows a great way to start is to install winpython)
-
+ 
 ===================================================
 1) Getting the code and linking to the data files
 ===================================================
