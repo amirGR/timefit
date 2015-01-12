@@ -287,7 +287,7 @@ class OneDataset(object):
         genders = genders[inds] if genders is not None else None
         expression = expression[inds,:,:]
         
-        return OneDataset(
+        res = OneDataset(
             expression = expression,
             gene_names = gene_names,
             region_names = region_names,
@@ -295,6 +295,10 @@ class OneDataset(object):
             ages = ages,
             name = dataset
         ).restrict_pathway('all')
+        sorted_regions = cfg.sorted_regions.get(dataset)
+        if sorted_regions is not None:
+            res = res.restrict_regions(cfg.sorted_regions[dataset])
+        return res
 
     def restrict_pathway(self, pathway, ad_hoc_genes=None, allow_missing_genes=True):
         pathway, pathway_genes = _translate_pathway(pathway, ad_hoc_genes)

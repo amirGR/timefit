@@ -167,17 +167,25 @@ def _compute_fit(series, fitter):
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.single_expression
-    theta,sigma,LOO_predictions,LOO_fits = fitter.fit(x,y,loo=True)
-    if theta is None:
-        print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
+    if len(x) < cfg.min_points_for_fitting:
+        print 'Not enough data points to fit for {}@{}. Skipping...'.format(series.gene_name, series.region_name)
+        theta = None
+        sigma = None
         fit_predictions = None
+        LOO_predictions = None
         theta_samples = None
     else:
-        fit_predictions = fitter.shape.f(theta,x)
-        if fitter.shape.parameter_type() == object:
+        theta,sigma,LOO_predictions,LOO_fits = fitter.fit(x,y,loo=True)
+        if theta is None:
+            print 'WARNING: Optimization failed during overall fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
+            fit_predictions = None
             theta_samples = None
         else:
-            theta_samples = fitter.parametric_bootstrap(x, theta, sigma)
+            fit_predictions = fitter.shape.f(theta,x)
+            if fitter.shape.parameter_type() == object:
+                theta_samples = None
+            else:
+                theta_samples = fitter.parametric_bootstrap(x, theta, sigma)
     
     return Bunch(
         fitter = fitter,

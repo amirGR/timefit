@@ -35,6 +35,7 @@ log_scale_x0 = -38.0/52
 fitter_scaling_percentiles = (10,90)
 
 n_parameter_estimate_bootstrap_samples = 30
+min_points_for_fitting = 5
 
 # these two settings must change together
 from sklearn.metrics import r2_score as score
@@ -48,7 +49,7 @@ sorted_regions = {
         'AMY', 'CBC','HIP', 'MD','STR',
     ],
     'colantuoni2011' : ['PFC'],
-    'brainSpan2014': [
+    'brainspan2014': [
         'DFC','OFC','VFC','MFC',
         'M1C','S1C','IPC',
         'ITC','STC','A1C','V1C',
