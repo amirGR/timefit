@@ -1,4 +1,4 @@
-This is a quick-start guide for the project, including how to get the code and run basic tasks. 
+This is a quick-start guide for the project, including how to get the code and run basic tasks.
 
 I'm assuming you're running on cortex. If not, you should make sure to have the following installed:
 * git (on windows I recommend gitextensions)
