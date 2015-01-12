@@ -57,7 +57,7 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
     nRows, nCols = rect_subplot(len(region_series_fits))
     for iRegion,(r,series,fit) in enumerate(region_series_fits):
         ax = fig.add_subplot(nRows,nCols,iRegion+1)
-        if change_distribution_bin_centers is None:
+        if change_distribution_bin_centers is None or not hasattr(fit, 'change_distribution_weights'):
             change_distribution = None
         else:
             change_distribution = Bunch(
@@ -196,7 +196,7 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show
                 print 'Figure already exists for {}@{}. skipping...'.format(g,r)
                 continue
             series = data.get_one_series(g,r)
-            if show_change_distributions:
+            if show_change_distributions and hasattr(fit, 'change_distribution_weights'):
                 change_distribution = Bunch(
                     centers = fits.change_distribution_params.bin_centers,
                     weights = fit.change_distribution_weights,
