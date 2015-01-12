@@ -21,7 +21,7 @@ dct_ages = {
     'EF3' : PCW(10),
 }
 
-known_datasets = ['kang2011', 'colantuoni2011', 'both', 'harris2009', 'somel2010-human', 'brainSpan2014']
+known_datasets = ['kang2011', 'colantuoni2011', 'both', 'harris2009', 'somel2010-human', 'brainspan2014']
 
 def get_common_parser(include_pathway=True):
     parser = MyParser(fromfile_prefix_chars='@')

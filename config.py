@@ -48,7 +48,7 @@ sorted_regions = {
         'AMY', 'CBC','HIP', 'MD','STR',
     ],
     'colantuoni2011' : ['PFC'],
-    'brainSpan2014': [
+    'brainspan2014': [
         'DFC','OFC','VFC','MFC',
         'M1C','S1C','IPC',
         'ITC','STC','A1C','V1C',
