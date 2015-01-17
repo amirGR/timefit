@@ -240,9 +240,12 @@ def save_as_mat_files(data, fitter, fits, has_change_distributions):
             LOO_scores[ig,ir] = fit.LOO_score
             if write_theta and fit.theta is not None:
                 theta[:,ig,ir] = fit.theta
-            fit_predictions[series.original_inds,ig,ir] = fit.fit_predictions
-            LOO_predictions[series.original_inds,ig,ir] = fit.LOO_predictions
-            high_res_predictions[:,ig,ir] = shape.f(fit.theta, scaled_high_res_ages)
+            if fit.fit_predictions is not None:
+                fit_predictions[series.original_inds,ig,ir] = fit.fit_predictions
+            if fit.LOO_predictions is not None:
+                LOO_predictions[series.original_inds,ig,ir] = fit.LOO_predictions
+            if fit.theta is not None:
+                high_res_predictions[:,ig,ir] = shape.f(fit.theta, scaled_high_res_ages)
             change_weights = getattr(fit,'change_distribution_weights',None)
             if change_weights is not None:
                 change_distribution_weights[:,ig,ir] = change_weights
