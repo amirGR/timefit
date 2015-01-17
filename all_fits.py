@@ -51,7 +51,11 @@ def _get_dataset_fits(data, dataset, fitter, k_of_n, n_correlation_iterations, c
         assert k_of_n is None, "Can't perform correlation computations when sharding is enabled at the basic fit level" 
         _add_dataset_correlation_fits(dataset, fitter, dataset_fits, n_correlation_iterations, correlations_k_of_n, allow_new_computation)
 
+    if cfg.verbosity > 0:
+        print 'Adding fit scores... ',
     _add_scores(dataset, dataset_fits)
+    if cfg.verbosity > 0:
+        print 'done!'
     
     return dataset_fits
 
