@@ -61,6 +61,8 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
         _save_batch(dct_updates, base_filename, k_of_n, i)
         dct_res.update(dct_updates)
 
+    if cfg.verbosity > 0:
+        print 'Consolidating fits...'
     _consolidate(dct_res, base_filename, k_of_n, bool(missing_keys))
     return dct_res
 
@@ -155,10 +157,14 @@ def _consolidate(dct_res, base_filename, k_of_n, found_keys_not_in_main_file):
 
     # write the updated main file    
     if found_keys_not_in_main_file:
+        if cfg.verbosity > 0:
+            print 'Writing back consolidated fit file...'
         ensure_dir(dirname(filename))
         with open(filename,'w') as f:
             pickle.dump(dct_res,f)
     
+    if cfg.verbosity > 0:
+        print 'Deleting any partial fit files...'
     if k_of_n is None:
         # it's the main file - delete all k_of_n files and the batches dir
         batchdir = _batch_dir(base_filename)
