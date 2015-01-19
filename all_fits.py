@@ -171,7 +171,7 @@ def _compute_fit(series, fitter):
         print 'Computing fit for {}@{} using {}'.format(series.gene_name, series.region_name, fitter)
     x = series.ages
     y = series.single_expression
-    if np.count_nonzero(abs(y) > 1E-6) < cfg.min_nonzero_points_for_fitting:
+    if np.count_nonzero(abs(y) > cfg.nonzero_threshold) < cfg.min_nonzero_points_for_fitting:
         print 'Not enough non-zero data points to fit for {}@{}. Skipping...'.format(series.gene_name, series.region_name)
         theta = None
         sigma = None
