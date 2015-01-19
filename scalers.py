@@ -59,4 +59,4 @@ def build_scaler(name, data):
     elif name == 'log':
         return LogScaler()
     else:
-        raise Exception('Unknown scaler: {}'.format(name))
+        raise AssertionError('Unknown scaler: {}'.format(name))

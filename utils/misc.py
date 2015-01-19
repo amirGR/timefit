@@ -63,9 +63,9 @@ def retry(n_max):
 def get_unique(seq):
     s = set(seq)
     if not s:
-        raise Exception('get_unique: no items')
+        raise AssertionError('get_unique: no items')
     if len(s) > 1:
-        raise Exception('get_unique: items are not unique')
+        raise AssertionError('get_unique: items are not unique')
     res = s.pop()
     return res
 

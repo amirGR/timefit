@@ -45,7 +45,7 @@ class Poly(Shape):
             theta[2] = theta[2] - 3 * A**3 * B * t[3]
             theta[3] = theta[3] + A**3 * t[3]            
         if self.n >= 4:
-            raise Exception('adjust_for_scaling not supported for polynomials above degree 3')
+            raise AssertionError('adjust_for_scaling not supported for polynomials above degree 3')
 
         # handle y scaling
         C,D = sy

@@ -78,4 +78,4 @@ def get_prior(name, is_sigma=False):
         with open(path) as f:
             priors = eval(f.read())
         return priors
-    raise Exception('Could not find prior file at {}'.format(path))
+    raise AssertionError('Could not find prior file at {}'.format(path))

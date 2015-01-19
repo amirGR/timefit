@@ -29,7 +29,7 @@ class Shape(object):
             for p in self.param_names():
                 val = dct_priors.get(p)
                 if val is None:
-                    raise Exception("Could not find prior for {} in {}".format(p,priors_name))
+                    raise AssertionError("Could not find prior for {} in {}".format(p,priors_name))
                 priors.append(val)        
         self.priors_name = priors_name
         self.priors = priors            
@@ -119,4 +119,4 @@ def get_shape_by_name(shape_name, priors):
         from spline import Spline
         return Spline()
     else:
-        raise Exception('Unknown shape: {}'.format(shape_name))
+        raise AssertionError('Unknown shape: {}'.format(shape_name))

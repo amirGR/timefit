@@ -24,9 +24,9 @@ def read_strings_from_mat_file(filename):
     mat = loadmat(filename)
     keys = [k for k in mat.keys() if not k.startswith('__')] # ignore matlab's special fields
     if not keys:
-        raise Exception('mat file contains no fields')
+        raise AssertionError('mat file contains no fields')
     if len(keys) > 1:
-        raise Exception('mat file contains more than one fields. found {} fields: {}'.format(len(keys),keys))
+        raise AssertionError('mat file contains more than one fields. found {} fields: {}'.format(len(keys),keys))
     val = mat[keys[0]]
     return matlab_cell_array_to_list_of_strings(val)
 

@@ -49,7 +49,7 @@ def _extract_gene_data(data, g, fits=None):
             fit = None
         region_series_fits.append( (r,series,fit) )
     if not region_series_fits:
-        raise Exception('Gene not found in the data')
+        raise AssertionError('Gene not found in the data')
     return region_series_fits
 
 def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None):

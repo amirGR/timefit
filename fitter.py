@@ -13,7 +13,7 @@ class Fitter(object):
     def __init__(self, shape, sigma_prior=None):
         self.shape = shape
         if shape.has_special_fitting() and sigma_prior is not None:
-            raise Exception("Sigma prior can't be used with a shape that has special fitting")
+            raise AssertionError("Sigma prior can't be used with a shape that has special fitting")
         self.inv_sigma_prior_name = sigma_prior
         self.inv_sigma_prior = get_prior(sigma_prior,is_sigma=True)
         if cfg.verbosity > 0:
@@ -48,7 +48,7 @@ class Fitter(object):
         assert y.shape[0] == len(x)
         n_series = y.shape[1] if y.ndim == 2 else 1
         if n_series > 1:
-            raise Exception('for Multi-series fitting use fit_multi(). Please note the difference in interface')
+            raise AssertionError('for Multi-series fitting use fit_multi(). Please note the difference in interface')
         
         t0,s0 = self._fit(x,y)
         if loo:            
@@ -86,7 +86,7 @@ class Fitter(object):
         assert y.shape[0] == len(x)
         n_series = y.shape[1] if y.ndim == 2 else 1
         if n_series <= 1:
-            raise Exception('for Single series fitting use fit()')
+            raise AssertionError('for Single series fitting use fit()')
             
         basic_theta = [self.fit(x,y[:,iy],loo=False)[0] for iy in xrange(n_series)]
         levels = self.fit_multiple_series_with_cache(x, y, basic_theta, loo_point=None, n_iterations=n_iterations)

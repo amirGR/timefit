@@ -41,7 +41,7 @@ class Spline(Shape):
                 print 'retrying spline fit with w /= 2'
             w = w/2
         else:
-            raise Exception('Failed to fit spline')
+            raise AssertionError('Failed to fit spline')
 
         tck = spline._eval_args
         return [tck]

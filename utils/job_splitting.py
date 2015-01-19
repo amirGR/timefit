@@ -45,7 +45,7 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
     if cfg.verbosity > 0:
         print 'Still need to compute {}/{} {}'.format(len(missing_keys),len(keys),name)
     if missing_keys and not allow_new_computation:
-        raise Exception('Cache does not contain all results')
+        raise AssertionError('Cache does not contain all results')
 
     # compute the keys that are missing
     batches = parallel.batches(missing_keys, batch_size)

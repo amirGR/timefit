@@ -111,7 +111,7 @@ class SeveralGenesOneRegion(object):
             return match_positions[0]
         if allow_missing:
             return None
-        raise Exception('Gene {} not found'.format(name))
+        raise AssertionError('Gene {} not found'.format(name))
 
 
 class GeneData(object):
@@ -210,7 +210,7 @@ class GeneData(object):
                 return series
         if allow_missing:
             return None
-        raise Exception('{}@{} not found in the datasets'.format(iGene,iRegion))
+        raise AssertionError('{}@{} not found in the datasets'.format(iGene,iRegion))
     
     def get_several_series(self, genes, iRegion, allow_missing=False):
         for ds in self.datasets:
@@ -219,7 +219,7 @@ class GeneData(object):
                 return series
         if allow_missing:
             return None
-        raise Exception('{}@{} not found in the datasets'.format(genes,iRegion))
+        raise AssertionError('{}@{} not found in the datasets'.format(genes,iRegion))
         
     def get_dataset_for_region(self, region_name):
         res = {ds.name for ds in self.datasets if region_name in ds.region_names}
@@ -391,7 +391,7 @@ class OneDataset(object):
             return match_positions[0]
         if allow_missing:
             return None
-        raise Exception('Gene {} not found'.format(name))
+        raise AssertionError('Gene {} not found'.format(name))
 
     def _find_region_index(self, name, allow_missing=False):
         match_positions = np.where(self.region_names == name)[0]
@@ -399,7 +399,7 @@ class OneDataset(object):
             return match_positions[0]
         if allow_missing:
             return None
-        raise Exception('Region {} not found'.format(name))        
+        raise AssertionError('Region {} not found'.format(name))        
 
 
 ####################################################
@@ -421,7 +421,7 @@ def _translate_pathway(pathway, ad_hoc_genes):
         assert pathway_name not in cfg.pathways, 'Changing the meaning (gene list) of a known pathway is not allowed. Pathway: {}'.format(pathway_name)
         return pathway_name, pathway_genes
         
-    raise Exception('Unknown pathway: {}'.format(pathway))
+    raise AssertionError('Unknown pathway: {}'.format(pathway))
 
 def _translate_gene_list(gene_list):
     """gene_list can already be a sequence of strings or it could be a path to
