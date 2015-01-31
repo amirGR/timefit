@@ -165,6 +165,10 @@ class GeneData(object):
         for ds in self.datasets:
             region_names.extend(cfg.sorted_regions[ds.name])
         return region_names
+    
+    @property
+    def exons(self):
+        return self.datasets[0].exons
 
     def region_to_dataset(self):
         res = {}
@@ -226,7 +230,7 @@ class GeneData(object):
         return get_unique(res)
 
 class OneDataset(object):
-    def __init__(self, expression, gene_names, region_names, genders, ages, name):
+    def __init__(self, expression, gene_names, region_names, genders, ages, name, exons = None):
         n_ages, n_genes, n_regions = expression.shape
         assert len(ages) == n_ages
         if genders is not None:
@@ -243,6 +247,7 @@ class OneDataset(object):
         self.age_restriction = None
         self.age_scaler = None
         self.is_shuffled = False
+        self.exons = exons
         
     @property
     def age_range(self):
@@ -287,13 +292,16 @@ class OneDataset(object):
         genders = genders[inds] if genders is not None else None
         expression = expression[inds,:,:]
         
+        exons = _get_exons(gene_names) if cfg.exon_level else None
+
         res = OneDataset(
             expression = expression,
             gene_names = gene_names,
             region_names = region_names,
             genders = genders,
             ages = ages,
-            name = dataset
+            name = dataset,
+			exons = exons
         ).restrict_pathway('all')
         sorted_regions = cfg.sorted_regions.get(dataset)
         if sorted_regions is not None:
@@ -305,8 +313,13 @@ class OneDataset(object):
         if pathway_genes is None:
             # we still need to get rid of gene_names that are None
             inds = [i for i,g in enumerate(self.gene_names) if g is not None]
-        else:
-            inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
+        else:  
+            if cfg.exon_level:  #get indicies of all exons of pathway genes. #needs to be verified
+                inds_lists = [self._find_multiple_indices(gene,allow_missing_genes) for gene in pathway_genes]
+                inds = [item for sublist in inds_lists if sublist is not None for item in sublist]
+            else:
+                inds = [self._find_gene_index(gene,allow_missing_genes) for gene in pathway_genes]
+            
             missing = [g for g,i in zip(pathway_genes,inds) if i is None]
             if missing and cfg.verbosity > 0:
                 print 'Dataset {} is missing {} genes from pathway {}: {}'.format(self.name, len(missing), pathway, missing)
@@ -384,6 +397,15 @@ class OneDataset(object):
     #####################################################################
     # Private helper methods
     #####################################################################        
+    
+    def _find_multiple_indices(self,name,allow_missing = False):
+        name = name + '_'
+        match_positions = [ind for ind, g in enumerate(self.gene_names) if g.startswith(name)]
+        if len(match_positions) > 0:
+            return match_positions
+        if allow_missing:
+            return None
+        raise AssertionError('Gene {} not found'.format(name))
         
     def _find_gene_index(self, name, allow_missing=False):
         match_positions = np.where(self.gene_names == name)[0]
@@ -444,3 +466,27 @@ def _translate_gene_list(gene_list):
 
     # not found
     return None,None 
+
+# returns: gene_name -> list of it's exons
+# an exon is represented as start_end
+def _get_exons(gene_names):
+    
+    result = {}
+    for name in gene_names:
+        gene,start,end = name.split('_')
+        exon = '{}_{}'.format(start,end)
+        if gene in result:
+            result[gene].append(exon)
+        else:
+            result[gene] = [exon]
+        
+    return result
+
+
+    
+    
+    
+    
+
+
+            
