@@ -1,0 +1,86 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="fits.css">
+</head>
+<body>
+<H1>{{ttl}}</H1>
+{% if b_R2_dist %}
+    <P>
+    <a href="{{scores_dir}}/scores.html">Distribution of LOO R2 scores</a>
+    </P>
+{% endif %}
+{% if b_pathways %}
+    <P>
+    <a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
+    <a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
+    </P>
+{% endif %}
+{% for href,txt in extra_top_links %}
+    <a href={{href}}>{{txt}}</a><br/>
+{% endfor %}
+{% if top_text %}
+{{ top_text }}
+{% endif %}
+<P>
+Column/row headings and/or cell entries may link to more details for the corresponding entity.
+</P>
+<P>
+<table>
+    <th>
+        {% for column_name,dct_vals in extra_columns %}
+        <td class="tableExtraColumnHeading">
+            <b>{{column_name}}</b>
+        </td>
+        {% endfor %}
+        {% for region_name in region_names %}
+        <td class="tableHeading">
+            {% if link_to_correlation_plots %}
+                <a class=noColorChange href="{{correlations_dir}}/{{region_name}}.png"><b>{{region_name}}</b></a>
+            {% else %}
+                <b>{{region_name}}</b>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </th>
+    {% for gene_name in gene_names %}
+    <tr>
+        <td>
+            <b>{{gene_name}}</b>
+        </td>
+        {% for column_name,dct_vals in extra_columns %}
+            <td>
+                {{ '%.2g' | format(dct_vals[gene_name]) }}
+            </td>
+        {% endfor %}
+        {% for region_name in region_names %}
+			<td>
+            {% if flat_fits[(gene_name,region_name)] %}
+                <a class=noColorChange href="{{exons_dir}}/{{gene_name}}-{{region_name}}.png">
+                {% if flat_fits[(gene_name,region_name)].min_score %}
+                    {% if b_inline_images %}
+                        R2 &nbsp; = &nbsp;
+                    {% endif %}
+                    {% if show_R2 %}
+                        <div class="score rank{{flat_fits[(gene_name,region_name)].min_rank}}">
+                            {{flat_fits[(gene_name,region_name)].min_score | round(2)}}
+                        </div>
+						<div class="score rank{{flat_fits[(gene_name,region_name)].max_rank}}">
+                            {{flat_fits[(gene_name,region_name)].max_score | round(2)}}
+                        </div>
+                    {% endif %}
+                {% else %}
+                   No Score
+                {% endif %}
+                </a>
+            {% endif %}
+        </td>
+			
+		{% endfor %}
+		
+    </tr>
+    {% endfor %}
+</table>
+</P>
+
+</body>
+</html>

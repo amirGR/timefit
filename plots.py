@@ -308,26 +308,9 @@ def create_score_distribution_html(fits, use_correlations, dirname):
             save_figure(fig, join(dirname,delta_hist_filename), b_close=True)
                         
     image_size = "50%"
-    from jinja2 import Template
+    
     import shutil
-    html = Template("""
-<html>
-<head>
-    <link rel="stylesheet" type="text/css" href="score-distribution.css">
-</head>
-<body>
-<center><H1>R2 Score Distribution</H1></center>
-
-<a href="{{hist_filename}}"> <img src="{{hist_filename}}" height="{{image_size}}"></a>
-
-{% if use_correlations %}
-    <a href="{{delta_hist_filename}}"> <img src="{{delta_hist_filename}}" height="{{image_size}}"></a>
-    <a href="{{scatter_filename}}"> <img src="{{scatter_filename}}" height="{{image_size}}"></a>
-{% endif %}
-
-</body>
-</html>    
-""").render(**locals())
+    html = get_jinja_env().get_template('R2.jinja').render(**locals())
     filename = join(dirname,'scores.html')
     with open(filename, 'w') as f:
         f.write(html)
@@ -357,9 +340,9 @@ def create_html(data, fitter, fits,
                 b_inline_images=False, inline_image_size=None,
                 b_R2_dist=True, ttl=None, top_text=None,
                 filename=None):
-    from jinja2 import Template
+                   
     import shutil
-
+      
     if gene_names is None:
         gene_names = data.gene_names
     if region_names is None:
@@ -397,102 +380,10 @@ def create_html(data, fitter, fits,
             flat_fits[(g,r)] = fit     
             
     extra_fields_per_fit = list(enumerate(extra_fields_per_fit))
-    html = Template("""
-<html>
-<head>
-    <link rel="stylesheet" type="text/css" href="fits.css">
-</head>
-<body>
-<H1>{{ttl}}</H1>
-{% if b_R2_dist %}
-    <P>
-    <a href="{{scores_dir}}/scores.html">Distribution of LOO R2 scores</a>
-    </P>
-{% endif %}
-{% if b_pathways %}
-    <P>
-    <a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
-    <a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
-    </P>
-{% endif %}
-{% for href,txt in extra_top_links %}
-    <a href={{href}}>{{txt}}</a><br/>
-{% endfor %}
-{% if top_text %}
-{{ top_text }}
-{% endif %}
-<P>
-Column/row headings and/or cell entries may link to more details for the corresponding entity.
-</P>
-<P>
-<table>
-    <th>
-        {% for column_name,dct_vals in extra_columns %}
-        <td class="tableExtraColumnHeading">
-            <b>{{column_name}}</b>
-        </td>
-        {% endfor %}
-        {% for region_name in region_names %}
-        <td class="tableHeading">
-            {% if link_to_correlation_plots %}
-                <a class=noColorChange href="{{correlations_dir}}/{{region_name}}.png"><b>{{region_name}}</b></a>
-            {% else %}
-                <b>{{region_name}}</b>
-            {% endif %}
-        </td>
-        {% endfor %}
-    </th>
-    {% for gene_name in gene_names %}
-    <tr>
-        <td>
-            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
-        </td>
-        {% for column_name,dct_vals in extra_columns %}
-            <td>
-                {{ '%.2g' | format(dct_vals[gene_name]) }}
-            </td>
-        {% endfor %}
-        {% for region_name in region_names %}
-        <td>
-            {% if flat_fits[(gene_name,region_name)] %}
-                <a class=noColorChange href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-                {% if flat_fits[(gene_name,region_name)].score %}
-                    {% if b_inline_images %}
-                        R2 &nbsp; = &nbsp;
-                    {% endif %}
-                    {% if show_R2 %}
-                        <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
-                            {{flat_fits[(gene_name,region_name)].score | round(2)}}
-                        </div>
-                    {% endif %}
-                    {% for i,f in extra_fields_per_fit %}
-                        {% set txt,cls = f(flat_fits[(gene_name,region_name)]) %}
-                        {% if i>0 or show_R2 %}
-                            <br/>
-                        {% endif %}
-                        <div class="fitField {{cls}}">
-                            <b>{{txt}}</b>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                   No Score
-                {% endif %}
-                {% if b_inline_images %}
-                    <br/>
-                    <img src="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png" height="{{inline_image_size}}">
-                {% endif %}
-                </a>
-            {% endif %}
-        </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
-</P>
-
-</body>
-</html>    
-""").render(**locals())
+    
+    template_file = 'main.jinja'
+    html = get_jinja_env().get_template(template_file).render(**locals())
+    
     filename = join(basedir,'{}.html'.format(filename))
     print 'Saving HTML to {}'.format(filename)
     with open(filename, 'w') as f:
@@ -500,8 +391,7 @@ Column/row headings and/or cell entries may link to more details for the corresp
     shutil.copy(join(resources_dir(),'fits.css'), basedir)
 
 def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir, use_correlations, b_unique):
-    from jinja2 import Template
-
+    
     dct_pathways = load_17_pathways_breakdown(b_unique)
 
     n_ranks = 3 # actually we'll have ranks of 0 to n_ranks
@@ -519,53 +409,7 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
             fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
             flat_fits[(g,r)] = fit     
             
-    html = Template("""
-<html>
-<head>
-    <link rel="stylesheet" type="text/css" href="fits.css">
-</head>
-<body>
-<H1>Fits broken down by pathway {% if b_unique %} (unique genes only) {% endif %} </H1>
-{% for pathway_name, pathway_genes in dct_pathways.iteritems() %}
-<P>
-<H2>{{pathway_name}}</H2>
-<table>
-    <th>
-        {% for region_name in data.region_names %}
-        <td class="tableHeading">
-            <b>{{region_name}}</b>
-        </td>
-        {% endfor %}
-    </th>
-    {% for gene_name in pathway_genes %}
-    <tr>
-        <td>
-            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
-        </td>
-        {% for region_name in data.region_names %}
-        <td>
-            {% if flat_fits[(gene_name,region_name)] %}
-                <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
-                {% if flat_fits[(gene_name,region_name)].score %}
-                    <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
-                   {{flat_fits[(gene_name,region_name)].score | round(2)}}
-                   </div>
-                {% else %}
-                   No Score
-                {% endif %}
-                </a>
-            {% endif %}
-        </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
-</P>
-{% endfor %} {# dct_pathways #}
-
-</body>
-</html>    
-""").render(**locals())
+    html = get_jinja_env().get_template('pathways.jinja').render(**locals())
     str_unique = '-unique' if b_unique else ''
     filename = 'pathway-fits{}.html'.format(str_unique)
     with open(join(basedir,filename), 'w') as f:
@@ -614,3 +458,14 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
             use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
             b_pathways=b_pathways, **html_kw
         )
+        
+def get_jinja_env():
+    
+    import jinja2 
+    
+    template_dir = '../templates'
+    templateLoader = jinja2.FileSystemLoader(template_dir)
+    templateEnv = jinja2.Environment( loader=templateLoader )
+    return templateEnv
+
+    

@@ -1,0 +1,16 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="score-distribution.css">
+</head>
+<body>
+<center><H1>R2 Score Distribution</H1></center>
+
+<a href="{{hist_filename}}"> <img src="{{hist_filename}}" height="{{image_size}}"></a>
+
+{% if use_correlations %}
+    <a href="{{delta_hist_filename}}"> <img src="{{delta_hist_filename}}" height="{{image_size}}"></a>
+    <a href="{{scatter_filename}}"> <img src="{{scatter_filename}}" height="{{image_size}}"></a>
+{% endif %}
+
+</body>
+</html> 

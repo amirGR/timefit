@@ -1,0 +1,94 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="fits.css">
+</head>
+<body>
+<H1>{{ttl}}</H1>
+{% if b_R2_dist %}
+    <P>
+    <a href="{{scores_dir}}/scores.html">Distribution of LOO R2 scores</a>
+    </P>
+{% endif %}
+{% if b_pathways %}
+    <P>
+    <a href="pathway-fits-unique.html">Breakdown of fits for 17 pathways (unique)</a><br/>
+    <a href="pathway-fits.html">Breakdown of fits for 17 pathways (overlapping)</a>
+    </P>
+{% endif %}
+{% for href,txt in extra_top_links %}
+    <a href={{href}}>{{txt}}</a><br/>
+{% endfor %}
+{% if top_text %}
+{{ top_text }}
+{% endif %}
+<P>
+Column/row headings and/or cell entries may link to more details for the corresponding entity.
+</P>
+<P>
+<table>
+    <th>
+        {% for column_name,dct_vals in extra_columns %}
+        <td class="tableExtraColumnHeading">
+            <b>{{column_name}}</b>
+        </td>
+        {% endfor %}
+        {% for region_name in region_names %}
+        <td class="tableHeading">
+            {% if link_to_correlation_plots %}
+                <a class=noColorChange href="{{correlations_dir}}/{{region_name}}.png"><b>{{region_name}}</b></a>
+            {% else %}
+                <b>{{region_name}}</b>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </th>
+    {% for gene_name in gene_names %}
+    <tr>
+        <td>
+            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
+        </td>
+        {% for column_name,dct_vals in extra_columns %}
+            <td>
+                {{ '%.2g' | format(dct_vals[gene_name]) }}
+            </td>
+        {% endfor %}
+        {% for region_name in region_names %}
+        <td>
+            {% if flat_fits[(gene_name,region_name)] %}
+                <a class=noColorChange href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                {% if flat_fits[(gene_name,region_name)].score %}
+                    {% if b_inline_images %}
+                        R2 &nbsp; = &nbsp;
+                    {% endif %}
+                    {% if show_R2 %}
+                        <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                            {{flat_fits[(gene_name,region_name)].score | round(2)}}
+                        </div>
+                    {% endif %}
+                    {% for i,f in extra_fields_per_fit %}
+                        {% set txt,cls = f(flat_fits[(gene_name,region_name)]) %}
+                        {% if i>0 or show_R2 %}
+                            <br/>
+                        {% endif %}
+                        <div class="fitField {{cls}}">
+                            <b>{{txt}}</b>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                   No Score
+                {% endif %}
+                {% if b_inline_images %}
+                    <br/>
+                    <img src="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png" height="{{inline_image_size}}">
+                {% endif %}
+                </a>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+</P>
+
+</body>
+</html>

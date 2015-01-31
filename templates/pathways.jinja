@@ -1,0 +1,45 @@
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="fits.css">
+</head>
+<body>
+<H1>Fits broken down by pathway {% if b_unique %} (unique genes only) {% endif %} </H1>
+{% for pathway_name, pathway_genes in dct_pathways.iteritems() %}
+<P>
+<H2>{{pathway_name}}</H2>
+<table>
+    <th>
+        {% for region_name in data.region_names %}
+        <td class="tableHeading">
+            <b>{{region_name}}</b>
+        </td>
+        {% endfor %}
+    </th>
+    {% for gene_name in pathway_genes %}
+    <tr>
+        <td>
+            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
+        </td>
+        {% for region_name in data.region_names %}
+        <td>
+            {% if flat_fits[(gene_name,region_name)] %}
+                <a href="{{series_dir}}/fit-{{gene_name}}-{{region_name}}.png">
+                {% if flat_fits[(gene_name,region_name)].score %}
+                    <div class="score rank{{flat_fits[(gene_name,region_name)].rank}}">
+                   {{flat_fits[(gene_name,region_name)].score | round(2)}}
+                   </div>
+                {% else %}
+                   No Score
+                {% endif %}
+                </a>
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+</P>
+{% endfor %} {# dct_pathways #}
+
+</body>
+</html>
