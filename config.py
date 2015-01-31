@@ -38,6 +38,11 @@ n_parameter_estimate_bootstrap_samples = 30
 min_nonzero_points_for_fitting = 5
 nonzero_threshold = 1E-6
 
+exon_level = False # exon-level dataset
+plot_exons_from_png = False #build exons plots from series png files
+plots_scaling = 'none' #scaling on y axis (expression) for selected plots
+same_scale_exons = False #use same y axis range for all exons of a gene 
+
 # these two settings must change together
 from sklearn.metrics import r2_score as score
 score_type = 'R2'
@@ -49,6 +54,7 @@ sorted_regions = {
         'ITC','STC','A1C','V1C',
         'AMY', 'CBC','HIP', 'MD','STR',
     ],
+    
     'colantuoni2011' : ['PFC'],
     'brainspan2014': [
         'DFC','OFC','VFC','MFC',
@@ -56,6 +62,24 @@ sorted_regions = {
         'ITC','STC','A1C','V1C',
         'AMY', 'CBC','HIP', 'MD','STR',
     ],
+    
+    'brainspan2014exons': [
+    'A1C','AMY','CB','CBC',
+    'CGE','DFC','DTH','HIP',
+    'IPC','ITC','LGE','M1C',
+    'M1C-S1C','MD','MFC','MGE',
+    'OFC','Ocx','PCx','S1C',
+    'STC','STR','TCx','URL',
+    'V1C','VFC'],
+    
+    'brainspan2014exons17pathways': [
+    'A1C','AMY','CB','CBC',
+    'CGE','DFC','DTH','HIP',
+    'IPC','ITC','LGE','M1C',
+    'M1C-S1C','MD','MFC','MGE',
+    'OFC','Ocx','PCx','S1C',
+    'STC','STR','TCx','URL',
+    'V1C','VFC']
 }
 
 pathways = {
