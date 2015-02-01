@@ -35,6 +35,10 @@ def plot_gene(data, g, fits=None):
     region_series_fits = _extract_gene_data(data,g,fits)
     return _plot_gene_inner(g,region_series_fits)
 
+def plot_exons(data,gene,region,fits=None):
+    exon_series_fits = _extract_exons_data(data,gene,region,fits)
+    return _plot_exons_inner(gene,region,exon_series_fits)
+
 def _extract_gene_data(data, g, fits=None):
     dct_dataset = data.region_to_dataset()
     region_series_fits = []
@@ -52,6 +56,24 @@ def _extract_gene_data(data, g, fits=None):
         raise AssertionError('Gene not found in the data')
     return region_series_fits
 
+def _extract_exons_data(data,gene,region,fits):
+    exons = data.exons[gene]
+    exons_fits = []
+    dataset_name = data.name
+    for exon in exons:
+        full_name = '{}_{}'.format(gene,exon)
+        series = data.get_one_series(full_name,region,allow_missing=True)
+        if series is None :
+            continue
+        if fits is not None:     
+            fit = fits[dataset_name][(full_name,region)]
+        else:
+            fit = None               
+        exons_fits.append((exon,series,fit))
+    if not exons_fits:
+        raise AssertionError('No exons found for gene {}'.format(gene))
+    return  exons_fits;
+        
 def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None):
     fig = plt.figure()
     nRows, nCols = rect_subplot(len(region_series_fits))
@@ -68,9 +90,35 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
         ax.set_title('Region {}'.format(r))
         if iRegion % nCols == 0:
             ax.set_ylabel('expression level')
-    fig.tight_layout(h_pad=0,w_pad=0)
-    fig.suptitle('Gene {}'.format(g))
+    if cfg.exon_level:
+        plt.subplots_adjust(hspace = 0.8)  
+        gene,start,end = g.split('_');
+        ttl = '{}({}-{})'.format(gene,start,end)  
+    else:
+        fig.tight_layout(h_pad=0,w_pad=0)
+        ttl = 'Gene {}'.format(g);
+    fig.suptitle(ttl, fontsize = 14)
     return fig
+    
+def _plot_exons_inner(gene,region,exon_series_fits):
+    fig = plt.figure();
+    nRows,nCols = rect_subplot(len(exon_series_fits))
+    if cfg.same_scale_exons:
+        expression_max = max([max(exon[1].single_expression) for exon in exon_series_fits])
+        expression_min = min([min(exon[1].single_expression) for exon in exon_series_fits])
+        expression_range = np.array([expression_min,expression_max])
+    else:
+        expression_range = None
+    for iExon,(exon,series,fit) in enumerate(exon_series_fits):
+        ax = fig.add_subplot(nRows,nCols,iExon+1)
+        plot_one_exon(series, fit.fitter.shape, fit.theta,LOO_predictions = fit.LOO_predictions, 
+                      ax=ax, y_range = expression_range)
+        ax.set_title(exon.replace('_','-'))
+        if iExon % nCols == 0:
+            ax.set_ylabel('log expression level' if cfg.plots_scaling in ['log+1','log'] else 'expression level')
+    fig.tight_layout(h_pad=0,w_pad=0)
+    fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
+    return fig 
 
 def add_age_ticks(ax, age_scaler, fontsize=None):
     if fontsize is None:
@@ -143,6 +191,51 @@ def plot_one_series(series, shape=None, theta=None, LOO_predictions=None, change
         if not b_subplot:
             ax.set_title(ttl, fontsize=fontsize)
     return ax.figure
+    
+def plot_one_exon(series, shape=None, theta=None, LOO_predictions=None, ax=None, y_range = None):
+    x = series.ages
+    y = series.single_expression
+
+    fontsize = cfg.minimal_annotation_fontsize
+    markersize = 8    
+    y_scaler = scalers.build_scaler(cfg.plots_scaling,None)
+    scaled = y_scaler is not None
+    
+    y_scaled = y_scaler.scale(y) if scaled else y
+    if scaled and y_range is not None :
+        y_range = y_scaler.scale(y_range)
+
+    if y_range is not None:
+        plt.ylim(y_range)
+    ax.plot(series.ages, y_scaled, 'ks', markersize=markersize)    
+    ax.set_xlabel('age', fontsize=fontsize)
+    add_age_ticks(ax, series.age_scaler, fontsize)
+    exon = series.gene_name[series.gene_name.index('_')+1:]
+    ax.set_title(exon.replace('_','-'), fontsize = 14)
+   
+    if shape is not None and theta is not None:
+        
+        score = cfg.score(y,shape.f(theta,x))
+        x_smooth,y_smooth = shape.high_res_preds(theta,x)
+        if scaled:
+            y_smooth = y_scaler.scale(y_smooth)
+        label = 'fit ({}={:.3g})'.format(cfg.score_type, score)
+        ax.plot(x_smooth, y_smooth, 'b-', linewidth=3, label=label)
+
+        # draw LOO predictions and residuals
+        if LOO_predictions is not None:
+            score = loo_score(y,LOO_predictions)
+            if scaled:
+                LOO_predictions =y_scaler.scale(LOO_predictions)
+            for i,(xi,yi,y_loo) in enumerate(zip(x,y_scaled,LOO_predictions)):
+                if y_loo is None or np.isnan(y_loo):
+                    continue
+                label = 'LOO ({}={:.3g})'.format(cfg.score_type, score) if i==0  and score is not None else None
+                ax.plot([xi, xi], [yi, y_loo], '-', color='0.5', label=label)
+                ax.plot(xi, y_loo, 'x', color='0.5', markeredgewidth=2)
+        
+        ax.legend(fontsize=fontsize, frameon=False)
+    return ax.figure
 
 def plot_series(series, shape=None, theta=None, LOO_predictions=None):
     if series.num_genes == 1:
@@ -167,7 +260,12 @@ def plot_and_save_all_genes(data, fitter, fits, dirname, show_change_distributio
         for g,r in ds_fits.iterkeys():
             genes.add(g)
     for g in sorted(genes):
-        filename = join(dirname, '{}.png'.format(g))
+        if cfg.exon_level:   #save exons plots on separate folders by gene  
+            gene_dir = join(dirname,g[:g.index('_')])
+            ensure_dir(gene_dir)
+            filename = join(gene_dir,'{}.png'.format(g))
+        else:
+            filename = join(dirname, '{}.png'.format(g))
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
             continue
@@ -180,10 +278,39 @@ def plot_and_save_all_genes(data, fitter, fits, dirname, show_change_distributio
     pool = Parallel(_plot_genes_job)
     pool(pool.delay(*args) for args in to_plot)
 
+def plot_and_save_all_exons(data, fitter, fits, dirname):
+    ensure_dir(dirname)
+    to_plot = []
+    genes,regions = set(),set();
+    for ds_fits in fits.itervalues():
+        for g,r in ds_fits.iterkeys():
+            genes.add(g[:g.index('_')])
+            regions.add(r)
+    for g in sorted(genes):
+        for r in sorted(regions):
+            gene_dir = join(dirname,g)
+            ensure_dir(gene_dir)
+            filename = join(gene_dir, '{}-{}.png'.format(g,r))
+            if isfile(filename):
+                print 'Figure already exists for gene {} in region {}. skipping...'.format(g,r)
+                continue
+            exons_series_fits = _extract_exons_data(data,g,r,fits)
+            if not np.count_nonzero(exons_series_fits):
+                continue
+            to_plot.append((g,r,exons_series_fits,filename))
+    pool = Parallel(_plot_exons_job)
+    pool(pool.delay(*args) for args in to_plot)
+        
 def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
     with interactive(False):
         print 'Saving figure for gene {}'.format(gene)
         fig = _plot_gene_inner(gene, region_series_fits, change_distribution_bin_centers=bin_centers)
+        save_figure(fig, filename, b_close=True)
+
+def _plot_exons_job(gene,region,exons_series_fits,filename):
+    with interactive(False):
+        print 'Saving Exons figure for gene {} on region {}'.format(gene,region)
+        fig = _plot_exons_inner(gene,region, exons_series_fits)
         save_figure(fig, filename, b_close=True)
 
 def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions, figure_kw=None):
@@ -330,7 +457,7 @@ def plot_gene_correlations_single_region(sigma, region, gene_names):
     return fig
 
 def create_html(data, fitter, fits, 
-                basedir, gene_dir, series_dir, scores_dir,
+                basedir, gene_dir, exons_dir, series_dir, scores_dir,
                 correlations_dir = None,
                 use_correlations = False,
                 link_to_correlation_plots = False,
@@ -379,11 +506,32 @@ def create_html(data, fitter, fits,
                 score = fit.LOO_score
             fit.score = score
             fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
-            flat_fits[(g,r)] = fit     
-            
+            flat_fits[(g,r)] = fit
+    
+    if cfg.exon_level:   #html is organized differently when data is on exons level
+        scores_per_gene = {}
+        for (g,r),fit in flat_fits.iteritems():
+            key = (g[:g.index('_')],r)
+            if fit.score is None:
+                continue
+            if key in scores_per_gene:
+                scores_per_gene[key].append(fit.score)
+            else:
+                scores_per_gene[key] = [fit.score]
+        gene_names = np.lib.arraysetops.unique([name[:name.index('_')] for name in gene_names])
+        flat_fits = {}
+        for (g,r),scores in scores_per_gene.iteritems():
+            min_score, max_score = min(scores), max(scores)
+            min_rank = int(np.ceil(n_ranks * max_score)) if max_score > 0 else 0
+            max_rank = int(np.ceil(n_ranks * max_score)) if max_score > 0 else 0
+            flat_fits[(g,r)] = Bunch(min_score = min_score,
+                                     min_rank = min_rank,
+                                     max_score = max_score,
+                                     max_rank = max_rank)
+        
     extra_fields_per_fit = list(enumerate(extra_fields_per_fit))
     
-    template_file = 'main.jinja'
+    template_file = 'main_exons.jinja' if cfg.exon_level else 'main.jinja'
     html = get_jinja_env().get_template(template_file).render(**locals())
     
     filename = join(basedir,'{}.html'.format(filename))
@@ -418,7 +566,7 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
         f.write(html)
     
 def save_fits_and_create_html(data, fitter, fits=None, basedir=None, 
-                              do_genes=True, do_series=True, do_hist=True, do_html=True, only_main_html=False,
+                              do_genes=True, do_exons = False, do_series=True, do_hist=True, do_html=True, only_main_html=False,
                               k_of_n=None, 
                               use_correlations=False, correlations=None,
                               show_change_distributions=False,
@@ -437,13 +585,16 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
-    series_dir = 'gene-region-fits'
+    exons_dir = 'exons_subplot'
+    series_dir = 'gene-region-fits' 
     correlations_dir = 'gene-correlations'
     scores_dir = 'score_distributions'
     if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir), show_change_distributions)
     if do_series and not only_main_html:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, figure_kw)
+    if do_exons and not only_main_html:
+        plot_and_save_all_exons(data, fitter, fits, join(basedir,exons_dir))
     if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
@@ -456,7 +607,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
         missing = pathway_genes - data_genes
         b_pathways = len(missing) < len(pathway_genes)/2 # simple heuristic to create pathways only if we have most of the genes (currently 61 genes are missing)
         create_html(
-            data, fitter, fits, basedir, gene_dir, series_dir, scores_dir, correlations_dir=correlations_dir,
+            data, fitter, fits, basedir, gene_dir, exons_dir, series_dir, scores_dir, correlations_dir=correlations_dir,
             use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
             b_pathways=b_pathways, **html_kw
         )

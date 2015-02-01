@@ -55,7 +55,7 @@ Column/row headings and/or cell entries may link to more details for the corresp
         {% for region_name in region_names %}
 			<td>
             {% if flat_fits[(gene_name,region_name)] %}
-                <a class=noColorChange href="{{exons_dir}}/{{gene_name}}-{{region_name}}.png">
+                <a class=noColorChange href="{{exons_dir}}/{{gene_name}}/{{gene_name}}-{{region_name}}.png">
                 {% if flat_fits[(gene_name,region_name)].min_score %}
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
@@ -72,11 +72,11 @@ Column/row headings and/or cell entries may link to more details for the corresp
                    No Score
                 {% endif %}
                 </a>
+			{% else %}	
+				No Score
             {% endif %}
-        </td>
-			
+			</td>	
 		{% endfor %}
-		
     </tr>
     {% endfor %}
 </table>
