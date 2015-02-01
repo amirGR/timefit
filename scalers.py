@@ -51,12 +51,14 @@ class LinearScaler(object):
 # Building scaler from command line input
 ##########################################################
 def allowed_scaler_names():
-    return ['none', 'log']
+    return ['none', 'log', 'log+1']
 
 def build_scaler(name, data):
     if name == 'none':
         return None
     elif name == 'log':
         return LogScaler()
+    elif name == 'log+1':
+        return LogScaler(-1)
     else:
         raise AssertionError('Unknown scaler: {}'.format(name))
