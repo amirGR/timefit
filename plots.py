@@ -191,7 +191,9 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show
     to_plot = []
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
-            filename = join(dirname, 'fit-{}-{}.png'.format(g,r))
+            genedir = join(dirname,g)
+            ensure_dir(genedir)
+            filename = join(genedir, 'fit-{}-{}.png'.format(g,r))
             if isfile(filename):
                 print 'Figure already exists for {}@{}. skipping...'.format(g,r)
                 continue
