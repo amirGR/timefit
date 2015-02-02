@@ -41,7 +41,7 @@ nonzero_threshold = 1E-6
 exon_level = False # exon-level dataset
 plot_exons_from_png = False #build exons plots from series png files
 plots_scaling = 'none' #scaling on y axis (expression) for selected plots
-same_scale_exons = False #use same y axis range for all exons of a gene 
+exons_same_scale = True #use same y axis range for all exons of a gene(only on multi-exons plots)
 
 # these two settings must change together
 from sklearn.metrics import r2_score as score

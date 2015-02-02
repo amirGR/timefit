@@ -6,6 +6,7 @@ from all_fits import get_all_fits, iterate_region_fits, save_as_mat_files, save_
 from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
 from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, export_timing_info_for_all_fits, compute_fraction_of_change
+import config as cfg
 
 
 def do_fits(data, fitter, k_of_n, add_correlations, correlations_k_of_n):
@@ -20,7 +21,7 @@ def do_fits(data, fitter, k_of_n, add_correlations, correlations_k_of_n):
     fits = get_all_fits(data, fitter, k_of_n, n_correlation_iterations=n_correlation_iterations, correlations_k_of_n=correlations_k_of_n)    
     return fits
     
-def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions, no_legend):
+def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlations, show_onsets, show_change_distributions, no_legend, exons_layout):
     print """
 ==============================================================================================
 ==============================================================================================
@@ -38,6 +39,7 @@ def create_html(data, fitter, fits, html_dir, k_of_n, use_correlations, correlat
         use_correlations = use_correlations,
         correlations = correlations,
         show_change_distributions = show_change_distributions,
+        exons_layout = exons_layout
     )
     
     if show_onsets:
@@ -157,6 +159,8 @@ if __name__ == '__main__':
     parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't show change distribution in the figures (only relevant for sigmoids and together with --html)")
     parser.add_argument('--no_legend', action='store_true', help="Don't show the legend in the figures (only relevant together with --html)")
     parser.add_argument('--change_dist', action='store_true', help='Compute change distributions and related measures (sigmoid only)')
+    parser.add_argument('--exons_layout', action='store_true', help='Adjust plotting and html layout to exon-level data')
+    parser.add_argument('--exons_same_scale', action='store_true', help='set y axis range to be the same for all exons in multi-exons subplots')
     args = parser.parse_args()
     
     if args.part is not None and args.mat:
@@ -180,6 +184,8 @@ if __name__ == '__main__':
         abort('--onset should only be used with --html')
     if args.text and args.shape != 'spline':
         abort('--text only supported for splines at the moment')
+    if args.exons_layout and args.html == NOT_USED:
+        abort('--exons_layout should only be used with --html')
     k_of_n = parse_k_of_n(args.part)
     correlations_k_of_n = parse_k_of_n(args.correlations_part)
     data, fitter = process_common_inputs(args)
@@ -197,12 +203,15 @@ if __name__ == '__main__':
             correlations = {r: rfits[-1].correlations for r,rfits in iterate_region_fits(data, fits)}
         else:
             correlations = None
+        cfg.exons_same_scale = args.exons_same_scale
+        exons_layout = args.exons_layout and cfg.exon_level
         create_html(data, fitter, fits, args.html, k_of_n, 
                     use_correlations=args.correlations, 
                     correlations=correlations, 
                     show_onsets=args.onset,
                     show_change_distributions = has_change_distributions and not args.dont_show_change_dist,
                     no_legend = args.no_legend,
+                    exons_layout = exons_layout
                     )
     if args.mat:
         save_mat_file(data, fitter, fits, has_change_distributions)

@@ -103,10 +103,10 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
 def _plot_exons_inner(gene,region,exon_series_fits):
     fig = plt.figure();
     nRows,nCols = rect_subplot(len(exon_series_fits))
-    if cfg.same_scale_exons:
+    if cfg.exons_same_scale:
         expression_max = max([max(exon[1].single_expression) for exon in exon_series_fits])
         expression_min = min([min(exon[1].single_expression) for exon in exon_series_fits])
-        expression_range = np.array([expression_min,expression_max])
+        expression_range = np.array([expression_min,expression_max + np.e])
     else:
         expression_range = None
     for iExon,(exon,series,fit) in enumerate(exon_series_fits):
@@ -260,12 +260,7 @@ def plot_and_save_all_genes(data, fitter, fits, dirname, show_change_distributio
         for g,r in ds_fits.iterkeys():
             genes.add(g)
     for g in sorted(genes):
-        if cfg.exon_level:   #save exons plots on separate folders by gene  
-            gene_dir = join(dirname,g[:g.index('_')])
-            ensure_dir(gene_dir)
-            filename = join(gene_dir,'{}.png'.format(g))
-        else:
-            filename = join(dirname, '{}.png'.format(g))
+        filename = join(dirname, '{}.png'.format(g))
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
             continue
@@ -461,7 +456,8 @@ def create_html(data, fitter, fits,
                 correlations_dir = None,
                 use_correlations = False,
                 link_to_correlation_plots = False,
-                b_pathways = False, 
+                b_pathways = False,
+                exons_layout = False,
                 show_R2 = True,
                 gene_names=None, region_names=None, 
                 extra_columns=None, extra_fields_per_fit=None,
@@ -508,7 +504,7 @@ def create_html(data, fitter, fits,
             fit.rank = int(np.ceil(n_ranks * score)) if score > 0 else 0
             flat_fits[(g,r)] = fit
     
-    if cfg.exon_level:   #html is organized differently when data is on exons level
+    if exons_layout:   #html is organized differently when data is on exons level
         scores_per_gene = {}
         for (g,r),fit in flat_fits.iteritems():
             key = (g[:g.index('_')],r)
@@ -531,7 +527,7 @@ def create_html(data, fitter, fits,
         
     extra_fields_per_fit = list(enumerate(extra_fields_per_fit))
     
-    template_file = 'main_exons.jinja' if cfg.exon_level else 'main.jinja'
+    template_file = 'main_exons.jinja' if exons_layout else 'main.jinja'
     html = get_jinja_env().get_template(template_file).render(**locals())
     
     filename = join(basedir,'{}.html'.format(filename))
@@ -566,10 +562,11 @@ def create_pathway_index_html(data, fitter, fits, basedir, gene_dir, series_dir,
         f.write(html)
     
 def save_fits_and_create_html(data, fitter, fits=None, basedir=None, 
-                              do_genes=True, do_exons = False, do_series=True, do_hist=True, do_html=True, only_main_html=False,
+                              do_genes=True, do_series=True, do_hist=True, do_html=True, only_main_html=False,
                               k_of_n=None, 
                               use_correlations=False, correlations=None,
                               show_change_distributions=False,
+                              exons_layout = False,
                               html_kw=None,
                               figure_kw=None):
     if fits is None:
@@ -593,7 +590,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir), show_change_distributions)
     if do_series and not only_main_html:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, figure_kw)
-    if do_exons and not only_main_html:
+    if exons_layout and not only_main_html:
         plot_and_save_all_exons(data, fitter, fits, join(basedir,exons_dir))
     if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
@@ -609,7 +606,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
         create_html(
             data, fitter, fits, basedir, gene_dir, exons_dir, series_dir, scores_dir, correlations_dir=correlations_dir,
             use_correlations=use_correlations, link_to_correlation_plots=link_to_correlation_plots, 
-            b_pathways=b_pathways, **html_kw
+            b_pathways=b_pathways, exons_layout = exons_layout, **html_kw
         )
         
 def get_jinja_env():
