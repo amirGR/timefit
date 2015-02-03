@@ -120,6 +120,23 @@ def _plot_exons_inner(gene,region,exon_series_fits):
     fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
     return fig 
 
+def _plot_exons_from_png_inner(gene,region,series_dir):
+    import Image
+    import glob
+    
+    fig = plt.figure()
+    img_files = glob.glob(join(series_dir,gene,'*{}_*{}.png'.format(gene,region)))
+    print join(series_dir,gene,'*{}_*{}.png'.format(gene,region))
+    nRows,nCols = rect_subplot(len(img_files))
+    for n, fname in enumerate(img_files):
+        image=Image.open(fname)
+        ax = fig.add_subplot(nRows,nCols,n+1) 
+        ax.axis('off')
+        ax.imshow(image)
+    fig.tight_layout(h_pad=0,w_pad=0)
+    fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
+    return fig
+    
 def add_age_ticks(ax, age_scaler, fontsize=None):
     if fontsize is None:
         fontsize = cfg.fontsize
@@ -295,6 +312,24 @@ def plot_and_save_all_exons(data, fitter, fits, dirname):
             to_plot.append((g,r,exons_series_fits,filename))
     pool = Parallel(_plot_exons_job)
     pool(pool.delay(*args) for args in to_plot)
+    
+def plot_and_save_all_exons_from_png(fits, exons_dir, series_dir):
+    to_plot = []
+    ensure_dir(exons_dir)
+    keys = set()
+    for ds_fits in fits.itervalues():
+        for g,r in ds_fits.iterkeys():
+            keys.add((g[:g.index('_')],r))
+    for g,r in keys:
+        gene_dir = join(exons_dir,g)
+        ensure_dir(gene_dir)
+        filename = join(gene_dir, '{}-{}.png'.format(g,r))
+        if isfile(filename):
+            print 'Figure already exists for gene {} in region {}. skipping...'.format(g,r)
+            continue
+        to_plot.append((g,r,filename,series_dir))
+    pool = Parallel(_plot_exons_from_png_job)
+    pool(pool.delay(*args) for args in to_plot)
         
 def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
     with interactive(False):
@@ -308,12 +343,19 @@ def _plot_exons_job(gene,region,exons_series_fits,filename):
         fig = _plot_exons_inner(gene,region, exons_series_fits)
         save_figure(fig, filename, b_close=True)
 
-def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions, figure_kw=None):
+def _plot_exons_from_png_job(gene,region,filename,series_dir):
+    with interactive(False):
+        print 'Saving Exons figure for gene {} on region {}'.format(gene,region)
+        fig = _plot_exons_from_png_inner(gene,region,series_dir)
+        save_figure(fig,filename,b_close=True)
+
+def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions,exons_layout = False,figure_kw=None):
     ensure_dir(dirname)
     to_plot = []
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
-            genedir = join(dirname,g)
+            
+            genedir = join(dirname,g[:g.index('_')] if exons_layout else g )
             ensure_dir(genedir)
             filename = join(genedir, 'fit-{}-{}.png'.format(g,r))
             if isfile(filename):
@@ -589,9 +631,12 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     if do_genes and not only_main_html: # relies on the sharding of the fits respecting gene boundaries
         plot_and_save_all_genes(data, fitter, fits, join(basedir,gene_dir), show_change_distributions)
     if do_series and not only_main_html:
-        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, figure_kw)
+        plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, exons_layout, figure_kw)
     if exons_layout and not only_main_html:
-        plot_and_save_all_exons(data, fitter, fits, join(basedir,exons_dir))
+        if cfg.plot_exons_from_png:
+            plot_and_save_all_exons_from_png(fits,join(basedir,exons_dir),join(basedir,series_dir))
+        else:
+             plot_and_save_all_exons(data, fitter, fits, join(basedir,exons_dir))
     if do_hist and k_of_n is None and not only_main_html:
         create_score_distribution_html(fits, use_correlations, join(basedir,scores_dir))
     if do_html and k_of_n is None:
