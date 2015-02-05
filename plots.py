@@ -120,7 +120,7 @@ def _plot_exons_inner(gene,region,exon_series_fits):
     fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
     return fig 
 
-def _plot_exons_from_png_inner(gene,region,series_dir):
+def _plot_exons_from_series_inner(gene,region,series_dir):
     import Image
     import glob
     
@@ -313,7 +313,7 @@ def plot_and_save_all_exons(data, fitter, fits, dirname):
     pool = Parallel(_plot_exons_job)
     pool(pool.delay(*args) for args in to_plot)
     
-def plot_and_save_all_exons_from_png(fits, exons_dir, series_dir):
+def plot_and_save_all_exons_from_series(fits, exons_dir, series_dir):
     to_plot = []
     ensure_dir(exons_dir)
     keys = set()
@@ -328,7 +328,7 @@ def plot_and_save_all_exons_from_png(fits, exons_dir, series_dir):
             print 'Figure already exists for gene {} in region {}. skipping...'.format(g,r)
             continue
         to_plot.append((g,r,filename,series_dir))
-    pool = Parallel(_plot_exons_from_png_job)
+    pool = Parallel(_plot_exons_from_series_job)
     pool(pool.delay(*args) for args in to_plot)
         
 def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
@@ -343,10 +343,10 @@ def _plot_exons_job(gene,region,exons_series_fits,filename):
         fig = _plot_exons_inner(gene,region, exons_series_fits)
         save_figure(fig, filename, b_close=True)
 
-def _plot_exons_from_png_job(gene,region,filename,series_dir):
+def _plot_exons_from_series_job(gene,region,filename,series_dir):
     with interactive(False):
         print 'Saving Exons figure for gene {} on region {}'.format(gene,region)
-        fig = _plot_exons_from_png_inner(gene,region,series_dir)
+        fig = _plot_exons_from_series_inner(gene,region,series_dir)
         save_figure(fig,filename,b_close=True)
 
 def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions,exons_layout = False,figure_kw=None):
@@ -624,7 +624,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
-    exons_dir = 'exons_subplot'
+    exons_dir = 'exons_subplot_png' if cfg.exons_plots_from_series else 'exons_subplot'
     series_dir = 'gene-region-fits' 
     correlations_dir = 'gene-correlations'
     scores_dir = 'score_distributions'
@@ -633,8 +633,8 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     if do_series and not only_main_html:
         plot_and_save_all_series(data, fitter, fits, join(basedir,series_dir), use_correlations, show_change_distributions, exons_layout, figure_kw)
     if exons_layout and not only_main_html:
-        if cfg.plot_exons_from_png:
-            plot_and_save_all_exons_from_png(fits,join(basedir,exons_dir),join(basedir,series_dir))
+        if cfg.exons_plots_from_series:
+            plot_and_save_all_exons_from_series(fits,join(basedir,exons_dir),join(basedir,series_dir))
         else:
              plot_and_save_all_exons(data, fitter, fits, join(basedir,exons_dir))
     if do_hist and k_of_n is None and not only_main_html:

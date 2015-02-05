@@ -38,12 +38,10 @@ def get_common_parser(include_pathway=True):
     parser.add_argument('-s', '--shape', help='The shape to use for fitting. Default: sigslope', default='sigslope', choices=allowed_shape_names())
     parser.add_argument('--sigma_prior', help='Prior to use for 1/sigma when fitting. Default: normal', default = 'normal', choices=get_allowed_priors(is_sigma=True))
     parser.add_argument('--priors', help='Priors to use for theta when fitting. Default: sigslope80', default = 'sigslope80', choices=get_allowed_priors())
-    parser.add_argument('--plots_scaling', help = 'What scaling to use for expression levels when plotting. Currently affects only exons plots. Default: log(x+1).', default = 'log+1', choices=allowed_scaler_names())
     return parser
 
 def process_common_inputs(args):
     cfg.verbosity = args.verbose - args.quiet
-    cfg.plots_scaling =  args.plots_scaling
     cfg.exon_level = args.dataset in ['brainspan2014exons','brainspan2014exons17pathways']
     pathway = getattr(args, 'pathway', None)
     data = get_data_from_args(args.dataset, pathway, args.from_age, args.scaling, args.shuffle)

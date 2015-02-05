@@ -7,6 +7,7 @@ from command_line import get_common_parser, process_common_inputs
 from plots import save_fits_and_create_html
 from sigmoid_change_distribution import add_change_distributions, compute_dprime_measures_for_all_pairs, export_timing_info_for_all_fits, compute_fraction_of_change
 import config as cfg
+from scalers import allowed_scaler_names
 
 
 def do_fits(data, fitter, k_of_n, add_correlations, correlations_k_of_n):
@@ -159,8 +160,11 @@ if __name__ == '__main__':
     parser.add_argument('--dont_show_change_dist', action='store_true', help="Don't show change distribution in the figures (only relevant for sigmoids and together with --html)")
     parser.add_argument('--no_legend', action='store_true', help="Don't show the legend in the figures (only relevant together with --html)")
     parser.add_argument('--change_dist', action='store_true', help='Compute change distributions and related measures (sigmoid only)')
-    parser.add_argument('--exons_layout', action='store_true', help='Adjust plotting and html layout to exon-level data')
-    parser.add_argument('--exons_same_scale', action='store_true', help='set y axis range to be the same for all exons in multi-exons subplots')
+    parser.add_argument('--exons_layout', action='store_true', default = False, help='Adjust plotting and html layout to exon-level data')
+    parser.add_argument('--exons_same_scale',action='store_true',default = False, help='Set y axis range to be the same for all exons in multi-exons subplots')
+    parser.add_argument('--exons_plots_from_series',action='store_true',default = False, help='Build multi-exons plots from series plots')
+    parser.add_argument('--plots_scaling',default = 'none', help = 'What scaling to use for expression levels when plotting. Currently affects only exons plots. Default: none.', choices=allowed_scaler_names())
+
     args = parser.parse_args()
     
     if args.part is not None and args.mat:
@@ -184,8 +188,10 @@ if __name__ == '__main__':
         abort('--onset should only be used with --html')
     if args.text and args.shape != 'spline':
         abort('--text only supported for splines at the moment')
-    if args.exons_layout and args.html == NOT_USED:
-        abort('--exons_layout should only be used with --html')
+    if (args.exons_layout or args.exons_same_scale or args.exons_plots_from_series) and args.html == NOT_USED:
+        abort('exons settings are relevant only when using --html')
+    if (args.exons_same_scale or args.plots_scaling) and args.exons_plots_from_series:
+        abort('--exons_same_scale/--plots_scaling are relevant only when not using --exons_plots_from_series')
     k_of_n = parse_k_of_n(args.part)
     correlations_k_of_n = parse_k_of_n(args.correlations_part)
     data, fitter = process_common_inputs(args)
@@ -203,8 +209,10 @@ if __name__ == '__main__':
             correlations = {r: rfits[-1].correlations for r,rfits in iterate_region_fits(data, fits)}
         else:
             correlations = None
-        cfg.exons_same_scale = args.exons_same_scale
         exons_layout = args.exons_layout and cfg.exon_level
+        cfg.exons_same_scale = args.exons_same_scale
+        cfg.plots_scaling =  args.plots_scaling
+        cfg.exons_plots_from_series = args.exons_plots_from_series
         create_html(data, fitter, fits, args.html, k_of_n, 
                     use_correlations=args.correlations, 
                     correlations=correlations, 
