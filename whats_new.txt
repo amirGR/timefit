@@ -1,0 +1,55 @@
+What's new?
+
+=======================================================================
+1)  RNA-Seq datasets that are reorganized to work with timefit package:
+=======================================================================
+    location: /cortex/data/RNA-Seq/human/brainspan/2014-11-05/
+    datasets:
+        brainspan2014exons_allGenes.mat - all of brainspan 2014 
+        brainspan2014exons17pathways_allGenes.mat - only genes that belong to the 17 pathways
+    The original datasets are also at the above location
+    The matlab script that transforms the original datasets to the timefit version:
+            /cortex/users/amir/scripts/adjust_brainspan_to_timefit.m
+     
+    notes:
+    exons are represented as intervals in the sequence, e.g. HTR_47407512_47409774
+    a detailed explanation about the data can be found at:
+    http://help.brain-map.org/download/attachments/3506181/Transcriptome_Profiling.pdf?version=1&modificationDate=1382036562736
+
+==========================    
+2)  Exons-per-gene layout:
+==========================
+    There's a new hierarchical layout for the plots and the html, presenting exons per gene:
+    ***sample 1: http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_layout/fits.html
+    The numbers in the cells are the min and max R-squared received for exons of that gene in that region.
+    To use the new layout, run compute_fits with the flag --exons_layout. 
+    Without the flag the standard layout is used, where each exon is treated as a separate gene:
+    ***sample 2: http://chechiklab.biu.ac.il/~amir/samples/timefit/standard_layout/fits.html
+    
+=========================================
+3)  New flags controlling exons plotting:
+=========================================
+    --exons_same_scale - sets the range of the y-axis to be the same for all exons per gene
+    --plots_scaling - scaling to use on y axis (expression levels). Currently affects only exons plots. The preferred scaling is log(x+1), default is 'none'
+    --exons_plots_from_series - use the series plots (those under gene-region folder) to build the multi-exons plots. Without this flag
+      the data is plotted using a dedicated plotting method:
+      ***sample 3 (without the flag): http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_layout/exons_subplot/HTR2A/HTR2A-A1C.png
+      ***sample 4 (with the flag): http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_layout/exons_subplot_png/HTR2A/HTR2A-A1C.png
+      note that currently only the dedicated method (without the flag) supports scaling and y axis alignment (first two flags above)
+
+=========================================      
+4.  A new scaler has been added: log(x+1)
+=========================================
+    The string that represents it is log+1 (see second example below).
+
+================================================================================================    
+5. The gene-region plots are created in sub-folders per gene name rather than all in one folder.
+================================================================================================
+
+examples:
+--------
+python compute_fits.py --dataset brainspan2014exons17pathways --html ../../results --exons_layout --exons_plots_from_series
+similar to sample 4
+
+python compute_fits.py --dataset brainspan2014exons17pathways --html ../../results --exons_layout --plots_scaling log+1 --exons_same_scale
+exons will be plotted using the dedicated method(like sample 3), but log scaled and with the same y axis range

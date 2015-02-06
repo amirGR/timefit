@@ -190,7 +190,7 @@ if __name__ == '__main__':
         abort('--text only supported for splines at the moment')
     if (args.exons_layout or args.exons_same_scale or args.exons_plots_from_series) and args.html == NOT_USED:
         abort('exons settings are relevant only when using --html')
-    if (args.exons_same_scale or args.plots_scaling) and args.exons_plots_from_series:
+    if (args.exons_same_scale or args.plots_scaling is not 'none') and args.exons_plots_from_series:
         abort('--exons_same_scale/--plots_scaling are relevant only when not using --exons_plots_from_series')
     k_of_n = parse_k_of_n(args.part)
     correlations_k_of_n = parse_k_of_n(args.correlations_part)

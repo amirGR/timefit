@@ -27,6 +27,9 @@ def results_dir():
     
 def priors_dir():
     return join(code_dir(), 'priors')
+    
+def templates_dir():
+    return join(code_dir(), 'templates')
 
 def fit_results_relative_path(d,fitter): # d can be data or dataset
     s = d.pathway
