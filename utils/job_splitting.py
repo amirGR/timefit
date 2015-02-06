@@ -42,8 +42,7 @@ def compute(name, f, arg_mapper, all_keys, k_of_n, base_filename, batch_size=Non
     _consolidate(dct_res, base_filename, k_of_n, found_keys_not_in_main_file)
 
     missing_keys = set(k for k in keys if k not in dct_res)
-    if cfg.verbosity > 0:
-        print 'Still need to compute {}/{} {}'.format(len(missing_keys),len(keys),name)
+    print 'Still need to compute {}/{} {}'.format(len(missing_keys),len(keys),name)
     if missing_keys and not allow_new_computation:
         raise AssertionError('Cache does not contain all results')
 
