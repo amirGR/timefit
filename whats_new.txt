@@ -12,8 +12,10 @@ What's new?
             /cortex/users/amir/scripts/adjust_brainspan_to_timefit.m
      
     notes:
-    exons are represented as intervals in the sequence, e.g. HTR_47407512_47409774
-    a detailed explanation about the data can be found at:
+    - When converted to timefit format, the whole brainspan RNA-Seq data exceeds 2GB. This means that it has to be saved in a compressed matlab format (7.3), 
+      which is currently not supported by timefit. Thus we currently need to work with smaller sets, e.g the partial 17-pathways genes dataset above. 
+    - exons are represented as intervals in the sequence, e.g. HTR_47407512_47409774
+    - a detailed explanation about the data can be found at:
     http://help.brain-map.org/download/attachments/3506181/Transcriptome_Profiling.pdf?version=1&modificationDate=1382036562736
 
 ==========================    
