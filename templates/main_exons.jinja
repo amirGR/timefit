@@ -53,25 +53,29 @@ Column/row headings and/or cell entries may link to more details for the corresp
             </td>
         {% endfor %}
         {% for region_name in region_names %}
-			<td>
-            {% if flat_fits[(gene_name,region_name)] %}
-                <a class=noColorChange href="{{exons_dir}}/{{gene_name}}/{{gene_name}}-{{region_name}}.png">
+			<td style="font-size:14px">
+            {% if flat_fits[(gene_name,region_name)] %} 
                 {% if flat_fits[(gene_name,region_name)].min_score %}
                     {% if b_inline_images %}
                         R2 &nbsp; = &nbsp;
                     {% endif %}
                     {% if show_R2 %}
+                        <a class=noColorChange href="{{exons_dir}}/{{gene_name}}/{{gene_name}}-{{region_name}}.png">
                         <div class="score rank{{flat_fits[(gene_name,region_name)].min_rank}}">
                             {{flat_fits[(gene_name,region_name)].min_score | round(2)}}
                         </div>
 						<div class="score rank{{flat_fits[(gene_name,region_name)].max_rank}}">
                             {{flat_fits[(gene_name,region_name)].max_score | round(2)}}
                         </div>
+                        </a>
+                        {% for i in range(flat_fits[(gene_name,region_name)].num_of_plots - 1) %}
+                            <a href = "{{exons_dir}}/{{gene_name}}/{{gene_name}}-{{region_name}}_{{'%d'|format(i+2)}}.png"<b>.</b></a>
+                        {% endfor %}
                     {% endif %}
                 {% else %}
                    No Score
                 {% endif %}
-                </a>
+                
 			{% else %}	
 				No Score
             {% endif %}

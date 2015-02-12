@@ -399,7 +399,7 @@ class OneDataset(object):
     #####################################################################        
     
     def _find_multiple_indices(self,name,allow_missing = False):
-        name = name + '_'
+        name = name + cfg.exon_separator
         match_positions = [ind for ind, g in enumerate(self.gene_names) if g.startswith(name)]
         if len(match_positions) > 0:
             return match_positions
@@ -473,8 +473,8 @@ def _get_exons(gene_names):
     
     result = {}
     for name in gene_names:
-        gene,start,end = name.split('_')
-        exon = '{}_{}'.format(start,end)
+        gene,start,end = name.split(cfg.exon_separator)
+        exon = '{}{}{}'.format(start,cfg.exon_separator,end)
         if gene in result:
             result[gene].append(exon)
         else:

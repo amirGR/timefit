@@ -12,9 +12,11 @@ What's new?
             /cortex/users/amir/scripts/adjust_brainspan_to_timefit.m
      
     notes:
-    - When converted to timefit format, the whole brainspan RNA-Seq data exceeds 2GB. This means that it has to be saved in a compressed matlab format (7.3), 
-      which is currently not supported by timefit. Thus we currently need to work with smaller sets, e.g the partial 17-pathways genes dataset above. 
+    - When converted to timefit format, the whole brainspan RNA-Seq data exceeds 2GB. This means that it has to be saved
+      in a compressed matlab format (7.3), which is currently not supported by timefit. Thus we currently need to work 
+      with smaller sets, e.g the partial 17-pathways genes dataset above. 
     - exons are represented as intervals in the sequence, e.g. HTR_47407512_47409774
+      the separator '_' can be changed - make sure to update the key 'exon_separator' in config.py
     - a detailed explanation about the data can be found at:
     http://help.brain-map.org/download/attachments/3506181/Transcriptome_Profiling.pdf?version=1&modificationDate=1382036562736
 
@@ -32,12 +34,25 @@ What's new?
 3)  New flags controlling exons plotting:
 =========================================
     --exons_same_scale - sets the range of the y-axis to be the same for all exons per gene
-    --plots_scaling - scaling to use on y axis (expression levels). Currently affects only exons plots. The preferred scaling is log(x+1), default is 'none'
-    --exons_plots_from_series - use the series plots (those under gene-region folder) to build the multi-exons plots. Without this flag
-      the data is plotted using a dedicated plotting method:
+    --plots_scaling - scaling to use on y axis (expression levels). Currently affects only exons plots. 
+      the preferred scaling is log(x+1), default is 'none'
+    --exons_plots_from_series - use the series plots (those under gene-region folder) to build the multi-exons plots. 
+      Without this flag the data is plotted using a dedicated plotting method:
       ***sample 3 (without the flag): http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_layout/exons_subplot/HTR2A/HTR2A-A1C.png
       ***sample 4 (with the flag): http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_layout/exons_subplot_png/HTR2A/HTR2A-A1C.png
       note that currently only the dedicated method (without the flag) supports scaling and y axis alignment (first two flags above)
+      
+      Additional options:
+      A gene can have more than 30 exons expressed in a single region - too much for showing them all on a single plot. 
+      You can use split exons per gene over several plots. If splitted - dots will appear in each gene-region cell in the 
+      main html,
+      linking to the additional plots - See examples below.
+      The config keys to control number of exons per figure
+      exons_per_plot - number of exons when plotting using the dedicated plotting method (without --exons_plots_from_series)
+      ***sample 5  http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_multiplots/fits.html
+      exons_per_series_plot - number of exons when plotting using the gene-region files (with --exons_plots_from_series)
+      ***sample 6  http://chechiklab.biu.ac.il/~amir/samples/timefit/exons_multiplots/fits_series.html
+      
 
 =========================================      
 4.  A new scaler has been added: log(x+1)

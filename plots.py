@@ -9,11 +9,13 @@ from os.path import join, isfile
 from sklearn.datasets.base import Bunch
 from utils.statsmodels_graphics.correlation import plot_corr
 from project_dirs import resources_dir, results_dir, fit_results_relative_path, templates_dir
-from utils.misc import ensure_dir, interactive, rect_subplot
+from utils.misc import ensure_dir, interactive, rect_subplot,split_list
 from utils.parallel import Parallel
 from dev_stages import dev_stages
 import scalers
 import jinja2
+import Image
+import glob
 
 def save_figure(fig, filename, b_close=False, b_square=True, show_frame=False, under_results=False, print_filename=False):
     if under_results:
@@ -93,7 +95,7 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
             ax.set_ylabel('expression level')
     if cfg.exon_level:
         plt.subplots_adjust(hspace = 0.8)  
-        gene,start,end = g.split('_');
+        gene,start,end = g.split(cfg.exon_separator);
         ttl = '{}({}-{})'.format(gene,start,end)  
     else:
         fig.tight_layout(h_pad=0,w_pad=0)
@@ -101,9 +103,10 @@ def _plot_gene_inner(g, region_series_fits, change_distribution_bin_centers=None
     fig.suptitle(ttl, fontsize = 14)
     return fig
     
-def _plot_exons_inner(gene,region,exon_series_fits):
-    fig = plt.figure();
+def _plot_exons_inner(gene,region,exon_series_fits, plot_ind = 1,total_plots = 1):
+    fig = plt.figure()
     nRows,nCols = rect_subplot(len(exon_series_fits))
+    nRows,nCols = min(nRows,nCols),max(nRows,nCols)
     if cfg.exons_same_scale:
         expression_max = max([max(exon[1].single_expression) for exon in exon_series_fits])
         expression_min = min([min(exon[1].single_expression) for exon in exon_series_fits])
@@ -114,28 +117,25 @@ def _plot_exons_inner(gene,region,exon_series_fits):
         ax = fig.add_subplot(nRows,nCols,iExon+1)
         plot_one_exon(series, fit.fitter.shape, fit.theta,LOO_predictions = fit.LOO_predictions, 
                       ax=ax, y_range = expression_range)
-        ax.set_title(exon.replace('_','-'))
+        ax.set_title(exon.replace(cfg.exon_separator,'-'))
         if iExon % nCols == 0:
             ax.set_ylabel('log expression level' if cfg.plots_scaling in ['log+1','log'] else 'expression level')
-    fig.tight_layout(h_pad=0,w_pad=0)
-    fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
+    plt.subplots_adjust(hspace = 0.4)
+    plot_ind = '({}\\{})'.format(plot_ind,total_plots)
+    fig.suptitle('Gene: {}, Region: {} {}'.format(gene,region,plot_ind) ,fontsize = 20,fontweight='bold')
     return fig 
 
-def _plot_exons_from_series_inner(gene,region,series_dir):
-    import Image
-    import glob
-    
-    fig = plt.figure()
-    img_files = glob.glob(join(series_dir,gene,'*{}_*{}.png'.format(gene,region)))
-    print join(series_dir,gene,'*{}_*{}.png'.format(gene,region))
+def _plot_exons_from_series_inner(gene,region,img_files,plot_ind,total_plots):
+    fig = plt.figure()#figsize = (20,9))
     nRows,nCols = rect_subplot(len(img_files))
+    nRows,nCols = min(nRows,nCols),max(nRows,nCols)
     for n, fname in enumerate(img_files):
         image=Image.open(fname)
         ax = fig.add_subplot(nRows,nCols,n+1) 
         ax.axis('off')
         ax.imshow(image)
-    fig.tight_layout(h_pad=0,w_pad=0)
-    fig.suptitle('Gene: {}, Region: {}'.format(gene,region) ,fontsize = 20,fontweight='bold')
+    plot_ind = '({}\\{})'.format(plot_ind,total_plots)
+    fig.suptitle('Gene: {}, Region: {} {}'.format(gene,region,plot_ind) ,fontsize = 20,fontweight='bold')
     return fig
     
 def add_age_ticks(ax, age_scaler, fontsize=None):
@@ -228,8 +228,8 @@ def plot_one_exon(series, shape=None, theta=None, LOO_predictions=None, ax=None,
     ax.plot(series.ages, y_scaled, 'ks', markersize=markersize)    
     ax.set_xlabel('age', fontsize=fontsize)
     add_age_ticks(ax, series.age_scaler, fontsize)
-    exon = series.gene_name[series.gene_name.index('_')+1:]
-    ax.set_title(exon.replace('_','-'), fontsize = 14)
+    exon = series.gene_name[series.gene_name.index(cfg.exon_separator)+1:]
+    ax.set_title(exon.replace(cfg.exon_separator,'-'), fontsize = 14)
    
     if shape is not None and theta is not None:
         
@@ -297,7 +297,7 @@ def plot_and_save_all_exons(data, fitter, fits, dirname):
     genes,regions = set(),set();
     for ds_fits in fits.itervalues():
         for g,r in ds_fits.iterkeys():
-            genes.add(g[:g.index('_')])
+            genes.add(g[:g.index(cfg.exon_separator)])
             regions.add(r)
     for g in sorted(genes):
         for r in sorted(regions):
@@ -320,7 +320,7 @@ def plot_and_save_all_exons_from_series(fits, exons_dir, series_dir):
     keys = set()
     for ds_fits in fits.itervalues():
         for g,r in ds_fits.iterkeys():
-            keys.add((g[:g.index('_')],r))
+            keys.add((g[:g.index(cfg.exon_separator)],r))
     for g,r in keys:
         gene_dir = join(exons_dir,g)
         ensure_dir(gene_dir)
@@ -341,14 +341,21 @@ def _plot_genes_job(gene, region_series_fits, filename, bin_centers):
 def _plot_exons_job(gene,region,exons_series_fits,filename):
     with interactive(False):
         print 'Saving Exons figure for gene {} on region {}'.format(gene,region)
-        fig = _plot_exons_inner(gene,region, exons_series_fits)
-        save_figure(fig, filename, b_close=True)
+        exons_chunks = split_list(exons_series_fits,cfg.exons_per_plot)
+        for i,chunk in enumerate(exons_chunks):
+            fig = _plot_exons_inner(gene,region, chunk,i+1,len(exons_chunks))
+            curr_fig_filename = filename[:-4] + cfg.exon_separator + str(i+1) + filename[-4:] if i > 0 else filename
+            save_figure(fig, curr_fig_filename, b_close=True, b_square = False)
 
 def _plot_exons_from_series_job(gene,region,filename,series_dir):
     with interactive(False):
         print 'Saving Exons figure for gene {} on region {}'.format(gene,region)
-        fig = _plot_exons_from_series_inner(gene,region,series_dir)
-        save_figure(fig,filename,b_close=True)
+        img_files = glob.glob(join(series_dir,gene,'*{}_*{}.png'.format(gene,region)))
+        exons_chunks = split_list(img_files,cfg.exons_per_series_plot)
+        for i,chunk in enumerate(exons_chunks):
+            fig = _plot_exons_from_series_inner(gene,region,chunk,i+1,len(exons_chunks))
+            curr_fig_filename = filename[:-4] + cfg.exon_separator + str(i+1) + filename[-4:] if i > 0 else filename
+            save_figure(fig,curr_fig_filename,b_close=True,b_square = False)
 
 def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show_change_distributions,exons_layout = False,figure_kw=None):
     ensure_dir(dirname)
@@ -356,7 +363,7 @@ def plot_and_save_all_series(data, fitter, fits, dirname, use_correlations, show
     for dsfits in fits.itervalues():
         for (g,r),fit in dsfits.iteritems():
             
-            genedir = join(dirname,g[:g.index('_')] if exons_layout else g )
+            genedir = join(dirname,g[:g.index(cfg.exon_separator)] if exons_layout else g )
             ensure_dir(genedir)
             filename = join(genedir, 'fit-{}-{}.png'.format(g,r))
             if isfile(filename):
@@ -550,15 +557,16 @@ def create_html(data, fitter, fits,
     if exons_layout:   #html is organized differently when data is on exons level
         scores_per_gene = {}
         for (g,r),fit in flat_fits.iteritems():
-            key = (g[:g.index('_')],r)
+            key = (g[:g.index(cfg.exon_separator)],r)
             if fit.score is None:
                 continue
             if key in scores_per_gene:
                 scores_per_gene[key].append(fit.score)
             else:
                 scores_per_gene[key] = [fit.score]
-        gene_names = np.lib.arraysetops.unique([name[:name.index('_')] for name in gene_names])
+        gene_names = np.lib.arraysetops.unique([name[:name.index(cfg.exon_separator)] for name in gene_names])
         flat_fits = {}
+        exons_per_plot = cfg.exons_per_series_plot if 'series' in exons_dir else cfg.exons_per_plot
         for (g,r),scores in scores_per_gene.iteritems():
             min_score, max_score = min(scores), max(scores)
             min_rank = int(np.ceil(n_ranks * max_score)) if max_score > 0 else 0
@@ -566,7 +574,8 @@ def create_html(data, fitter, fits,
             flat_fits[(g,r)] = Bunch(min_score = min_score,
                                      min_rank = min_rank,
                                      max_score = max_score,
-                                     max_rank = max_rank)
+                                     max_rank = max_rank,
+                                     num_of_plots = len(scores) / exons_per_plot + 1)
         
     extra_fields_per_fit = list(enumerate(extra_fields_per_fit))
     
@@ -625,7 +634,7 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
     print 'Writing HTML under {}'.format(basedir)
     ensure_dir(basedir)
     gene_dir = 'gene-subplot'
-    exons_dir = 'exons_subplot_png' if cfg.exons_plots_from_series else 'exons_subplot'
+    exons_dir = 'exons_subplot_series' if cfg.exons_plots_from_series else 'exons_subplot'
     series_dir = 'gene-region-fits' 
     correlations_dir = 'gene-correlations'
     scores_dir = 'score_distributions'

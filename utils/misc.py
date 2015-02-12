@@ -118,3 +118,6 @@ def save_matfile(mdict, filename):
     print 'Saving to {}'.format(filename)
     scipy.io.savemat(filename, mdict, oned_as='column')
 
+def split_list(l, seg_size):
+    return [l[i:i+seg_size] for i in xrange(0, len(l), seg_size)]
+

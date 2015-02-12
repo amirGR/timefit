@@ -42,6 +42,9 @@ exon_level = False # exon-level dataset
 exons_plots_from_series = False #build multi-exons plots from the gene-region .png files
 plots_scaling = 'none' #scaling on y axis (expression), currently only for the multi-exons plots
 exons_same_scale = True #use same y axis range for all exons of a gene(only on multi-exons plots)
+exons_per_plot = 12
+exons_per_series_plot = 6
+exon_separator = '_'
 
 # these two settings must change together
 from sklearn.metrics import r2_score as score
