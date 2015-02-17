@@ -9,12 +9,12 @@ from os.path import join, isfile
 from sklearn.datasets.base import Bunch
 from utils.statsmodels_graphics.correlation import plot_corr
 from project_dirs import resources_dir, results_dir, fit_results_relative_path, templates_dir
-from utils.misc import ensure_dir, interactive, rect_subplot,split_list
+from utils.misc import ensure_dir, interactive, rect_subplot, split_list
 from utils.parallel import Parallel
 from dev_stages import dev_stages
 import scalers
 import jinja2
-import Image
+from PIL import Image
 import glob
 
 def save_figure(fig, filename, b_close=False, b_square=True, show_frame=False, under_results=False, print_filename=False):
