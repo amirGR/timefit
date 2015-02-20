@@ -45,7 +45,7 @@ Column/row headings and/or cell entries may link to more details for the corresp
     {% for gene_name in gene_names %}
     <tr>
         <td>
-            <a href="{{gene_dir}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
+            <a href="{{gene_dir}}/{{gene_name | strip_exon}}/{{gene_name}}.png"><b>{{gene_name}}</b></a>
         </td>
         {% for column_name,dct_vals in extra_columns %}
             <td>

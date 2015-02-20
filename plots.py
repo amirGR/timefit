@@ -278,7 +278,9 @@ def plot_and_save_all_genes(data, fitter, fits, dirname, show_change_distributio
         for g,r in ds_fits.iterkeys():
             genes.add(g)
     for g in sorted(genes):
-        filename = join(dirname, '{}.png'.format(g))
+        genedir = join(dirname,g[:g.index(cfg.exon_separator)])  #does nothing if gene name does not contain the exon
+        ensure_dir(genedir)
+        filename = join(genedir, '{}.png'.format(g))
         if isfile(filename):
             print 'Figure already exists for gene {}. skipping...'.format(g)
             continue
@@ -667,6 +669,10 @@ def save_fits_and_create_html(data, fitter, fits=None, basedir=None,
 def get_jinja_env():
     templateLoader = jinja2.FileSystemLoader(templates_dir())
     templateEnv = jinja2.Environment( loader=templateLoader )
+    templateEnv.filters['strip_exon'] = strip_exon
     return templateEnv
+
+def strip_exon(gene_name):
+    return gene_name[:gene_name.index(cfg.exon_separator)]
 
     
